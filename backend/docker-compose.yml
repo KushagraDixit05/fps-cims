@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_DB: fps_db
+      POSTGRES_USER: fps_user
+      POSTGRES_PASSWORD: kushagra123
+    ports:
+      - "5432:5432"
+    volumes:
+      - fps_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  fps_postgres_data:
