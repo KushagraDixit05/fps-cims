@@ -28,7 +28,13 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 #DEBUG = True
 DEBUG = os.getenv('DEBUG') == 'True'
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '10.0.2.2',          # Android emulator → host alias
+    '10.240.145.244',    # Host LAN IP
+    '100.65.37.21',      # Host Tailscale/VPN IP
+]
 
 
 # Application definition
