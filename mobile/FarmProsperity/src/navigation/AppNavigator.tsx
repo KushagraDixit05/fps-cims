@@ -19,7 +19,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../store/authStore';
 import { colors } from '../utils/colors';
 
-// Screens
+// ── Existing screens ──────────────────────────────────────────────────────────
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
 import CropListScreen from '../screens/CropListScreen';
@@ -30,6 +30,10 @@ import MandiEntryFormScreen from '../screens/MandiEntryFormScreen';
 import MandiDetailScreen from '../screens/MandiDetailScreen';
 import ReportsScreen from '../screens/ReportsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+
+// ── New: Crop Monitoring Module screens ───────────────────────────────────────
+import CropMonitoringFormScreen from '../screens/cropMonitoring/CropMonitoringFormScreen';
+import CropMonitoringDetailScreen from '../screens/cropMonitoring/CropMonitoringDetailScreen';
 
 // Type imports
 import type { RootStackParamList, MainTabParamList } from './types';
@@ -107,12 +111,14 @@ const AppNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user == null ? (
-          // ── Auth ──────────────────────────────────────────────────────────
+          // ── Auth ────────────────────────────────────────────────────────────
           <Stack.Screen name="Login" component={LoginScreen} />
         ) : (
-          // ── App ───────────────────────────────────────────────────────────
+          // ── App ─────────────────────────────────────────────────────────────
           <>
             <Stack.Screen name="Main" component={MainTabs} />
+
+            {/* ── Legacy Crop Entry screens (preserved) ── */}
             <Stack.Screen
               name="CropEntryForm"
               component={CropEntryFormScreen}
@@ -123,6 +129,8 @@ const AppNavigator = () => {
               component={CropDetailScreen}
               options={{ ...headerOptions, title: 'Crop Detail' }}
             />
+
+            {/* ── Mandi screens ── */}
             <Stack.Screen
               name="MandiEntryForm"
               component={MandiEntryFormScreen}
@@ -133,6 +141,23 @@ const AppNavigator = () => {
               component={MandiDetailScreen}
               options={{ ...headerOptions, title: 'Mandi Detail' }}
             />
+
+            {/* ── Crop Monitoring Module (new) ── */}
+            <Stack.Screen
+              name="CropMonitoringForm"
+              component={CropMonitoringFormScreen}
+              options={{ headerShown: false }} // custom topbar inside the screen
+            />
+            <Stack.Screen
+              name="CropMonitoringDetail"
+              component={CropMonitoringDetailScreen}
+              options={{ ...headerOptions, title: 'Visit Details' }}
+            />
+            {/* CropMonitoringReview + CropMonitoringSuccess are rendered as
+                in-tree components inside CropMonitoringFormScreen (not separate routes)
+                to prevent the user from navigating to them directly via back-stack. */}
+
+            {/* ── Misc ── */}
             <Stack.Screen
               name="Profile"
               component={ProfileScreen}

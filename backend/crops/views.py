@@ -1,13 +1,31 @@
-from rest_framework import viewsets, filters
+# /media/kushagra/crucial/FPS internship/fps/backend/crops/views.py
+
+from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum, Count
+from django.utils import timezone
+from datetime import timedelta
 
-from .models import Village, Farmer, CropEntry
-from .serializers import VillageSerializer, FarmerSerializer, CropEntrySerializer
+from .models import (
+    Village, Farmer, CropEntry,
+    District, Block, CropMaster,
+    FarmerVisit,
+)
+from .serializers import (
+    VillageSerializer, FarmerSerializer, CropEntrySerializer,
+    DistrictSerializer, BlockSerializer, CropMasterSerializer,
+    FarmerVisitCreateSerializer, FarmerVisitListSerializer,
+    FarmerVisitDetailSerializer,
+)
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXISTING VIEWSETS — PRESERVED UNCHANGED
+# ─────────────────────────────────────────────────────────────────────────────
 
 class VillageViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -53,7 +71,7 @@ class FarmerViewSet(viewsets.ModelViewSet):
 
 class CropEntryViewSet(viewsets.ModelViewSet):
     """
-    CRUD for crop entries (field visits).
+    CRUD for (legacy) crop entries (field visits).
 
     - Field executives: see only their own submissions.
     - Admins: see all entries.
@@ -106,4 +124,124 @@ class CropEntryViewSet(viewsets.ModelViewSet):
             'total_acreage': qs.aggregate(Sum('area_this_year'))['area_this_year__sum'],
             'by_condition': by_condition,
             'by_stage': by_stage,
+        })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NEW VIEWSETS — CROP MONITORING MODULE
+# ─────────────────────────────────────────────────────────────────────────────
+
+class DistrictViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    GET /api/districts/        → full district list
+    GET /api/districts/{id}/   → single district
+    """
+    queryset = District.objects.filter(is_active=True)
+    serializer_class = DistrictSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'state']
+
+
+class BlockViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    GET /api/blocks/                     → all blocks
+    GET /api/blocks/?district=<id>       → blocks for a given district ID
+    GET /api/blocks/?search=<name>       → search by name
+    """
+    serializer_class = BlockSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['district']
+    search_fields = ['name', 'district__name']
+
+    def get_queryset(self):
+        return Block.objects.filter(is_active=True).select_related('district')
+
+
+class CropMasterViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    GET /api/crop-master/      → all crops with nested varieties
+    GET /api/crop-master/{id}/ → single crop with varieties
+    """
+    queryset = CropMaster.objects.filter(is_active=True).prefetch_related('varieties')
+    serializer_class = CropMasterSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['crop_name']
+
+
+class FarmerVisitViewSet(viewsets.ModelViewSet):
+    """
+    Full CRUD for farmer visits (new Crop Monitoring module).
+
+    POST   /api/farmer-visits/           → submit new visit (multipart/form-data)
+    GET    /api/farmer-visits/           → list visits for current executive
+    GET    /api/farmer-visits/{uuid}/    → visit detail
+    PATCH  /api/farmer-visits/{uuid}/    → partial update (for EDIT from Review screen)
+    GET    /api/farmer-visits/summary/   → dashboard counts (today/week/month/team)
+    """
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ['submitted_at']
+    ordering = ['-submitted_at']
+    search_fields = ['farmer_name', 'village_name', 'block_name', 'district_name']
+
+    def get_queryset(self):
+        user = self.request.user
+        base_qs = FarmerVisit.objects.prefetch_related('crops', 'photos')
+        if user.is_superuser or getattr(user, 'role', '') == 'admin':
+            return base_qs.all()
+        return base_qs.filter(executive=user)
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return FarmerVisitCreateSerializer
+        if self.action in ('retrieve', 'update', 'partial_update'):
+            return FarmerVisitDetailSerializer
+        return FarmerVisitListSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        visit = serializer.save()
+
+        # Return lightweight response on 201
+        return Response(
+            {
+                'id': str(visit.id),
+                'submitted_at': visit.submitted_at.isoformat(),
+                'farmer_name': visit.farmer_name,
+                'crop_count': visit.crop_count,
+                'location': {
+                    'lat': visit.latitude,
+                    'lng': visit.longitude,
+                },
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=False, methods=['get'], url_path='summary')
+    def summary(self, request):
+        """
+        Dashboard counts for the current executive.
+        GET /api/farmer-visits/summary/
+        """
+        qs = self.get_queryset()
+        now = timezone.now()
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_start = today_start - timedelta(days=now.weekday())
+        month_start = today_start.replace(day=1)
+
+        return Response({
+            'today': qs.filter(submitted_at__gte=today_start).count(),
+            'this_week': qs.filter(submitted_at__gte=week_start).count(),
+            'this_month': qs.filter(submitted_at__gte=month_start).count(),
+            'team_members': FarmerVisit.objects.values('executive').distinct().count(),
         })

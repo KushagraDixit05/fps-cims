@@ -14,11 +14,25 @@ export type RootStackParamList = {
   // Main tab container
   Main: undefined;
 
-  // Detail / Form screens pushed on top of tabs
+  // ── Legacy Crop Entry screens ──────────────────────────────────────────────
   CropEntryForm: undefined;
   CropDetail: { entry: CropEntry };
+
+  // ── Mandi screens ──────────────────────────────────────────────────────────
   MandiEntryForm: undefined;
   MandiDetail: { arrival: MandiArrival };
+
+  // ── Crop Monitoring Module (new) ───────────────────────────────────────────
+  /** Entry point — starts fresh wizard (step 1). */
+  CropMonitoringForm: undefined;
+  /** Review & Confirm screen — wizard state flows via the hook. */
+  CropMonitoringReview: undefined;
+  /** Post-submit success screen. */
+  CropMonitoringSuccess: undefined;
+  /** Full visit detail (tapped from dashboard Recent Entries). */
+  CropMonitoringDetail: { visitId: string };
+
+  // ── Misc ───────────────────────────────────────────────────────────────────
   Profile: undefined;
 };
 

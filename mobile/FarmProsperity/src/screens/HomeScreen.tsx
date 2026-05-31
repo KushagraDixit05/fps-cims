@@ -1,11 +1,12 @@
 /**
  * HomeScreen — Dashboard
  *
- * - Header with user's real name (from authStore)
- * - Stats row from GET /api/crops/summary/
- * - 4-card quick-action grid
- * - Pull-to-refresh
- * - Profile icon → Profile screen
+ * Updated for Phase F (Crop Monitoring):
+ *  - Top stats row now shows visit summary: Today / This Week / This Month / Team
+ *  - "Crop Monitoring" quick-action card navigates to CropMonitoringForm
+ *  - Recent Entries list shows FarmerVisits (not legacy CropEntries)
+ *  - Tapping a visit entry → CropMonitoringDetail screen
+ *  - Pull-to-refresh reloads both summary and recent entries
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -16,61 +17,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 
-import { getDashboardSummary } from '../api/crops';
+import { getVisitSummary, getFarmerVisits } from '../api/cropMonitoring';
 import { useAuth } from '../store/authStore';
 import { colors } from '../utils/colors';
-import { formatArea } from '../utils/helpers';
-import type { DashboardSummary } from '../types';
+import type { FarmerVisitSummary, RecentVisit } from '../types/cropMonitoring';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = StackNavigationProp<RootStackParamList>;
-
-// ─── Quick-action cards ───────────────────────────────────────────────────────
-interface MenuItem {
-  title: string;
-  subtitle: string;
-  emoji: string;
-  tab: string;
-  color: string;
-  badge?: string;
-}
-
-const MENU_ITEMS: MenuItem[] = [
-  {
-    title: 'Crop Monitoring',
-    subtitle: 'Field data · Visits',
-    emoji: '🌶️',
-    tab: 'Crops',
-    color: colors.primaryLight,
-  },
-  {
-    title: 'Mandi Arrivals',
-    subtitle: 'Prices · Trends',
-    emoji: '📦',
-    tab: 'Mandi',
-    color: '#FEF3DA',
-    badge: 'Live',
-  },
-  {
-    title: 'My Visits',
-    subtitle: 'History · Map',
-    emoji: '🗺️',
-    tab: 'Reports',
-    color: colors.infoBg,
-  },
-  {
-    title: 'Reports',
-    subtitle: 'Analytics · YoY',
-    emoji: '📊',
-    tab: 'Reports',
-    color: '#F3E8FF',
-  },
-];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -78,31 +36,37 @@ const HomeScreen = () => {
   const navigation = useNavigation<Nav>();
   const { user } = useAuth();
 
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [summary, setSummary] = useState<FarmerVisitSummary | null>(null);
+  const [recentVisits, setRecentVisits] = useState<RecentVisit[]>([]);
+  const [loadingVisits, setLoadingVisits] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadSummary = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
-      const data = await getDashboardSummary();
-      setSummary(data);
+      const [sum, paginated] = await Promise.all([
+        getVisitSummary(),
+        getFarmerVisits(1),
+      ]);
+      setSummary(sum);
+      setRecentVisits(paginated.results ?? []);
     } catch {
-      // Silently fail on home — show stale or '—' values
+      // Silently fail — show stale / '—' values
+    } finally {
+      setLoadingVisits(false);
     }
   }, []);
 
   useEffect(() => {
-    loadSummary();
-  }, [loadSummary]);
+    loadData();
+  }, [loadData]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadSummary();
+    await loadData();
     setRefreshing(false);
-  }, [loadSummary]);
+  }, [loadData]);
 
-  const displayName = user
-    ? (user.first_name || user.username)
-    : 'User';
+  const displayName = user ? user.first_name || user.username : 'User';
 
   return (
     <ScrollView
@@ -138,127 +102,133 @@ const HomeScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* ── Stats Row ── */}
-      <View style={styles.statsRow}>
-        <StatBox
-          value={
-            summary?.total_acreage != null
-              ? `${Number(summary.total_acreage).toFixed(0)}`
-              : '—'
-          }
-          label="Acres tracked"
-        />
-        <StatBox
-          value={summary?.total_entries?.toString() ?? '—'}
-          label="Entries"
-        />
-        <StatBox
-          value={summary?.by_condition.good?.toString() ?? '—'}
-          label="Good fields"
-          valueColor={colors.good}
-        />
+      {/* ── Visit Summary Strip (Today / Week / Month / Team) ── */}
+      <View style={styles.summaryStrip}>
+        <SummaryTile label="Today" value={summary?.today} />
+        <SummaryTile label="This Week" value={summary?.this_week} />
+        <SummaryTile label="This Month" value={summary?.this_month} />
+        <SummaryTile label="Team" value={summary?.team_members} />
       </View>
 
-      {/* ── Condition breakdown ── */}
-      {summary && (
-        <View style={styles.conditionRow}>
-          <ConditionBar
-            label="Good"
-            count={summary.by_condition.good}
-            total={summary.total_entries}
-            color={colors.good}
-          />
-          <ConditionBar
-            label="Average"
-            count={summary.by_condition.average}
-            total={summary.total_entries}
-            color={colors.average}
-          />
-          <ConditionBar
-            label="Poor"
-            count={summary.by_condition.poor}
-            total={summary.total_entries}
-            color={colors.poor}
-          />
-        </View>
-      )}
-
-      {/* ── Menu Grid ── */}
+      {/* ── Quick Actions ── */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>QUICK ACTIONS</Text>
       </View>
       <View style={styles.grid}>
-        {MENU_ITEMS.map((item) => (
-          <TouchableOpacity
-            key={item.title}
-            style={[styles.menuCard, { backgroundColor: item.color }]}
-            onPress={() => navigation.navigate('Main' as any)}
-            activeOpacity={0.85}
-          >
-            {item.badge ? (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.badge}</Text>
-              </View>
-            ) : null}
-            <Text style={styles.menuEmoji}>{item.emoji}</Text>
-            <Text style={styles.menuTitle}>{item.title}</Text>
-            <Text style={styles.menuSub}>{item.subtitle}</Text>
-          </TouchableOpacity>
-        ))}
+        <TouchableOpacity
+          style={[styles.menuCard, { backgroundColor: colors.primaryLight }]}
+          onPress={() => navigation.navigate('CropMonitoringForm')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.menuEmoji}>🌾</Text>
+          <Text style={styles.menuTitle}>New Visit</Text>
+          <Text style={styles.menuSub}>Log a field visit</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.menuCard, { backgroundColor: '#FEF3DA' }]}
+          onPress={() => navigation.navigate('Main')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>Live</Text>
+          </View>
+          <Text style={styles.menuEmoji}>📦</Text>
+          <Text style={styles.menuTitle}>Mandi</Text>
+          <Text style={styles.menuSub}>Prices · Trends</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.menuCard, { backgroundColor: colors.infoBg }]}
+          onPress={() => navigation.navigate('Main')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.menuEmoji}>🗺️</Text>
+          <Text style={styles.menuTitle}>My Visits</Text>
+          <Text style={styles.menuSub}>History</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.menuCard, { backgroundColor: '#F3E8FF' }]}
+          onPress={() => navigation.navigate('Main')}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.menuEmoji}>📊</Text>
+          <Text style={styles.menuTitle}>Reports</Text>
+          <Text style={styles.menuSub}>Analytics · YoY</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Bottom spacing */}
-      <View style={{ height: 20 }} />
+      {/* ── Recent Entries ── */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>RECENT VISITS</Text>
+      </View>
+
+      {loadingVisits ? (
+        <View style={styles.visitLoader}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      ) : recentVisits.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>🌱</Text>
+          <Text style={styles.emptyText}>No visits recorded yet.</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('CropMonitoringForm')}
+          >
+            <Text style={styles.emptyAction}>Log your first visit →</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        recentVisits.map((visit) => (
+          <TouchableOpacity
+            key={visit.id}
+            style={styles.visitCard}
+            onPress={() =>
+              navigation.navigate('CropMonitoringDetail', { visitId: visit.id })
+            }
+            activeOpacity={0.85}
+          >
+            <View style={styles.visitCardLeft}>
+              <Text style={styles.visitFarmer}>{visit.farmer_name}</Text>
+              <Text style={styles.visitLocation}>
+                {visit.village_name} · {visit.block_name}
+              </Text>
+              <Text style={styles.visitDate}>
+                {new Date(visit.submitted_at).toLocaleDateString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                })}
+              </Text>
+            </View>
+            <View style={styles.cropBadge}>
+              <Text style={styles.cropBadgeText}>
+                {visit.crop_count} crop{visit.crop_count !== 1 ? 's' : ''}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))
+      )}
+
+      <View style={{ height: 24 }} />
     </ScrollView>
   );
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-const StatBox = ({
-  value,
+const SummaryTile = ({
   label,
-  valueColor,
+  value,
 }: {
-  value: string;
   label: string;
-  valueColor?: string;
+  value: number | undefined;
 }) => (
-  <View style={styles.statBox}>
-    <Text style={[styles.statValue, valueColor ? { color: valueColor } : null]}>
-      {value}
-    </Text>
-    <Text style={styles.statLabel}>{label}</Text>
+  <View style={styles.summaryTile}>
+    <Text style={styles.summaryValue}>{value ?? '—'}</Text>
+    <Text style={styles.summaryLabel}>{label}</Text>
   </View>
 );
-
-const ConditionBar = ({
-  label,
-  count,
-  total,
-  color,
-}: {
-  label: string;
-  count: number;
-  total: number;
-  color: string;
-}) => {
-  const pct = total > 0 ? (count / total) * 100 : 0;
-  return (
-    <View style={styles.condBar}>
-      <Text style={[styles.condBarLabel, { color }]}>{label}</Text>
-      <View style={styles.condBarTrack}>
-        <View
-          style={[
-            styles.condBarFill,
-            { width: `${pct}%`, backgroundColor: color },
-          ]}
-        />
-      </View>
-      <Text style={[styles.condBarCount, { color }]}>{count}</Text>
-    </View>
-  );
-};
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -275,67 +245,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  greeting: { color: 'rgba(255,255,255,0.75)', fontSize: 13 },
-  role: { color: 'white', fontSize: 18, fontWeight: '700', marginTop: 2 },
-  region: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2 },
+  greeting:    { color: 'rgba(255,255,255,0.75)', fontSize: 13 },
+  role:        { color: 'white', fontSize: 18, fontWeight: '700', marginTop: 2 },
+  region:      { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2 },
   profileBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center',
   },
   profileInitial: { color: 'white', fontSize: 18, fontWeight: '700' },
 
-  // Stats
-  statsRow: {
+  // Summary strip
+  summaryStrip: {
     flexDirection: 'row',
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    gap: 10,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: colors.primaryLight,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 0.5,
-    borderColor: '#C8E4D4',
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  statLabel: { fontSize: 11, color: '#4A7A5A', marginTop: 2 },
-
-  // Condition bars
-  conditionRow: {
-    marginHorizontal: 14,
-    marginTop: 10,
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    gap: 8,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
   },
-  condBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  condBarLabel: { fontSize: 12, fontWeight: '600', width: 52 },
-  condBarTrack: {
+  summaryTile: {
     flex: 1,
-    height: 6,
-    backgroundColor: colors.borderLight,
-    borderRadius: 3,
-    overflow: 'hidden',
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRightWidth: 0.5,
+    borderRightColor: colors.border,
   },
-  condBarFill: { height: 6, borderRadius: 3 },
-  condBarCount: { fontSize: 12, fontWeight: '600', width: 24, textAlign: 'right' },
+  summaryValue: { fontSize: 22, fontWeight: '800', color: colors.primary },
+  summaryLabel: { fontSize: 10, color: colors.textMuted, marginTop: 2, fontWeight: '600' },
 
   // Section header
   sectionHeader: {
@@ -344,47 +279,68 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
+    fontSize: 11, fontWeight: '700', color: colors.textSecondary,
     letterSpacing: 0.8,
   },
 
-  // Menu grid
+  // Quick action grid
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 14,
-    gap: 10,
+    flexDirection: 'row', flexWrap: 'wrap',
+    paddingHorizontal: 14, gap: 10,
   },
   menuCard: {
-    width: '47%',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    minHeight: 110,
-    position: 'relative',
+    width: '47%', borderRadius: 16, padding: 16,
+    borderWidth: 0.5, borderColor: colors.border,
+    minHeight: 110, position: 'relative',
   },
   badge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: colors.primary,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    position: 'absolute', top: 10, right: 10,
+    backgroundColor: colors.primary, borderRadius: 6,
+    paddingHorizontal: 6, paddingVertical: 2,
   },
-  badgeText: { color: 'white', fontSize: 9, fontWeight: '700' },
-  menuEmoji: { fontSize: 28, marginBottom: 8 },
-  menuTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    lineHeight: 18,
+  badgeText:    { color: 'white', fontSize: 9, fontWeight: '700' },
+  menuEmoji:    { fontSize: 28, marginBottom: 8 },
+  menuTitle:    { fontSize: 14, fontWeight: '600', color: colors.textPrimary, lineHeight: 18 },
+  menuSub:      { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
+
+  // Visit loader
+  visitLoader:  { paddingVertical: 24, alignItems: 'center' },
+
+  // Empty state
+  emptyState:   { alignItems: 'center', paddingVertical: 32, gap: 8 },
+  emptyIcon:    { fontSize: 36 },
+  emptyText:    { fontSize: 14, color: colors.textSecondary },
+  emptyAction:  { fontSize: 14, color: colors.primary, fontWeight: '600' },
+
+  // Visit cards
+  visitCard: {
+    marginHorizontal: 14,
+    marginBottom: 8,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
   },
-  menuSub: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
+  visitCardLeft:  { flex: 1, marginRight: 10 },
+  visitFarmer:    { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  visitLocation:  { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  visitDate:      { fontSize: 11, color: colors.textMuted, marginTop: 3 },
+  cropBadge: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  cropBadgeText:  { fontSize: 12, fontWeight: '700', color: colors.primary },
 });
 
 export default HomeScreen;

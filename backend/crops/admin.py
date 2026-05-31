@@ -1,8 +1,18 @@
+# /media/kushagra/crucial/FPS internship/fps/backend/crops/admin.py
+
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
 from django.db.models import Sum
-from .models import Village, Farmer, CropEntry, CropPhoto
+from .models import (
+    Village, Farmer, CropEntry, CropPhoto,
+    District, Block, CropMaster, CropVariety,
+    FarmerVisit, CropRecord, VisitPhoto,
+)
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXISTING ADMIN — PRESERVED UNCHANGED
+# ─────────────────────────────────────────────────────────────────────────────
 
 @admin.register(Village)
 class VillageAdmin(admin.ModelAdmin):
@@ -12,7 +22,7 @@ class VillageAdmin(admin.ModelAdmin):
 
 
 class CropPhotoInline(admin.TabularInline):
-    """Inline photos displayed inside a CropEntry admin page."""
+    """Inline photos displayed inside a (legacy) CropEntry admin page."""
     model = CropPhoto
     extra = 0
     readonly_fields = ['uploaded_at']
@@ -52,3 +62,90 @@ class FarmerAdmin(admin.ModelAdmin):
     search_fields = ['name', 'phone_number', 'village__name']
     list_filter = ['village__district']
     raw_id_fields = ['village', 'created_by']
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NEW ADMIN — CROP MONITORING MODULE
+# ─────────────────────────────────────────────────────────────────────────────
+
+class BlockInline(admin.TabularInline):
+    model = Block
+    extra = 1
+    fields = ['name', 'is_active']
+
+
+@admin.register(District)
+class DistrictAdmin(admin.ModelAdmin):
+    list_display = ['name', 'state', 'is_active', 'block_count']
+    list_filter = ['state', 'is_active']
+    search_fields = ['name', 'state']
+    list_editable = ['is_active']
+    inlines = [BlockInline]
+
+    def block_count(self, obj: District) -> int:
+        return obj.blocks.count()
+    block_count.short_description = 'Blocks'
+
+
+@admin.register(Block)
+class BlockAdmin(admin.ModelAdmin):
+    list_display = ['name', 'district', 'is_active']
+    list_filter = ['district__state', 'district', 'is_active']
+    search_fields = ['name', 'district__name']
+    list_editable = ['is_active']
+    raw_id_fields = ['district']
+
+
+class CropVarietyInline(admin.TabularInline):
+    model = CropVariety
+    extra = 1
+    fields = ['variety_name', 'is_active']
+
+
+@admin.register(CropMaster)
+class CropMasterAdmin(admin.ModelAdmin):
+    list_display = ['crop_name', 'is_active', 'variety_count']
+    list_filter = ['is_active']
+    search_fields = ['crop_name']
+    list_editable = ['is_active']
+    inlines = [CropVarietyInline]
+
+    def variety_count(self, obj: CropMaster) -> int:
+        return obj.varieties.count()
+    variety_count.short_description = 'Varieties'
+
+
+class CropRecordInline(admin.TabularInline):
+    model = CropRecord
+    extra = 0
+    readonly_fields = ['id']
+    fields = [
+        'crop_name', 'variety', 'date_of_sowing',
+        'current_area_acre', 'this_year_area_acre',
+        'crop_stage', 'crop_condition', 'problems', 'sort_order',
+    ]
+
+
+class VisitPhotoInline(admin.TabularInline):
+    model = VisitPhoto
+    extra = 0
+    readonly_fields = ['id', 'uploaded_at']
+    fields = ['image', 'uploaded_at']
+
+
+@admin.register(FarmerVisit)
+class FarmerVisitAdmin(GISModelAdmin):
+    list_display = [
+        'farmer_name', 'mobile_number', 'village_name', 'block_name',
+        'district_name', 'crop_count_display', 'executive', 'submitted_at',
+    ]
+    list_filter = ['district_name', 'submitted_at', 'is_synced']
+    search_fields = ['farmer_name', 'mobile_number', 'village_name', 'block_name', 'district_name']
+    date_hierarchy = 'submitted_at'
+    readonly_fields = ['id', 'submitted_at', 'updated_at', 'location']
+    raw_id_fields = ['executive']
+    inlines = [CropRecordInline, VisitPhotoInline]
+
+    def crop_count_display(self, obj: FarmerVisit) -> int:
+        return obj.crops.count()
+    crop_count_display.short_description = 'Crops'
