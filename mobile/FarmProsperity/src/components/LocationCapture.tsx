@@ -1,6 +1,6 @@
 // src/components/LocationCapture.tsx
-// Auto-captures GPS on mount. Uses react-native-geolocation-service for
-// reliable GPS on Android 12+ and New Architecture.
+// Auto-captures GPS on mount. Uses @react-native-community/geolocation (Android
+// LocationManager, no GMS/FusedLocation dependency — avoids IncompatibleClassChangeError).
 // Shows spinner while fetching, formatted coords on success, error + retry on failure.
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -13,7 +13,7 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import Geolocation from 'react-native-geolocation-service';
+import Geolocation from '@react-native-community/geolocation';
 import { colors } from '../utils/colors';
 import type { LocationDraft } from '../types/cropMonitoring';
 
@@ -123,13 +123,15 @@ const LocationCapture = ({ location, onCapture, error }: LocationCaptureProps) =
           {captureState === 'requesting' ? (
             <>
               <ActivityIndicator size="small" color={colors.primary} style={styles.spinner} />
-              <Text style={styles.statusText}>Capturing GPS…</Text>
+              <Text style={styles.statusText}>Capturing GPS...</Text>
             </>
           ) : captureState === 'success' &&
             location.latitude !== null &&
             location.longitude !== null ? (
             <>
-              <Text style={styles.coordIcon}>📍</Text>
+              <View style={styles.pinIcon}>
+                <View style={styles.pinDot} />
+              </View>
               <View>
                 <Text style={styles.coordText}>
                   {formatCoords(location.latitude, location.longitude)}
@@ -139,15 +141,17 @@ const LocationCapture = ({ location, onCapture, error }: LocationCaptureProps) =
             </>
           ) : captureState === 'denied' || captureState === 'error' ? (
             <>
-              <Text style={styles.errorIcon}>⚠️</Text>
+              <Text style={styles.warnIcon}>!</Text>
               <Text style={styles.errorInlineText} numberOfLines={2}>
                 {errorMessage}
               </Text>
             </>
           ) : (
             <>
-              <Text style={styles.coordIcon}>📍</Text>
-              <Text style={styles.statusText}>Waiting for GPS…</Text>
+              <View style={styles.pinIcon}>
+                <View style={styles.pinDot} />
+              </View>
+              <Text style={styles.statusText}>Waiting for GPS...</Text>
             </>
           )}
         </View>
@@ -159,7 +163,7 @@ const LocationCapture = ({ location, onCapture, error }: LocationCaptureProps) =
             onPress={capture}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.refreshIcon}>🔄</Text>
+            <Text style={styles.refreshIcon}>↻</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -211,8 +215,20 @@ const styles = StyleSheet.create({
   spinner: {
     marginRight: 2,
   },
-  coordIcon: {
-    fontSize: 20,
+  pinIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
   },
   coordText: {
     fontSize: 14,
@@ -229,8 +245,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
   },
-  errorIcon: {
-    fontSize: 18,
+  warnIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.error,
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+    lineHeight: 22,
+    overflow: 'hidden',
   },
   errorInlineText: {
     fontSize: 13,
@@ -238,11 +263,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   refreshBtn: {
-    padding: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginLeft: 8,
   },
   refreshIcon: {
     fontSize: 18,
+    color: colors.primary,
+    fontWeight: '700',
   },
   errorText: {
     marginTop: 4,

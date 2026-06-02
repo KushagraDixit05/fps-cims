@@ -161,6 +161,7 @@ const CropMonitoringFormScreen = () => {
           onEditCrops={() => form.setStep(2)}
           onEditPhotos={() => form.setStep(3)}
           onSubmit={handleSubmit}
+          onBack={() => form.setStep(3)}
           submitting={submitting}
         />
       )}

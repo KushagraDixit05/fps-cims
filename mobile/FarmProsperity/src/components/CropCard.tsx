@@ -58,7 +58,7 @@ const SimpleSelect = ({
   value,
   options,
   onSelect,
-  placeholder = 'Select…',
+  placeholder = 'Select...',
   disabled = false,
   error,
   required = false,
@@ -89,7 +89,7 @@ const SimpleSelect = ({
         >
           {selected ? selected.label : placeholder}
         </Text>
-        <Text style={selectStyles.arrow}>{open ? '▲' : '▼'}</Text>
+        <Text style={selectStyles.arrow}>{open ? '‹' : '›'}</Text>
       </TouchableOpacity>
 
       {open && (
@@ -142,7 +142,7 @@ const selectStyles = StyleSheet.create({
   triggerDisabled:   { backgroundColor: colors.background, opacity: 0.6 },
   triggerText:       { fontSize: 14, color: colors.textPrimary, flex: 1 },
   placeholder:       { color: colors.textMuted },
-  arrow:             { fontSize: 11, color: colors.textMuted, marginLeft: 6 },
+  arrow:             { fontSize: 16, color: colors.textMuted, marginLeft: 6, fontWeight: '600' },
   dropdown: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -187,6 +187,30 @@ const CropCard = ({
 }: CropCardProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const isPickerOpenRef = React.useRef(false);
+
+  // Sync ref with state
+  React.useEffect(() => {
+    isPickerOpenRef.current = showDatePicker;
+  }, [showDatePicker]);
+
+  // Force-close the date picker when validation errors appear (user pressed NEXT)
+  // This prevents the native picker from being open during component unmount.
+  React.useEffect(() => {
+    if (Object.keys(errors).length > 0 && showDatePicker) {
+      console.log('[CropCard] Validation errors detected — force-closing date picker.');
+      setShowDatePicker(false);
+    }
+  }, [errors, showDatePicker]);
+
+  // Cleanup: ensure date picker is closed when component unmounts
+  React.useEffect(() => {
+    return () => {
+      if (isPickerOpenRef.current) {
+        console.log('[CropCard] Component unmounting with open date picker — cleaning up.');
+      }
+    };
+  }, []);
 
   // Build crop options from master data
   const cropOptions = cropMaster.map((c) => ({ value: c.crop_name, label: c.crop_name }));
@@ -270,10 +294,10 @@ const CropCard = ({
   const sowingDateDisplay = parsedSowingDate
     ? parsedSowingDate.toLocaleDateString('en-IN', {
         day: '2-digit',
-        month: 'short',
+        month: '2-digit',
         year: 'numeric',
       })
-    : 'Select date…';
+    : 'Select date';
 
   // Bug fix #1: datePickerValue MUST always be a valid Date.
   // The native Android DatePicker bridge crashes the JNI layer if it receives
@@ -290,8 +314,8 @@ const CropCard = ({
           onPress={() => setCollapsed((prev) => !prev)}
           activeOpacity={0.7}
         >
-          <Text style={styles.headerTitle}>Crop Details — {index}</Text>
-          <Text style={styles.collapseArrow}>{collapsed ? '▼' : '▲'}</Text>
+          <Text style={styles.headerTitle}>Crop Details - {index}</Text>
+          <Text style={styles.collapseArrow}>{collapsed ? '+' : '-'}</Text>
         </TouchableOpacity>
 
         {onDelete && (
@@ -300,7 +324,13 @@ const CropCard = ({
             onPress={onDelete}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.deleteIcon}>🗑</Text>
+            <View style={styles.trashIcon}>
+              <View style={styles.trashLid} />
+              <View style={styles.trashBody}>
+                <View style={styles.trashLine} />
+                <View style={styles.trashLine} />
+              </View>
+            </View>
           </TouchableOpacity>
         )}
       </View>
@@ -314,7 +344,7 @@ const CropCard = ({
             value={data.crop_name}
             options={cropOptions}
             onSelect={handleCropChange}
-            placeholder="Select crop…"
+            placeholder="Select crop"
             required
             error={errors.crop_name}
           />
@@ -325,7 +355,7 @@ const CropCard = ({
             value={data.variety}
             options={varietyOptions}
             onSelect={(v) => onChange({ variety: v })}
-            placeholder={data.crop_name ? 'Select variety…' : 'Select crop first…'}
+            placeholder={data.crop_name ? 'Select variety' : 'Select crop first'}
             disabled={!data.crop_name}
             required
             error={errors.variety}
@@ -346,7 +376,7 @@ const CropCard = ({
                   !data.date_of_sowing && styles.datePlaceholder,
                 ]}
               >
-                📅  {sowingDateDisplay}
+                {sowingDateDisplay}
               </Text>
             </TouchableOpacity>
             {errors.date_of_sowing ? (
@@ -354,45 +384,72 @@ const CropCard = ({
             ) : null}
           </View>
 
-          {showDatePicker && (
+          {showDatePicker && Platform.OS === 'android' && (
             <DateTimePicker
               value={datePickerValue}
               mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              display="default"
               maximumDate={new Date()}
               onChange={handleDateChange}
             />
           )}
 
-          {/* Area fields */}
-          <FormInput
-            label="Current Area (Acre)"
-            required
-            value={data.current_area_acre}
-            onChangeText={(v) => onChange({ current_area_acre: v })}
-            keyboardType="decimal-pad"
-            placeholder="e.g. 2.50"
-            error={errors.current_area_acre}
-          />
+          {showDatePicker && Platform.OS === 'ios' && (
+            <DateTimePicker
+              value={datePickerValue}
+              mode="date"
+              display="inline"
+              maximumDate={new Date()}
+              onChange={handleDateChange}
+            />
+          )}
 
-          <FormInput
-            label="Last Year Area (Acre)"
-            value={data.last_year_area_acre}
-            onChangeText={(v) => onChange({ last_year_area_acre: v })}
-            keyboardType="decimal-pad"
-            placeholder="Optional"
-            error={errors.last_year_area_acre}
-          />
-
-          <FormInput
-            label="This Year Area (Acre)"
-            required
-            value={data.this_year_area_acre}
-            onChangeText={(v) => onChange({ this_year_area_acre: v })}
-            keyboardType="decimal-pad"
-            placeholder="e.g. 2.50"
-            error={errors.this_year_area_acre}
-          />
+          {/* Area fields — 3-column row matching wireframe */}
+          <Text style={styles.fieldLabel}>
+            Area Details (Acre)
+          </Text>
+          <View style={styles.areaRow}>
+            <View style={styles.areaCol}>
+              <Text style={styles.areaColLabel}>
+                Current Area <Text style={styles.required}>*</Text>
+              </Text>
+              <FormInput
+                label=""
+                value={data.current_area_acre}
+                onChangeText={(v) => onChange({ current_area_acre: v })}
+                keyboardType="decimal-pad"
+                placeholder="Enter area"
+                error={errors.current_area_acre}
+                style={styles.areaInput}
+              />
+            </View>
+            <View style={styles.areaCol}>
+              <Text style={styles.areaColLabel}>Last Year Area</Text>
+              <FormInput
+                label=""
+                value={data.last_year_area_acre}
+                onChangeText={(v) => onChange({ last_year_area_acre: v })}
+                keyboardType="decimal-pad"
+                placeholder="Last year area"
+                error={errors.last_year_area_acre}
+                style={styles.areaInput}
+              />
+            </View>
+            <View style={styles.areaCol}>
+              <Text style={styles.areaColLabel}>
+                This Year Area <Text style={styles.required}>*</Text>
+              </Text>
+              <FormInput
+                label=""
+                value={data.this_year_area_acre}
+                onChangeText={(v) => onChange({ this_year_area_acre: v })}
+                keyboardType="decimal-pad"
+                placeholder="This year area"
+                error={errors.this_year_area_acre}
+                style={styles.areaInput}
+              />
+            </View>
+          </View>
 
           {/* Crop Stage dropdown */}
           <SimpleSelect
@@ -400,7 +457,7 @@ const CropCard = ({
             value={data.crop_stage}
             options={STAGE_OPTIONS}
             onSelect={(v) => onChange({ crop_stage: v as CropStage })}
-            placeholder="Select stage…"
+            placeholder="Select crop stage"
             required
             error={errors.crop_stage}
           />
@@ -442,7 +499,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
   },
   headerTitle: {
     fontSize: 15,
@@ -450,14 +507,44 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   collapseArrow: {
-    fontSize: 11,
+    fontSize: 18,
     color: colors.textMuted,
+    fontWeight: '600',
   },
   deleteBtn: {
     padding: 4,
+    marginLeft: 12,
   },
-  deleteIcon: {
-    fontSize: 18,
+  trashIcon: {
+    width: 20,
+    height: 22,
+    alignItems: 'center',
+  },
+  trashLid: {
+    width: 18,
+    height: 3,
+    backgroundColor: colors.textMuted,
+    borderRadius: 1,
+    marginBottom: 1,
+  },
+  trashBody: {
+    width: 14,
+    height: 14,
+    borderWidth: 1.5,
+    borderColor: colors.textMuted,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    paddingTop: 2,
+  },
+  trashLine: {
+    width: 1.5,
+    height: 8,
+    backgroundColor: colors.textMuted,
+    borderRadius: 1,
   },
   body: {
     padding: 14,
@@ -495,6 +582,25 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 12,
     color: colors.error,
+  },
+  // ── 3-column area row ──
+  areaRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  areaCol: {
+    flex: 1,
+  },
+  areaColLabel: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  areaInput: {
+    padding: 10,
+    fontSize: 13,
   },
 });
 

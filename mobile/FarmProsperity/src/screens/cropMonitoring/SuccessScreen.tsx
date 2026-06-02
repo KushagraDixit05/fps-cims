@@ -7,7 +7,6 @@ import {
   Text,
   Animated,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native';
 import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
@@ -57,11 +56,11 @@ const SuccessScreen = ({
         <Text style={styles.checkmark}>✓</Text>
       </Animated.View>
 
-      <Animated.View style={{ opacity: opacityAnim, alignItems: 'center' }}>
-        <Text style={styles.title}>Entry Submitted!</Text>
+      <Animated.View style={{ opacity: opacityAnim, alignItems: 'center', width: '100%' }}>
+        <Text style={styles.title}>Entry Submitted{'\n'}Successfully!</Text>
         <Text style={styles.subtitle}>
           {farmerName
-            ? `Visit for ${farmerName} with ${cropCount ?? 0} crop${(cropCount ?? 0) !== 1 ? 's' : ''} has been saved.`
+            ? `Your crop monitoring data has been saved.`
             : 'Your crop monitoring data has been saved.'}
         </Text>
 
@@ -73,9 +72,12 @@ const SuccessScreen = ({
           variant="primary"
           style={styles.btn}
         />
-        <TouchableOpacity style={styles.dashboardBtn} onPress={onDashboard}>
-          <Text style={styles.dashboardBtnText}>GO TO DASHBOARD</Text>
-        </TouchableOpacity>
+        <Button
+          title="GO TO DASHBOARD"
+          onPress={onDashboard}
+          variant="secondary"
+          style={styles.btn}
+        />
       </Animated.View>
     </View>
   );
@@ -98,15 +100,26 @@ const styles = StyleSheet.create({
     borderColor: colors.success,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 32,
   },
   checkmark:  { fontSize: 48, color: colors.success, lineHeight: 56 },
-  title:      { fontSize: 24, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', marginBottom: 10 },
-  subtitle:   { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, paddingHorizontal: 12 },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 32,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 21,
+    paddingHorizontal: 12,
+  },
   divider:    { height: 1, backgroundColor: colors.border, width: '100%', marginVertical: 28 },
   btn:        { width: '100%', marginBottom: 12 },
-  dashboardBtn: { paddingVertical: 12, alignItems: 'center' },
-  dashboardBtnText: { fontSize: 14, color: colors.primary, fontWeight: '700' },
 });
 
 export default SuccessScreen;

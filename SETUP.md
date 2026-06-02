@@ -180,28 +180,93 @@ npm run android:phone
 
 ---
 
-## Everyday Development Workflow
+## Quick Start (Already Set Up)
 
-Once set up, starting the project each day only takes one command! We have provided a startup script that automatically launches the database, backend server, and Metro bundler in separate terminal windows.
+If you've already completed the one-time setup above and just want to get the project running, use the following commands. Open **three separate terminal tabs/windows**.
+
+---
+
+### Terminal 1 — Backend Server
 
 ```bash
-# Run this from the root 'fps' folder
+cd fps/backend
+
+# Activate the Python virtual environment
+source venv/bin/activate        # On Windows: venv\Scripts\activate
+
+# Start the Django backend (binds to all interfaces so the device can reach it)
+python manage.py runserver 0.0.0.0:8000
+```
+
+> **Login credentials (superuser):**
+> - Username: `admin`
+> - Password: `FarmPros@2026`
+> - Admin panel: `http://localhost:8000/admin`
+
+---
+
+### Terminal 2 — Metro Bundler (React Native)
+
+```bash
+cd fps/mobile/FarmProsperity
+
+# Start the Metro JS bundler
+npm start
+```
+
+> Keep this terminal running throughout development. It reloads the app on every code change.
+
+---
+
+### Terminal 3 — ADB + App Launch
+
+**If using a physical Android device (USB):**
+
+```bash
+# 1. Set up ADB reverse tunnels so the device can reach your machine's localhost
+adb reverse tcp:8000 tcp:8000   # Backend API
+adb reverse tcp:8081 tcp:8081   # Metro bundler
+
+# 2. Verify the tunnels are active (optional sanity check)
+adb reverse --list
+
+# 3. Build and launch the app on the connected device
+cd fps/mobile/FarmProsperity
+npm run android:phone
+```
+
+**If using an Android Emulator:**
+
+```bash
+# No ADB reverse needed — emulator uses 10.0.2.2 automatically
+cd fps/mobile/FarmProsperity
+npm run android:emulator
+```
+
+> **Note:** If you disconnect and reconnect the USB cable, re-run the `adb reverse` commands — tunnels reset on reconnect.
+
+---
+
+### Quick-Start Script (Automated)
+
+Alternatively, run everything at once from the project root:
+
+```bash
+# From the 'fps' root folder
 ./start.sh
 ```
 
-*(If permission is denied, run `chmod +x start.sh` first).*
+*(If permission is denied: `chmod +x start.sh`)*
 
-### Launch the App
-
-After running the script, just open a new terminal tab and launch the app:
+Then open a new terminal tab and launch the app:
 
 ```bash
-# For physical device (USB)
-cd fps/mobile/FarmProsperity
-npm run android:phone
+# Physical device
+adb reverse tcp:8000 tcp:8000 && adb reverse tcp:8081 tcp:8081
+cd fps/mobile/FarmProsperity && npm run android:phone
 
-# OR for emulator
-npm run android:emulator
+# OR emulator
+cd fps/mobile/FarmProsperity && npm run android:emulator
 ```
 
 ---

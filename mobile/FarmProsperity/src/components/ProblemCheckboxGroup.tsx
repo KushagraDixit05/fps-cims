@@ -19,12 +19,12 @@ interface ProblemOption {
 }
 
 const PROBLEMS: ProblemOption[] = [
-  { value: 'pest',     label: '🐛 Pest' },
-  { value: 'disease',  label: '🦠 Disease' },
-  { value: 'weather',  label: '🌧 Weather' },
-  { value: 'price',    label: '💰 Price' },
-  { value: 'labour',   label: '👷 Labour' },
-  { value: 'other',    label: '📝 Other' },
+  { value: 'pest',     label: 'Pest' },
+  { value: 'disease',  label: 'Disease' },
+  { value: 'weather',  label: 'Weather' },
+  { value: 'price',    label: 'Price' },
+  { value: 'labour',   label: 'Labour' },
+  { value: 'other',    label: 'Other' },
 ];
 
 interface ProblemCheckboxGroupProps {
@@ -55,7 +55,7 @@ const ProblemCheckboxGroup = ({
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>
-        Problems Observed <Text style={styles.required}>*</Text>
+        Problems (Select all that apply) <Text style={styles.required}>*</Text>
       </Text>
 
       <View style={styles.grid}>
@@ -84,13 +84,13 @@ const ProblemCheckboxGroup = ({
       {showOtherInput && (
         <View style={styles.otherInputWrapper}>
           <Text style={styles.otherLabel}>
-            Specify other problem <Text style={styles.required}>*</Text>
+            Other Problem (Please specify) <Text style={styles.required}>*</Text>
           </Text>
           <TextInput
             style={styles.otherInput}
             value={otherDetail}
             onChangeText={onOtherDetailChange}
-            placeholder="Describe the problem..."
+            placeholder="Enter other problem..."
             placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={2}

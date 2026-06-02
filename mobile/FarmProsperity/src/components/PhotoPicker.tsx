@@ -1,5 +1,5 @@
 // src/components/PhotoPicker.tsx
-// Multi-photo picker with horizontal thumbnail strip and ✕ remove button per photo.
+// Multi-photo picker with horizontal thumbnail strip and remove button per photo.
 // Supports camera and gallery via react-native-image-picker.
 // Requests Android permissions before accessing camera/gallery.
 
@@ -147,8 +147,8 @@ const PhotoPicker = ({
 
   const handleAdd = () => {
     Alert.alert('Add Photo', 'Choose a source', [
-      { text: '📷  Take Photo', onPress: openCamera },
-      { text: '🖼  Choose from Gallery', onPress: openGallery },
+      { text: 'Take Photo', onPress: openCamera },
+      { text: 'Choose from Gallery', onPress: openGallery },
       { text: 'Cancel', style: 'cancel' },
     ]);
   };
@@ -157,10 +157,7 @@ const PhotoPicker = ({
     <View style={styles.wrapper}>
       <View style={styles.labelRow}>
         <Text style={styles.label}>
-          Photos <Text style={styles.required}>*</Text>
-        </Text>
-        <Text style={styles.counter}>
-          {photos.length} / min {minPhotos}
+          Photos (Minimum {minPhotos} photos required) <Text style={styles.required}>*</Text>
         </Text>
       </View>
 
@@ -178,7 +175,7 @@ const PhotoPicker = ({
               onPress={() => onRemove(photo.uri)}
               hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             >
-              <Text style={styles.removeIcon}>✕</Text>
+              <Text style={styles.removeIcon}>x</Text>
             </TouchableOpacity>
           </View>
         ))}
@@ -204,7 +201,7 @@ const PhotoPicker = ({
       {/* Inline minimum-count hint */}
       {photos.length < minPhotos && !error && (
         <Text style={styles.hintText}>
-          Minimum {minPhotos} photos required.
+          {photos.length} / {minPhotos} photos added
         </Text>
       )}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -231,10 +228,6 @@ const styles = StyleSheet.create({
   },
   required: {
     color: colors.error,
-  },
-  counter: {
-    fontSize: 12,
-    color: colors.textMuted,
   },
   strip: {
     flexDirection: 'row',
@@ -268,9 +261,9 @@ const styles = StyleSheet.create({
   },
   removeIcon: {
     color: 'white',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
-    lineHeight: 12,
+    lineHeight: 13,
   },
   addBtn: {
     width: THUMB_SIZE,

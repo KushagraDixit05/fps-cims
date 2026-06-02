@@ -55,11 +55,13 @@ const Step3_PhotosLocation = ({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.stepLabel}>STEP 3 OF 3</Text>
-        <Text style={styles.heading}>Photos & Location</Text>
-        <Text style={styles.subtext}>
-          Attach field photos and confirm the GPS location.
-        </Text>
+        {/* Section header with circled number */}
+        <View style={styles.sectionHeader}>
+          <View style={styles.numberCircle}>
+            <Text style={styles.numberText}>3</Text>
+          </View>
+          <Text style={styles.heading}>Photos, Location & Remark</Text>
+        </View>
 
         {/* Photo picker */}
         <PhotoPicker
@@ -80,16 +82,14 @@ const Step3_PhotosLocation = ({
         {/* Remark textarea */}
         <View style={styles.remarkWrapper}>
           <View style={styles.remarkHeader}>
-            <Text style={styles.remarkLabel}>Remark</Text>
-            <Text style={styles.remarkCounter}>
-              {remark.length}/500
-            </Text>
+            <Text style={styles.remarkLabel}>Remark (if any)</Text>
+            <Text style={styles.remarkCounter}>{remark.length}/500</Text>
           </View>
           <TextInput
             style={[styles.remarkInput, errors.remark ? styles.remarkErr : null]}
             value={remark}
             onChangeText={onSetRemark}
-            placeholder="Any observations or additional notes…"
+            placeholder="Enter remark (if any)"
             placeholderTextColor={colors.textMuted}
             multiline
             numberOfLines={4}
@@ -101,15 +101,16 @@ const Step3_PhotosLocation = ({
           ) : null}
         </View>
 
+        {/* Nav row */}
         <View style={styles.navRow}>
           <Button
-            title="← BACK"
+            title="BACK"
             onPress={onBack}
             variant="secondary"
             style={styles.navBtn}
           />
           <Button
-            title="REVIEW →"
+            title="SUBMIT"
             onPress={handleSubmit}
             style={styles.navBtn}
           />
@@ -122,9 +123,31 @@ const Step3_PhotosLocation = ({
 const styles = StyleSheet.create({
   scroll:         { flex: 1, backgroundColor: colors.background },
   content:        { padding: 20, paddingBottom: 40 },
-  stepLabel:      { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, marginBottom: 4 },
-  heading:        { fontSize: 22, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
-  subtext:        { fontSize: 13, color: colors.textSecondary, marginBottom: 20 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 20,
+  },
+  numberCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numberText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  heading: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    flex: 1,
+  },
   remarkWrapper:  { marginBottom: 20 },
   remarkHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   remarkLabel:    { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },

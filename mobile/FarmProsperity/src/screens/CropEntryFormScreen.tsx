@@ -101,9 +101,9 @@ const CropEntryFormScreen = () => {
 
   // ── GPS ──────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Import dynamically to handle cases where lib is not linked yet
+    // Uses @react-native-community/geolocation (Android LocationManager, no GMS/FusedLocation)
     try {
-      const Geolocation = require('react-native-geolocation-service').default;
+      const Geolocation = require('@react-native-community/geolocation');
       Geolocation.getCurrentPosition(
         (pos: any) =>
           setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -117,6 +117,7 @@ const CropEntryFormScreen = () => {
       setLocationError('Geolocation module not linked — skipping GPS.');
     }
   }, []);
+
 
   // ── Farmer search ────────────────────────────────────────────────────────────
   const searchFarmers = useCallback(async (query: string) => {

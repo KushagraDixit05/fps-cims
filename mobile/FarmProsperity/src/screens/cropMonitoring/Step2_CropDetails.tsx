@@ -36,6 +36,7 @@ const Step2_CropDetails = ({
   const [cropMaster, setCropMaster] = useState<CropMaster[]>([]);
   const [loading, setLoading] = useState(true);
   const [cropErrors, setCropErrors] = useState<Map<string, CropRecordErrors>>(new Map());
+  const [isValidating, setIsValidating] = useState(false);
 
   useEffect(() => {
     getCropMaster()
@@ -52,34 +53,36 @@ const Step2_CropDetails = ({
 
   const handleNext = () => {
     console.log('[Step2] handleNext called. Crop count:', crops.length);
-    console.log('[Step2] Crop data snapshot:', JSON.stringify(crops.map(c => ({
-      localKey: c.localKey,
-      crop_name: c.crop_name,
-      variety: c.variety,
-      date_of_sowing: c.date_of_sowing,
-      current_area_acre: c.current_area_acre,
-      this_year_area_acre: c.this_year_area_acre,
-      crop_stage: c.crop_stage,
-      crop_condition: c.crop_condition,
-      problems: c.problems,
-    })), null, 2));
-
+    
+    // Prevent double-tap
+    if (isValidating) {
+      console.log('[Step2] Already validating — ignoring duplicate tap.');
+      return;
+    }
+    
+    setIsValidating(true);
+    
     try {
       const errs = validateStep2(crops);
-      console.log('[Step2] Validation complete. Errors:', errs.size > 0 ? Object.fromEntries(errs) : 'none');
+      console.log('[Step2] Validation complete. Error count:', errs.size);
       setCropErrors(errs);
+      
       if (!hasCropErrors(errs)) {
         console.log('[Step2] Validation passed → advancing to Step 3.');
-        onNext();
+        // Small delay to ensure any open native pickers are fully closed
+        // before unmounting this component. Prevents JNI crashes on some Android builds.
+        setTimeout(() => {
+          onNext();
+          setIsValidating(false);
+        }, 150);
       } else {
-        console.warn('[Step2] Validation failed — showing error alert.');
-        Alert.alert(
-          'Fix Errors',
-          'Please fix all errors in the crop cards before continuing.',
-        );
+        console.log('[Step2] Validation failed. Showing error alert.');
+        setIsValidating(false);
+        Alert.alert('Fix Errors', 'Please fix all errors in the crop cards before continuing.');
       }
     } catch (e) {
       console.error('[Step2] Unexpected error during validation:', e);
+      setIsValidating(false);
       Alert.alert('Error', 'An unexpected error occurred. Please restart the form and try again.');
     }
   };
@@ -88,7 +91,7 @@ const Step2_CropDetails = ({
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loaderText}>Loading crop data…</Text>
+        <Text style={styles.loaderText}>Loading crop data...</Text>
       </View>
     );
   }
@@ -105,11 +108,13 @@ const Step2_CropDetails = ({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.stepLabel}>STEP 2 OF 3</Text>
-        <Text style={styles.heading}>Crop Details</Text>
-        <Text style={styles.subtext}>
-          Add details for each crop grown by this farmer.
-        </Text>
+        {/* Section header with circled number */}
+        <View style={styles.sectionHeader}>
+          <View style={styles.numberCircle}>
+            <Text style={styles.numberText}>2</Text>
+          </View>
+          <Text style={styles.heading}>Crop Details</Text>
+        </View>
 
         {crops.map((crop, i) => (
           <CropCard
@@ -123,23 +128,28 @@ const Step2_CropDetails = ({
           />
         ))}
 
-        {/* Add Crop button */}
+        {/* Add Another Crop button — dashed border, wireframe style */}
         <TouchableOpacity style={styles.addCropBtn} onPress={handleAddCrop}>
-          <Text style={styles.addCropIcon}>+</Text>
+          <View style={styles.addCropIconCircle}>
+            <Text style={styles.addCropIconText}>+</Text>
+          </View>
           <Text style={styles.addCropText}>ADD ANOTHER CROP</Text>
         </TouchableOpacity>
 
+        {/* Nav row */}
         <View style={styles.navRow}>
           <Button
-            title="← BACK"
+            title="BACK"
             onPress={onBack}
             variant="secondary"
             style={styles.navBtn}
+            disabled={isValidating}
           />
           <Button
-            title="NEXT →"
+            title={isValidating ? "VALIDATING..." : "NEXT"}
             onPress={handleNext}
             style={styles.navBtn}
+            disabled={isValidating}
           />
         </View>
       </ScrollView>
@@ -152,9 +162,30 @@ const styles = StyleSheet.create({
   loaderText:   { fontSize: 14, color: colors.textSecondary },
   scroll:       { flex: 1, backgroundColor: colors.background },
   content:      { padding: 16, paddingBottom: 40 },
-  stepLabel:    { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, marginBottom: 4, paddingHorizontal: 4 },
-  heading:      { fontSize: 22, fontWeight: '700', color: colors.textPrimary, marginBottom: 4, paddingHorizontal: 4 },
-  subtext:      { fontSize: 13, color: colors.textSecondary, marginBottom: 16, paddingHorizontal: 4 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  numberCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  numberText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  heading: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
   addCropBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -163,12 +194,26 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     borderStyle: 'dashed',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
     marginBottom: 20,
-    gap: 8,
+    gap: 10,
     backgroundColor: colors.primaryLight,
   },
-  addCropIcon:  { fontSize: 18, color: colors.primary, fontWeight: '700' },
+  addCropIconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addCropIconText: {
+    fontSize: 16,
+    color: colors.primary,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
   addCropText:  { fontSize: 13, color: colors.primary, fontWeight: '700', letterSpacing: 0.5 },
   navRow:       { flexDirection: 'row', gap: 10 },
   navBtn:       { flex: 1 },

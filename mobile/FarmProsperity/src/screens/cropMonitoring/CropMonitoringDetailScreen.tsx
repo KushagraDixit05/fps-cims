@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  Image, ActivityIndicator, TouchableOpacity,
+  Image, ActivityIndicator,
 } from 'react-native';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 import { colors } from '../../utils/colors';
@@ -46,7 +46,7 @@ const CropMonitoringDetailScreen = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading visit…</Text>
+        <Text style={styles.loadingText}>Loading visit...</Text>
       </View>
     );
   }
@@ -73,7 +73,10 @@ const CropMonitoringDetailScreen = () => {
         </Text>
         <Text style={styles.dateText}>{visitDate}</Text>
         {visit.location_display ? (
-          <Text style={styles.gpsText}>📍 {visit.location_display}</Text>
+          <View style={styles.gpsRow}>
+            <View style={styles.gpsDot} />
+            <Text style={styles.gpsText}>{visit.location_display}</Text>
+          </View>
         ) : null}
       </Card>
 
@@ -141,7 +144,9 @@ const styles = StyleSheet.create({
   farmerName:   { fontSize: 20, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 },
   locationText: { fontSize: 13, color: colors.textSecondary, marginBottom: 2 },
   dateText:     { fontSize: 12, color: colors.textMuted, marginTop: 4 },
-  gpsText:      { fontSize: 12, color: colors.info, marginTop: 4 },
+  gpsRow:       { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  gpsDot:       { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.info },
+  gpsText:      { fontSize: 12, color: colors.info },
 
   sectionTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 10 },
   row:          { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 0.5, borderBottomColor: colors.borderLight },

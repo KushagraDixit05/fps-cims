@@ -17,8 +17,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useAuth } from '../store/authStore';
 import { colors } from '../utils/colors';
@@ -26,6 +26,7 @@ import { colors } from '../utils/colors';
 const LoginScreen = () => {
   const { login } = useAuth();
 
+  const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -63,9 +64,10 @@ const LoginScreen = () => {
       >
         {/* ── Brand section ── */}
         <View style={styles.logoSection}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoEmoji}>🌱</Text>
-          </View>
+          <Image
+            source={require('../assets/fps_logo.jpeg')}
+            style={styles.logoImage}
+          />
           <Text style={styles.brandName}>Farm Prosperity Solution</Text>
           <Text style={styles.brandSub}>Crop Intelligence Platform</Text>
         </View>
@@ -97,17 +99,26 @@ const LoginScreen = () => {
 
           {/* Password */}
           <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="Enter your password"
-            placeholderTextColor={colors.textMuted}
-            returnKeyType="done"
-            onSubmitEditing={handleLogin}
-            editable={!loading}
-          />
+          <View style={styles.passwordWrapper}>
+            <TextInput
+              style={styles.passwordInput}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              placeholder="Enter your password"
+              placeholderTextColor={colors.textMuted}
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(prev => !prev)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Submit */}
           <TouchableOpacity
@@ -143,22 +154,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
   },
-  logoCircle: {
-    width: 76,
-    height: 76,
+  logoImage: {
+    width: 120,
+    height: 120,
     borderRadius: 20,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 14,
-    // Subtle shadow
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    resizeMode: 'contain',
   },
-  logoEmoji: { fontSize: 34 },
   brandName: {
     fontSize: 20,
     fontWeight: '700',
@@ -215,6 +217,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     backgroundColor: colors.background,
     color: colors.textPrimary,
+  },
+  passwordWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 13,
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  eyeButton: {
+    paddingHorizontal: 13,
+    paddingVertical: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eyeIcon: {
+    fontSize: 18,
   },
   button: {
     backgroundColor: colors.primary,

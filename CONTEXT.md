@@ -193,7 +193,7 @@ Resolved **at runtime** — no env files needed:
 |---|---|
 | Django admin | `http://localhost:8000/admin` |
 | Username | `admin` |
-| Password | `admin123` |
+| Password | `FarmPros@2026` |
 | Role | `field_executive` (also `is_superuser=True`) |
 | DB name | `fps_db` |
 | DB user | `fps_user` |

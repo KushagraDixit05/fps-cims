@@ -21,6 +21,7 @@ interface ReviewScreenProps {
   onEditCrops: () => void;
   onEditPhotos: () => void;
   onSubmit: () => void;
+  onBack: () => void;
   submitting: boolean;
 }
 
@@ -63,6 +64,7 @@ const ReviewScreen = ({
   onEditCrops,
   onEditPhotos,
   onSubmit,
+  onBack,
   submitting,
 }: ReviewScreenProps) => {
   const { farmerDetails, crops, photos, location, remark } = state;
@@ -81,12 +83,11 @@ const ReviewScreen = ({
       {/* ── Farmer Details ── */}
       <Card>
         <SectionHeader title="Farmer Details" onEdit={onEditFarmer} />
-        <Row label="Name" value={farmerDetails.farmer_name} />
-        <Row label="Mobile" value={farmerDetails.mobile_number} />
-        <Row label="Village" value={farmerDetails.village_name} />
-        <Row label="Block" value={farmerDetails.block_name} />
+        <Row label="Farmer Name" value={farmerDetails.farmer_name} />
+        <Row label="Mobile Number" value={farmerDetails.mobile_number} />
+        <Row label="Village / Block" value={`${farmerDetails.village_name} / ${farmerDetails.block_name}`} />
         <Row label="District" value={farmerDetails.district_name} />
-        <Row label="Total Land" value={`${farmerDetails.total_land_acre} Acre`} />
+        <Row label="Total Land (Acre)" value={farmerDetails.total_land_acre} />
       </Card>
 
       {/* ── Crops ── */}
@@ -102,10 +103,10 @@ const ReviewScreen = ({
           <Text style={[styles.tableCell, styles.tableHeadText]}>Area</Text>
           <Text style={[styles.tableCell, styles.tableHeadText]}>Condition</Text>
         </View>
-        {crops.map((crop) => (
+        {crops.map((crop, i) => (
           <View key={crop.localKey} style={styles.tableRow}>
             <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>
-              {crop.crop_name}
+              {i + 1}. {crop.crop_name}
             </Text>
             <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>
               {crop.variety}
@@ -168,14 +169,23 @@ const ReviewScreen = ({
         <Row label="Remark" value={remark || 'None'} />
       </Card>
 
-      {/* ── Submit ── */}
-      <Button
-        title={submitting ? 'Submitting…' : 'SUBMIT ENTRY ✓'}
-        onPress={onSubmit}
-        loading={submitting}
-        disabled={submitting}
-        style={{ marginTop: 8 }}
-      />
+      {/* ── Nav buttons ── */}
+      <View style={styles.navRow}>
+        <Button
+          title="BACK"
+          onPress={onBack}
+          variant="secondary"
+          style={styles.navBtn}
+        />
+        <Button
+          title={submitting ? 'Submitting...' : 'SUBMIT ENTRY'}
+          onPress={onSubmit}
+          loading={submitting}
+          disabled={submitting}
+          style={styles.navBtn}
+        />
+      </View>
+
       <View style={{ height: 24 }} />
     </ScrollView>
   );
@@ -184,14 +194,14 @@ const ReviewScreen = ({
 const styles = StyleSheet.create({
   scroll:         { flex: 1, backgroundColor: colors.background },
   content:        { padding: 16, paddingBottom: 40 },
-  heading:        { fontSize: 22, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
+  heading:        { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
   subtext:        { fontSize: 13, color: colors.textSecondary, marginBottom: 16 },
 
   sectionHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle:   { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   editLink:       { fontSize: 12, fontWeight: '700', color: colors.primary },
 
-  row:            { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 5, borderBottomWidth: 0.5, borderBottomColor: colors.borderLight },
+  row:            { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: colors.borderLight },
   rowLabel:       { fontSize: 13, color: colors.textSecondary, flex: 1 },
   rowValue:       { fontSize: 13, color: colors.textPrimary, fontWeight: '500', flex: 2, textAlign: 'right' },
 
@@ -208,6 +218,9 @@ const styles = StyleSheet.create({
   photoMore:      { width: 56, height: 56, borderRadius: 8, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' },
   photoMoreText:  { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   noneText:       { fontSize: 12, color: colors.textMuted, fontStyle: 'italic' },
+
+  navRow:         { flexDirection: 'row', gap: 10, marginTop: 8 },
+  navBtn:         { flex: 1 },
 });
 
 export default ReviewScreen;
