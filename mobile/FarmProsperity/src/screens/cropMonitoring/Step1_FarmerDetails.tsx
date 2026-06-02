@@ -18,6 +18,10 @@ import Button from '../../components/Button';
 import type { FarmerDetailsDraft, FarmerDetailsErrors, District, Block } from '../../types/cropMonitoring';
 import { getDistricts, getBlocks } from '../../api/cropMonitoring';
 import { validateStep1, hasErrors } from '../../utils/cropMonitoringValidation';
+import { Q } from '@nozbe/watermelondb';
+import database from '../../database';
+import { DistrictModel } from '../../database/models/DistrictModel';
+import { BlockModel }    from '../../database/models/BlockModel';
 
 // Simple inline dropdown (reuse the same pattern as CropCard.tsx)
 interface PickerProps {
@@ -111,8 +115,25 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
   useEffect(() => {
     const load = async () => {
       try {
-        const dists = await getDistricts();
-        setDistricts(dists);
+        // Phase 3: load from local DB first (works offline)
+        const localDistricts = await database.collections
+          .get<DistrictModel>('districts')
+          .query()
+          .fetch();
+
+        if (localDistricts.length > 0) {
+          setDistricts(
+            localDistricts.map((d) => ({
+              id:    d.serverId,
+              name:  d.name,
+              state: d.state ?? '',
+            })),
+          );
+        } else {
+          // Cache empty — try API
+          const dists = await getDistricts();
+          setDistricts(dists);
+        }
       } catch { /* silently fall back to empty */ }
       finally { setLoadingMaster(false); }
     };
@@ -121,7 +142,35 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
 
   useEffect(() => {
     if (selectedDistrictId === undefined) return;
-    getBlocks(selectedDistrictId).then(setBlocks).catch(() => setBlocks([]));
+
+    const loadBlocks = async () => {
+      try {
+        // Phase 3: load from local DB first (works offline)
+        const localBlocks = await database.collections
+          .get<BlockModel>('blocks')
+          .query(Q.where('district_server_id', selectedDistrictId))
+          .fetch();
+
+        if (localBlocks.length > 0) {
+          setBlocks(
+            localBlocks.map((b) => ({
+              id:            b.serverId,
+              name:          b.name,
+              district:      b.districtServerId,
+              district_name: b.districtName ?? '',
+            })),
+          );
+        } else {
+          // Cache empty — try API
+          const apiBlocks = await getBlocks(selectedDistrictId);
+          setBlocks(apiBlocks);
+        }
+      } catch {
+        setBlocks([]);
+      }
+    };
+
+    loadBlocks();
   }, [selectedDistrictId]);
 
   const handleDistrictSelect = (districtName: string) => {

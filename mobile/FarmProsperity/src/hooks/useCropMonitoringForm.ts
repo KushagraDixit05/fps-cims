@@ -11,7 +11,7 @@ import type {
   PhotoDraft,
   LocationDraft,
 } from '../types/cropMonitoring';
-import { submitFarmerVisit } from '../api/cropMonitoring';
+import { saveVisitLocally } from '../database/operations';
 
 // ─── Action types ─────────────────────────────────────────────────────────────
 
@@ -256,8 +256,8 @@ export const useCropMonitoringForm = (): UseCropMonitoringFormReturn => {
   );
 
   const submit = useCallback(async () => {
-    const formData = buildFormData(state);
-    return submitFarmerVisit(formData);
+    // Phase 3: save locally first. Background sync will push to API when online.
+    return saveVisitLocally(state);
   }, [state]);
 
   const reset = useCallback(() => dispatch({ type: 'RESET' }), []);

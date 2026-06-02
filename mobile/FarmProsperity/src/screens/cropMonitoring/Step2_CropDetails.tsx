@@ -19,6 +19,8 @@ import CropCard from '../../components/CropCard';
 import type { CropRecordDraft, CropRecordErrors, CropMaster } from '../../types/cropMonitoring';
 import { getCropMaster } from '../../api/cropMonitoring';
 import { validateStep2, hasCropErrors } from '../../utils/cropMonitoringValidation';
+import database from '../../database';
+import { CropMasterModel } from '../../database/models/CropMasterModel';
 
 interface Step2Props {
   crops: CropRecordDraft[];
@@ -39,10 +41,34 @@ const Step2_CropDetails = ({
   const [isValidating, setIsValidating] = useState(false);
 
   useEffect(() => {
-    getCropMaster()
-      .then(setCropMaster)
-      .catch(() => { /* crops array stays empty; user sees no options */ })
-      .finally(() => setLoading(false));
+    const loadCropMaster = async () => {
+      try {
+        // Phase 3: load from local DB first (works offline)
+        const localCrops = await database.collections
+          .get<CropMasterModel>('crop_master')
+          .query()
+          .fetch();
+
+        if (localCrops.length > 0) {
+          setCropMaster(
+            localCrops.map((c) => ({
+              id:        c.serverId,
+              crop_name: c.cropName,
+              varieties: JSON.parse(c.varietiesJson || '[]'),
+            })),
+          );
+        } else {
+          // Cache empty — try API
+          const apiCrops = await getCropMaster();
+          setCropMaster(apiCrops);
+        }
+      } catch {
+        // crops array stays empty; user sees no options in dropdowns
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadCropMaster();
   }, []);
 
   const handleAddCrop = () => {

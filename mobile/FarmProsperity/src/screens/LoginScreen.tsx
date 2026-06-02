@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../store/authStore';
 import { colors } from '../utils/colors';
+import { seedReferenceData } from '../sync/seedReferenceData';
 
 const LoginScreen = () => {
   const { login } = useAuth();
@@ -41,6 +42,8 @@ const LoginScreen = () => {
     setLoading(true);
     try {
       await login(username.trim(), password);
+      // Seed reference data in background — non-blocking, does not affect navigation
+      seedReferenceData().catch(() => {});
       // Navigation is automatic — AppNavigator detects user state change
     } catch (err: any) {
       const msg =

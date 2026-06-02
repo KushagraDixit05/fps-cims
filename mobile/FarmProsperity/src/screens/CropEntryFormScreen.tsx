@@ -27,7 +27,8 @@ import {
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
 
-import { createCropEntry, getFarmers } from '../api/crops';
+import { getFarmers } from '../api/crops';
+import { saveCropEntryLocally } from '../database/operations';
 import { colors } from '../utils/colors';
 import { todayISO, cropStageLabel } from '../utils/helpers';
 import FormInput from '../components/FormInput';
@@ -146,8 +147,9 @@ const CropEntryFormScreen = () => {
     }
     setSubmitting(true);
     try {
-      const payload: CropEntryPayload = {
+      const payload: CropEntryPayload & { farmer_name_display?: string } = {
         farmer: Number(values.farmer_id),
+        farmer_name_display: values.farmer_name_display,
         visit_date: values.visit_date,
         crop_name: values.crop_name,
         area_this_year: parseFloat(values.area_this_year),
@@ -166,16 +168,13 @@ const CropEntryFormScreen = () => {
         longitude: location?.lng,
       };
 
-      await createCropEntry(payload);
-      Alert.alert('✓ Submitted', 'Crop entry saved successfully!', [
+      // Phase 3: save locally first — syncs to server in background when online.
+      await saveCropEntryLocally(payload);
+      Alert.alert('✓ Saved', 'Entry saved locally. Will sync to server when online.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (err: any) {
-      const msg =
-        err?.response?.data
-          ? JSON.stringify(err.response.data)
-          : 'Could not submit. Please check your connection.';
-      Alert.alert('Submission Failed', msg);
+      Alert.alert('Save Failed', err?.message ?? 'Could not save. Please try again.');
     } finally {
       setSubmitting(false);
     }
