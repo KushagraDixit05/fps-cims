@@ -1,4 +1,9 @@
-# Testing Instructions - Crop Monitoring Crash Fix
+# Farm Prosperity Solution (FPS) — Testing Instructions
+
+> **Current scope:** Offline-First Sync (Phase 3)  
+> **Status:** Phase 3 implemented and verified on physical device.
+
+---
 
 ## Quick Start
 
@@ -13,7 +18,7 @@ python manage.py runserver 0.0.0.0:8000
 ### 2. Start Metro Bundler
 ```bash
 cd "/media/kushagra/crucial/FPS internship/fps/mobile/FarmProsperity"
-npm start -- --port 8081 --reset-cache
+npm start
 ```
 
 ### 3. Deploy to Device
@@ -25,223 +30,238 @@ adb reverse tcp:8081 tcp:8081
 npm run android:phone
 ```
 
-### 4. Monitor Logs
+### 4. Monitor Sync Logs
 ```bash
-# In a new terminal
-npx react-native log-android | grep -E "\[CropCard\]|\[Step2\]"
+npx react-native log-android | grep -E "\[FPS Sync\]"
 ```
 
 ---
 
-## Critical Test Case (The Main Bug)
+## Test Suite — Offline Sync
 
-**This is the exact scenario that was crashing before:**
+### Test 1: Offline Record Creation (Critical)
 
-1. Open app → Login (admin/admin123)
-2. Tap "New Visit" from home screen
-3. Fill Step 1 (Farmer Details) → Tap NEXT
-4. In Step 2 (Crop Details):
-   - Select Crop: any crop
-   - Select Variety: any variety
-   - **Tap "Date of Sowing" to open the date picker**
-   - Select any past date
-   - Fill Current Area: 5
-   - Fill This Year Area: 5
-   - Select Crop Stage: any stage
-   - Select Crop Condition: any condition
-   - Select at least one Problem
-5. **While the date picker is still visible OR immediately after closing it:**
-   - **Tap NEXT button**
-6. **Expected Result:** 
-   - Button shows "VALIDATING..." briefly
-   - App navigates to Step 3 smoothly
-   - **NO CRASH** ✅
-7. **Previous Result:**
-   - App crashed with "FarmProsperityApp keeps stopping"
+**Preconditions:** Device has internet. App is open and logged in.
+
+1. Turn off Wi-Fi and mobile data on the device.
+2. Open the app — it should still load normally.
+3. Tap **"New Visit"** → complete the 3-step Crop Monitoring wizard → tap **Submit**.
+4. You should see the **Success screen** immediately (no network request is made).
+5. Navigate to **Profile** tab.
+
+**Expected Profile screen:**
+```
+Sync Status
+Visits: 1   Crop Entries: 0   Mandi: 0
+1 record pending sync
+● Offline
+[Sync Now]
+```
+
+**Bug if:** App errors, freezes, or shows "0 records pending".
 
 ---
 
-## Additional Test Cases
+### Test 2: Sync Now While Offline
 
-### Test 1: Date Picker Dismiss
-1. In Step 2, tap "Date of Sowing"
-2. Press device BACK button (dismiss without selecting)
-3. **Expected:** Date field remains empty
-4. **Bug if:** Date field shows today's date
+**Preconditions:** At least 1 pending record exists (from Test 1). Device is **offline**.
 
-### Test 2: Double-Tap Prevention
-1. Fill all Step 2 fields correctly
-2. Rapidly tap NEXT button twice
-3. **Expected:** 
-   - Button shows "VALIDATING..."
-   - Only one validation runs
-   - Logs show "Already validating — ignoring duplicate tap"
-4. **Bug if:** Multiple alerts appear or app freezes
+1. On Profile screen, tap **Sync Now**.
 
-### Test 3: Validation Errors
-1. In Step 2, leave some fields empty
-2. Tap NEXT
-3. **Expected:**
-   - Validation errors appear inline
-   - Alert shows "Fix Errors"
-   - App does NOT crash
-4. **Bug if:** App crashes or freezes
+**Expected alert:**
+```
+No Internet Connection
+1 record pending. They will sync automatically when you go online.
+```
 
-### Test 4: Multiple Crops
-1. Fill first crop card completely
-2. Tap "ADD ANOTHER CROP"
-3. Fill second crop card
-4. Open date picker on second crop
-5. Tap NEXT while picker is open
-6. **Expected:** Navigates to Step 3 without crash
-7. **Bug if:** App crashes
+**Bug if:** Alert shows "No pending records to sync." (this was the Phase 3 bug — now fixed).
 
-### Test 5: Full Workflow
-1. Complete Step 1 → NEXT
-2. Complete Step 2 → NEXT
-3. In Step 3:
-   - Take 2 photos
-   - Capture GPS location
-   - Add optional remark
-   - Tap SUBMIT
-4. Review screen → Tap SUBMIT
-5. **Expected:** Success screen appears
-6. **Bug if:** Crash at any step
+---
+
+### Test 3: Auto-Sync on Reconnect
+
+**Preconditions:** Pending records exist. Device is offline.
+
+1. Re-enable Wi-Fi or mobile data.
+2. Within ~5 seconds, watch the log output.
+
+**Expected logs:**
+```
+[FPS Sync] ✅ Synced 1 record(s) to backend.
+```
+
+3. Navigate to **Profile** tab.
+
+**Expected Profile screen:**
+```
+Visits: 0   Crop Entries: 0   Mandi: 0
+● Online
+Last synced: Today, 3:45 PM
+```
+
+**Expected Django Admin:**
+- Open `http://localhost:8000/admin` → **Farmer Visits**
+- The new visit record should appear.
+
+**Bug if:** Pending count does not drop, or record is absent from Django Admin.
+
+---
+
+### Test 4: Manual Sync While Online
+
+**Preconditions:** At least 1 pending record exists. Device is **online**.
+
+1. On Profile screen, tap **Sync Now**.
+
+**Expected alert (if records synced):**
+```
+Sync Complete
+1 record(s) synced successfully.
+```
+
+**Expected alert (if nothing was pending):**
+```
+Up to date
+No pending records to sync.
+```
+
+**Bug if:** Alert says "No pending records" when the pending count badge shows > 0.
+
+---
+
+### Test 5: Multiple Records — All Three Types
+
+1. Go offline.
+2. Submit **1 Crop Monitoring visit**.
+3. Submit **1 Legacy Crop Entry** (from the Crop List screen).
+4. Submit **1 Mandi Arrival** (from the Mandi screen).
+5. Navigate to Profile.
+
+**Expected:**
+```
+Visits: 1   Crop Entries: 1   Mandi: 1
+3 records pending sync
+```
+
+6. Go online.
+7. Auto-sync should trigger.
+
+**Expected after sync:**
+```
+Visits: 0   Crop Entries: 0   Mandi: 0
+Last synced: Today, HH:MM
+```
+
+**Django Admin should show** all 3 new records.
+
+---
+
+### Test 6: Reference Data Available Offline
+
+1. Go offline before opening the app (or kill app, disable internet, reopen).
+2. Tap **"New Visit"** → **Step 1**.
+
+**Expected:** District and Block dropdowns still populate from locally cached data.
+
+**Bug if:** Dropdowns are empty when offline.
+
+---
+
+### Test 7: Full End-to-End Workflow
+
+1. Go offline.
+2. Create **2 Crop Monitoring visits** (different farmer names).
+3. Profile shows `2 records pending sync`.
+4. Tap **Sync Now** → "No Internet Connection — 2 records pending."
+5. Go online.
+6. Auto-sync fires.
+7. Profile shows `0 records pending`.
+8. Django Admin → Farmer Visits shows the 2 new records.
+
+✅ This is the complete verified workflow.
 
 ---
 
 ## Expected Log Output
 
-### Successful Navigation (Happy Path)
+### Auto-sync fires successfully
 ```
-[Step2] handleNext called. Crop count: 1
-[Step2] Validation complete. Error count: 0
-[Step2] Validation passed → advancing to Step 3.
+[FPS Sync] ✅ Synced 2 record(s) to backend.
 ```
 
-### Validation Failure
+### Auto-sync — nothing to sync
 ```
-[Step2] handleNext called. Crop count: 1
-[Step2] Validation complete. Error count: 3
-[Step2] Validation failed. Showing error alert.
+(no output — sync runs silently when result.synced === 0)
 ```
 
-### Date Picker Dismissed
+### Auto-sync — failure
 ```
-[CropCard] DatePicker dismissed — no state update.
-```
-
-### Date Selected
-```
-[CropCard] Date selected: 2024-05-15
-```
-
-### Double-Tap Prevented
-```
-[Step2] handleNext called. Crop count: 1
-[Step2] Already validating — ignoring duplicate tap.
+[FPS Sync] ⚠️ 1 record(s) failed to sync.
 ```
 
 ---
 
-## If Crash Still Occurs
+## Debugging
 
-### 1. Collect Full Crash Log
+### Watch all sync activity
 ```bash
-adb logcat -d > crash_log.txt
+npx react-native log-android | grep -E "\[FPS Sync\]"
 ```
 
-Look for lines containing:
-- `FATAL EXCEPTION`
-- `AndroidRuntime`
-- `ReactNative`
-- `DateTimePicker`
-- `JNI`
-
-### 2. Check Specific Errors
+### Check WatermelonDB queries (verbose)
 ```bash
-adb logcat -d | grep -E "FATAL|AndroidRuntime" | tail -50
+npx react-native log-android | grep -E "watermelon|sqlite"
 ```
 
-### 3. Check React Native Errors
+### View full device logs
 ```bash
-npx react-native log-android | grep -E "ERROR|FATAL"
+adb logcat -d > device_log.txt
 ```
-
-### 4. Report Back
-Include:
-- Exact steps to reproduce
-- Full crash log from step 1
-- Device model and Android version
-- Whether it crashes every time or intermittently
 
 ---
 
-## Success Criteria
+## Django Admin Verification
 
-✅ **Fix is successful if:**
-1. Can complete Step 2 → Step 3 transition without crash
-2. Can do this with date picker open
-3. Can do this multiple times in a row
-4. Can complete full workflow end-to-end
-5. All validation still works correctly
-
-❌ **Fix needs more work if:**
-1. Crash still occurs (even intermittently)
-2. Date picker behaves incorrectly
-3. Validation stops working
-4. New bugs appear
+| URL | What to check |
+|---|---|
+| `http://localhost:8000/admin/crops/farmervisit/` | New visit records appear after sync |
+| `http://localhost:8000/admin/crops/cropentry/` | Legacy crop entries appear after sync |
+| `http://localhost:8000/admin/mandi/mandiarrival/` | Mandi arrivals appear after sync |
 
 ---
 
-## Rollback Plan
+## Rollback
 
-If the fix causes new issues:
+If a sync change causes issues, revert the three relevant files:
 
 ```bash
 cd "/media/kushagra/crucial/FPS internship/fps/mobile/FarmProsperity"
-
-# See what changed
-git diff src/screens/cropMonitoring/Step2_CropDetails.tsx
-git diff src/components/CropCard.tsx
-
-# Revert changes
-git checkout src/screens/cropMonitoring/Step2_CropDetails.tsx
-git checkout src/components/CropCard.tsx
-
-# Restart Metro
-npm start -- --port 8081 --reset-cache
+git diff src/sync/syncService.ts
+git diff src/sync/syncTypes.ts
+git diff src/screens/ProfileScreen.tsx
+git checkout src/sync/syncService.ts src/sync/syncTypes.ts src/screens/ProfileScreen.tsx
+npm start -- --reset-cache
 ```
 
 ---
 
-## Technical Details
+## Known Bugs — Fixed
 
-### What Was Fixed
+| Bug | Fix Applied |
+|---|---|
+| **Sync Now shows "No pending records" while offline** | `syncPendingRecords()` now sets `result.offline = true`; `handleManualSync()` checks this flag before interpreting counts |
+| **Step 2 → Step 3 crash on Android (DateTimePicker)** | `isValidDate()` guard, dismiss event guard, 150ms navigation delay, double-tap prevention |
 
-1. **Timing Issue:** Added 150ms delay before navigation to let native picker close
-2. **Race Conditions:** Added `isValidating` flag to prevent double-tap
-3. **Picker Cleanup:** Force-close picker when validation errors appear
-4. **Platform Isolation:** Split DateTimePicker rendering by platform
-5. **Ref Tracking:** Use ref to track picker state at unmount time
+---
 
-### Why These Fixes Work
+## Success Criteria — Phase 3
 
-- **150ms delay:** Gives Android time to clean up native DateTimePicker module
-- **isValidating flag:** Prevents concurrent validation attempts
-- **Force-close on errors:** Ensures picker is never open during re-validation
-- **Platform split:** Helps React Native reconciler manage native modules better
-- **Ref tracking:** Captures actual state at unmount (not stale closure)
+✅ Fix is complete if ALL of the following hold:
 
-### Files Changed
-
-- `src/screens/cropMonitoring/Step2_CropDetails.tsx`
-- `src/components/CropCard.tsx`
-
-### No Changes To
-
-- Validation logic (still works the same)
-- Form state management (still uses useReducer)
-- API calls (unchanged)
-- Other steps (Step 1, Step 3, Review)
-- Native code (no rebuild needed)
+1. Creating a visit while offline saves it locally (instant, no error)
+2. Profile screen shows the correct pending count immediately after saving
+3. Tapping **Sync Now** while offline shows the pending count, not "No records"
+4. Going online triggers auto-sync within ~5 seconds
+5. After auto-sync, pending count drops to 0
+6. Synced records appear in Django Admin
+7. All three record types (Farmer Visits, Crop Entries, Mandi Arrivals) sync correctly

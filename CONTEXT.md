@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-**Farm Prosperity Solution (FPS / fps-cims)** is an internship project — a field data collection platform for agricultural field executives. Field executives visit farmers, log crop health observations (Crop Monitoring module) and mandi (market) arrival data, and submit it to a central Django backend. The app must eventually work **offline-first** (Phase 3) because rural field coverage is poor.
+**Farm Prosperity Solution (FPS / fps-cims)** is an internship project — a field data collection platform for agricultural field executives. Field executives visit farmers, log crop health observations (Crop Monitoring module) and mandi (market) arrival data, and submit it to a central Django backend. The app works **offline-first** (Phase 3 complete) — records are saved locally when there is no internet, and synced automatically when connectivity is restored.
 
 - **GitHub:** `https://github.com/KushagraDixit05/fps-cims`
 - **Branch:** `main`
@@ -24,11 +24,13 @@
 | Auth | JWT (access: 12h, refresh: 30d, rotation enabled) |
 | Mobile navigation | React Navigation 7 (stack + bottom tabs) |
 | Mobile forms | react-hook-form + custom useReducer hook (wizard) |
-| Mobile storage | AsyncStorage (tokens) |
-| Mobile HTTP | Axios with interceptors |
+| Mobile local storage | WatermelonDB + react-native-quick-sqlite (offline-first DB) |
+| Mobile token storage | AsyncStorage (JWT tokens) |
+| Mobile HTTP | Axios with interceptors + JWT refresh |
 | Mobile camera/gallery | react-native-image-picker |
 | Mobile GPS | @react-native-community/geolocation |
 | Mobile date picker | @react-native-community/datetimepicker |
+| Connectivity detection | @react-native-community/netinfo |
 
 ---
 
@@ -55,33 +57,53 @@ fps/
 ├── mobile/FarmProsperity/          ← React Native app
 │   ├── src/
 │   │   ├── api/
-│   │   │   ├── client.ts           ← Axios instance, base URL logic, token interceptor
+│   │   │   ├── client.ts           ← Axios instance, base URL logic, JWT interceptor
 │   │   │   ├── auth.ts             ← login(), logout(), getMe()
 │   │   │   ├── crops.ts            ← Legacy: getCropEntries, createCropEntry, getDashboardSummary
 │   │   │   ├── mandi.ts            ← getMandis, getMandiArrivals, getYoYComparison
-│   │   │   └── cropMonitoring.ts   ← NEW: getCropMaster, getDistricts, getBlocks,
+│   │   │   └── cropMonitoring.ts   ← getCropMaster, getDistricts, getBlocks,
 │   │   │                               submitFarmerVisit, getVisitSummary, getFarmerVisits,
 │   │   │                               getFarmerVisitDetail
+│   │   ├── database/               ← WatermelonDB local database (Phase 3)
+│   │   │   ├── index.ts            ← Database instance (SQLiteAdapter + all model classes)
+│   │   │   ├── schema.ts           ← Full WatermelonDB schema (farmer_visits, crop_entries,
+│   │   │   │                           mandi_arrivals + reference tables)
+│   │   │   ├── operations.ts       ← saveVisitLocally(), saveCropEntryLocally(),
+│   │   │   │                           saveMandiArrivalLocally() — called by all form screens
+│   │   │   └── models/
+│   │   │       ├── FarmerVisitModel.ts   ← WatermelonDB model for farmer_visits table
+│   │   │       ├── CropEntryModel.ts     ← WatermelonDB model for crop_entries table
+│   │   │       ├── MandiArrivalModel.ts  ← WatermelonDB model for mandi_arrivals table
+│   │   │       ├── DistrictModel.ts      ← Reference data model
+│   │   │       ├── BlockModel.ts         ← Reference data model
+│   │   │       ├── CropMasterModel.ts    ← Reference data model (with varieties JSON)
+│   │   │       └── MandiModel.ts         ← Reference data model
+│   │   ├── sync/                   ← Sync engine (Phase 3)
+│   │   │   ├── syncService.ts      ← syncPendingRecords(), getPendingCount(), getLastSyncTime()
+│   │   │   ├── syncTypes.ts        ← SyncResult, SyncStats interfaces
+│   │   │   ├── useAutoSync.ts      ← NetInfo hook — auto-triggers sync on reconnect
+│   │   │   └── seedReferenceData.ts← Seeds districts, blocks, crop master, mandis on login
 │   │   ├── hooks/
-│   │   │   └── useCropMonitoringForm.ts  ← useReducer wizard state manager + FormData builder
+│   │   │   └── useCropMonitoringForm.ts  ← useReducer wizard state manager + calls saveVisitLocally()
 │   │   ├── store/
 │   │   │   └── authStore.tsx       ← React Context + useReducer auth state
 │   │   ├── navigation/
-│   │   │   ├── types.ts            ← RootStackParamList (updated with new routes)
-│   │   │   └── AppNavigator.tsx    ← Auth-gated navigator (updated with new screens)
+│   │   │   ├── types.ts            ← RootStackParamList (all routes)
+│   │   │   └── AppNavigator.tsx    ← Auth-gated navigator
 │   │   ├── screens/
 │   │   │   ├── LoginScreen.tsx
-│   │   │   ├── HomeScreen.tsx      ← UPDATED: visit summary + recent visits list
+│   │   │   ├── HomeScreen.tsx      ← Dashboard: visit summary strip + recent visits list
 │   │   │   ├── CropListScreen.tsx  ← Legacy crop list
-│   │   │   ├── CropEntryFormScreen.tsx ← Legacy 4-step crop wizard (preserved)
+│   │   │   ├── CropEntryFormScreen.tsx ← Legacy 4-step crop wizard (saves locally, Phase 3)
 │   │   │   ├── CropDetailScreen.tsx
 │   │   │   ├── MandiListScreen.tsx
-│   │   │   ├── MandiEntryFormScreen.tsx
+│   │   │   ├── MandiEntryFormScreen.tsx ← Saves locally, Phase 3
 │   │   │   ├── MandiDetailScreen.tsx
 │   │   │   ├── ReportsScreen.tsx
-│   │   │   ├── ProfileScreen.tsx
-│   │   │   └── cropMonitoring/     ← NEW: Crop Monitoring Wizard
-│   │   │       ├── CropMonitoringFormScreen.tsx ← Wizard shell (owns hook + submit logic)
+│   │   │   ├── ProfileScreen.tsx   ← Sync dashboard: pending counts, last sync time,
+│   │   │   │                           connectivity indicator, Sync Now button
+│   │   │   └── cropMonitoring/     ← Crop Monitoring Wizard
+│   │   │       ├── CropMonitoringFormScreen.tsx ← Wizard shell (saves locally offline-first)
 │   │   │       ├── Step1_FarmerDetails.tsx      ← Farmer info + district/block dropdowns
 │   │   │       ├── Step2_CropDetails.tsx        ← Dynamic multi-crop card list
 │   │   │       ├── Step3_PhotosLocation.tsx     ← Photos + GPS + remark
@@ -92,24 +114,24 @@ fps/
 │   │   │   ├── Button.tsx          ← primary / secondary / danger variants
 │   │   │   ├── Card.tsx
 │   │   │   ├── ConditionBadge.tsx  ← Legacy Good/Average/Poor pill
-│   │   │   ├── ConditionSelector.tsx ← NEW: 3-pill interactive selector
-│   │   │   ├── CropCard.tsx        ← NEW: collapsible per-crop form card
+│   │   │   ├── ConditionSelector.tsx ← 3-pill interactive selector
+│   │   │   ├── CropCard.tsx        ← Collapsible per-crop form card
 │   │   │   ├── EmptyState.tsx
 │   │   │   ├── FormInput.tsx
 │   │   │   ├── LoadingScreen.tsx
-│   │   │   ├── LocationCapture.tsx ← NEW: auto-GPS with retry
-│   │   │   ├── PhotoPicker.tsx     ← NEW: multi-photo picker (camera + gallery)
-│   │   │   └── ProblemCheckboxGroup.tsx ← NEW: 6-problem checkbox grid
+│   │   │   ├── LocationCapture.tsx ← Auto-GPS with retry
+│   │   │   ├── PhotoPicker.tsx     ← Multi-photo picker (camera + gallery)
+│   │   │   └── ProblemCheckboxGroup.tsx ← 6-problem checkbox grid
 │   │   ├── types/
 │   │   │   ├── index.ts            ← Legacy domain interfaces
-│   │   │   └── cropMonitoring.ts   ← NEW: all crop monitoring interfaces
+│   │   │   └── cropMonitoring.ts   ← All crop monitoring interfaces
 │   │   └── utils/
 │   │       ├── colors.ts           ← Brand color tokens
 │   │       ├── helpers.ts          ← formatDate, formatCurrency, conditionColor
-│   │       └── cropMonitoringValidation.ts ← NEW: pure per-step validation functions
+│   │       └── cropMonitoringValidation.ts ← Pure per-step validation functions
 │   ├── android/
 │   │   ├── gradle.properties       ← reactNativeArchitectures=arm64-v8a,x86_64
-│   │   └── app/src/main/AndroidManifest.xml ← CAMERA, LOCATION, STORAGE permissions added
+│   │   └── app/src/main/AndroidManifest.xml ← CAMERA, LOCATION, STORAGE permissions
 │   ├── scripts/
 │   │   └── run-android.sh          ← Smart launcher (auto-detects emulator vs device)
 │   └── package.json
@@ -118,11 +140,12 @@ fps/
 │   ├── PHASE-0-Foundation-Setup.md
 │   ├── PHASE-1-Backend-Models-API.md
 │   ├── PHASE-2-Mobile-App-Core.md
-│   ├── PHASE-3-Offline-Sync.md     ← NEXT: offline-first with WatermelonDB
+│   ├── PHASE-3-Offline-Sync.md     ← ✅ Implemented — WatermelonDB offline-first
 │   └── CropMonitoringPlan.md       ← Detailed spec for the crop monitoring module
 │
 ├── CONTEXT.md                      ← This file
 ├── SETUP.md                        ← Step-by-step setup guide
+├── TESTING_INSTRUCTIONS.md         ← Offline sync testing guide
 └── progress-report.md              ← Current module completion status
 ```
 
@@ -136,7 +159,7 @@ fps/
 | Phase 1 — Backend API | ✅ Done | Django models, JWT auth, all REST endpoints |
 | Phase 2 — Mobile Core | ✅ Done | All screens built, connected to live API, running on physical device |
 | **Crop Monitoring Module** | ✅ **Done** | Full 3-step wizard (backend + mobile) — Phases A through F complete |
-| Phase 3 — Offline Sync | ⏳ Next | WatermelonDB local DB + background sync to Django |
+| **Phase 3 — Offline Sync** | ✅ **Done** | WatermelonDB local DB + background auto-sync + manual sync dashboard |
 | Phase 4 — Photos & Polish | ⏳ Future | Geo maps, polished reports, edit submitted entries |
 
 ---
@@ -219,7 +242,7 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 | GET/POST | `/api/crops/` | List / create legacy crop entries |
 | GET | `/api/crops/summary/` | Aggregated stats (legacy) |
 
-### Crop Monitoring Module (new)
+### Crop Monitoring Module
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/api/districts/` | District list |
@@ -252,13 +275,13 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 - `role`: `field_executive` | `admin` | `viewer`
 - `region`: string (e.g. "Nanded", "Guntur")
 
-### `crops.FarmerVisit` (new — UUID PK)
+### `crops.FarmerVisit` (UUID PK)
 - `executive` → FK to User
 - `farmer_name`, `mobile_number`, `village_name`, `block_name`, `district_name`
 - `total_land_acre`, `latitude`, `longitude`, `location` (PostGIS Point)
 - `remark`, `submitted_at`, `local_id`, `is_synced` (Phase 3 fields)
 
-### `crops.CropRecord` (new — UUID PK)
+### `crops.CropRecord` (UUID PK)
 - `visit` → FK to FarmerVisit (related_name='crops')
 - `crop_name`, `variety`, `date_of_sowing`
 - `current_area_acre`, `last_year_area_acre`, `this_year_area_acre`
@@ -267,12 +290,46 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 - `problems`: JSONField (list: pest/disease/weather/price/labour/other)
 - `other_problem_detail`, `sort_order`
 
-### `crops.VisitPhoto` (new — UUID PK)
+### `crops.VisitPhoto` (UUID PK)
 - `visit` → FK to FarmerVisit
-- `image`: ImageField → `crop_photos/%Y/%m/`
+- `image`: ImageField → `visit_photos/%Y/%m/`
 
 ### `crops.CropEntry` (legacy — preserved, UUID PK)
 - Single-crop per entry; kept intact for backward compatibility
+
+---
+
+## Phase 3 — Offline-First Architecture
+
+### How It Works
+
+```
+User fills form
+      ↓
+saveVisitLocally() / saveCropEntryLocally() / saveMandiArrivalLocally()
+      ↓
+WatermelonDB (SQLite) — is_synced = false   ← INSTANT, works offline
+      ↓
+useAutoSync() detects internet via NetInfo
+      ↓
+syncPendingRecords() — POST to Django, mark is_synced = true
+```
+
+### Key Files
+| File | Role |
+|---|---|
+| `src/database/schema.ts` | Defines all WatermelonDB tables (farmer_visits, crop_entries, mandi_arrivals + reference tables) |
+| `src/database/operations.ts` | Write helpers called by all form screens |
+| `src/sync/syncService.ts` | `syncPendingRecords()`, `getPendingCount()`, `getLastSyncTime()` |
+| `src/sync/syncTypes.ts` | `SyncResult` (includes `offline: boolean` flag), `SyncStats` |
+| `src/sync/useAutoSync.ts` | NetInfo listener hook — throttled to 1 sync/minute |
+| `src/sync/seedReferenceData.ts` | Seeds districts/blocks/crop master/mandis locally on login |
+| `src/screens/ProfileScreen.tsx` | Sync dashboard: per-table pending counts, last sync time, Sync Now button |
+
+### SyncResult.offline Flag
+`syncPendingRecords()` sets `result.offline = true` when no internet is detected (early return).
+`handleManualSync()` in ProfileScreen checks this **before** interpreting `synced === 0` — so it shows
+"No Internet Connection — N records pending" instead of the misleading "No pending records to sync".
 
 ---
 
@@ -285,6 +342,8 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 | `crops` as JSON string in FormData | RN multipart cannot send nested arrays natively |
 | Legacy `CropEntry` preserved | Zero risk to existing data; both modules coexist |
 | Runtime base URL detection | Same APK works on emulator and device |
+| WatermelonDB for offline storage | Fast SQLite with reactive queries; works well on New Architecture |
+| `offline: boolean` in SyncResult | Lets callers distinguish "offline, didn't try" from "online, nothing pending" |
 
 ---
 
@@ -294,19 +353,9 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 2. **API unreachable on physical device** — Fixed in `client.ts` with runtime emulator detection
 3. **`InteractionManager` deprecation warning** — Harmless, from React Navigation internals
 4. **Docker daemon not running** — Must start Docker Desktop before `docker compose up -d`
-5. **New native packages need rebuild** — `@react-native-community/geolocation` and `@react-native-community/datetimepicker` require a full `npm run android` (not just Metro restart)
-
----
-
-## What's Next — Phase 3 (Offline-First)
-
-Spec in `docs/PHASE-3-Offline-Sync.md`:
-1. Install WatermelonDB + react-native-quick-sqlite
-2. Define local schema (mirrors Django models, adds `is_synced` + `server_id`)
-3. Refactor form screens to save to local DB first
-4. Build sync service + auto-sync hook (NetInfo listener)
-5. Seed reference data (villages, mandis, crop master) locally on login
-6. Sync status UI on ProfileScreen
+5. **New native packages need rebuild** — `@react-native-community/geolocation`, `@react-native-community/datetimepicker`, and WatermelonDB all require a full `npm run android` (not just Metro restart)
+6. **DateTimePicker crash on Android (OxygenOS)** — Fixed: guard `event.type === 'dismissed'`, always return a valid `Date` to native bridge, 150ms delay before Step 2→3 navigation
+7. **Manual Sync Now shows "No pending records" while offline** — Fixed: `syncPendingRecords()` sets `result.offline = true` on early return; `handleManualSync()` checks this flag first
 
 ---
 

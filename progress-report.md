@@ -1,7 +1,7 @@
 # Farm Prosperity Solution (FPS) — Progress Report
 
-> **Last updated:** 31 May 2026  
-> **Overall status:** Phases 0–2 complete · Crop Monitoring Module complete · Phase 3 pending
+> **Last updated:** 2 June 2026  
+> **Overall status:** Phases 0–3 complete · Phase 4 (Polish) pending
 
 ---
 
@@ -12,7 +12,7 @@
 | Django Backend | ✅ Fully implemented and migrated |
 | React Native Mobile | ✅ All screens built, type-safe, running on physical device |
 | Crop Monitoring Module | ✅ End-to-end complete (backend + wizard + dashboard) |
-| Offline Sync (Phase 3) | ⏳ Not started — spec in `docs/PHASE-3-Offline-Sync.md` |
+| Offline Sync (Phase 3) | ✅ Complete — WatermelonDB + auto-sync + sync dashboard |
 
 ---
 
@@ -51,14 +51,14 @@
 | `GET /api/mandis/` | ✅ |
 | `GET /api/villages/` | ✅ |
 | `GET /api/farmers/` | ✅ |
-| `GET /api/districts/` | ✅ (new) |
-| `GET /api/blocks/` | ✅ (new) |
-| `GET /api/crop-master/` | ✅ (new) |
-| `POST /api/farmer-visits/` | ✅ (new) |
-| `GET /api/farmer-visits/` | ✅ (new) |
-| `GET /api/farmer-visits/<uuid>/` | ✅ (new) |
-| `GET /api/farmer-visits/summary/` | ✅ (new) |
-| `PATCH /api/farmer-visits/<uuid>/` | ✅ (new) |
+| `GET /api/districts/` | ✅ |
+| `GET /api/blocks/` | ✅ |
+| `GET /api/crop-master/` | ✅ |
+| `POST /api/farmer-visits/` | ✅ |
+| `GET /api/farmer-visits/` | ✅ |
+| `GET /api/farmer-visits/<uuid>/` | ✅ |
+| `GET /api/farmer-visits/summary/` | ✅ |
+| `PATCH /api/farmer-visits/<uuid>/` | ✅ |
 
 **Django Admin:** All models registered with inline views (CropRecord, VisitPhoto inside FarmerVisit; CropVariety inside CropMaster; Blocks inside District)
 
@@ -78,7 +78,7 @@
 | Screen | Description | Status |
 |---|---|---|
 | `LoginScreen` | JWT login form | ✅ |
-| `HomeScreen` | Dashboard (updated for Phase F) | ✅ |
+| `HomeScreen` | Dashboard (visit summary + recent visits list) | ✅ |
 | `CropListScreen` | Legacy crop entry list | ✅ |
 | `CropEntryFormScreen` | Legacy 4-step crop wizard | ✅ |
 | `CropDetailScreen` | Legacy crop detail view | ✅ |
@@ -86,7 +86,7 @@
 | `MandiEntryFormScreen` | Mandi data entry | ✅ |
 | `MandiDetailScreen` | Mandi arrival detail | ✅ |
 | `ReportsScreen` | Analytics & reports | ✅ |
-| `ProfileScreen` | User profile | ✅ |
+| `ProfileScreen` | User profile + sync dashboard | ✅ |
 
 **Tested and running on:** OnePlus 11R (physical device, ARM64, Android 14)
 
@@ -136,7 +136,7 @@ This was the largest feature addition. Implemented end-to-end across backend and
 
 | Item | Status |
 |---|---|
-| `src/hooks/useCropMonitoringForm.ts` — `useReducer` wizard state, all actions, FormData builder | ✅ |
+| `src/hooks/useCropMonitoringForm.ts` — `useReducer` wizard state, all actions, calls `saveVisitLocally()` | ✅ |
 | `src/utils/cropMonitoringValidation.ts` — pure per-step validation functions | ✅ |
 
 #### Phase E — Wizard Screens
@@ -162,71 +162,117 @@ This was the largest feature addition. Implemented end-to-end across backend and
 | Tap visit card → navigates to `CropMonitoringDetail` | ✅ |
 | Empty state shown when no visits recorded yet | ✅ |
 
-**TypeScript check:** `npx tsc --noEmit` → **0 errors** ✅  
-**Django check:** `python manage.py check` → **0 issues** ✅
-
 ---
 
-## Current File Tree (New Files Only)
+### ✅ Phase 3 — Offline-First Sync
 
-```
-backend/crops/
-├── models.py               ← +7 new models (legacy preserved)
-├── serializers.py          ← +10 new serializers
-├── views.py                ← +4 ViewSets + summary action
-├── urls.py                 ← +4 new routes
-├── admin.py                ← All new models registered
-└── management/commands/
-    └── seed_crop_master.py ← Seeds master data
+Phase 3 introduces WatermelonDB as a local SQLite store. All three form types (FarmerVisit, Legacy CropEntry, MandiArrival) now save locally first and sync to Django in the background when internet is available.
 
-mobile/FarmProsperity/src/
-├── api/cropMonitoring.ts
-├── types/cropMonitoring.ts
-├── hooks/useCropMonitoringForm.ts
-├── utils/cropMonitoringValidation.ts
-├── components/
-│   ├── ConditionSelector.tsx
-│   ├── ProblemCheckboxGroup.tsx
-│   ├── CropCard.tsx
-│   ├── PhotoPicker.tsx
-│   └── LocationCapture.tsx
-└── screens/cropMonitoring/
-    ├── CropMonitoringFormScreen.tsx
-    ├── Step1_FarmerDetails.tsx
-    ├── Step2_CropDetails.tsx
-    ├── Step3_PhotosLocation.tsx
-    ├── ReviewScreen.tsx
-    ├── SuccessScreen.tsx
-    └── CropMonitoringDetailScreen.tsx
-```
+#### Infrastructure
 
----
+| Item | File | Status |
+|---|---|---|
+| WatermelonDB + react-native-quick-sqlite installed | `package.json` | ✅ |
+| Babel decorator plugin configured | `babel.config.js` | ✅ |
+| Full local schema defined | `src/database/schema.ts` | ✅ |
+| Database instance (SQLiteAdapter) | `src/database/index.ts` | ✅ |
 
-## ⏳ What's Next — Phase 3 (Offline-First)
+#### WatermelonDB Models
 
-Spec is already written in `docs/PHASE-3-Offline-Sync.md`. Summary of work:
+| Model | Table | Status |
+|---|---|---|
+| `FarmerVisitModel` | `farmer_visits` | ✅ |
+| `CropEntryModel` | `crop_entries` | ✅ |
+| `MandiArrivalModel` | `mandi_arrivals` | ✅ |
+| `DistrictModel` | `districts` | ✅ |
+| `BlockModel` | `blocks` | ✅ |
+| `CropMasterModel` | `crop_master` | ✅ |
+| `MandiModel` | `mandis` | ✅ |
 
-| Task | Description |
+#### Write Operations
+
+| Function | Description | Status |
+|---|---|---|
+| `saveVisitLocally()` | Saves Crop Monitoring wizard submission to `farmer_visits` with `is_synced=false` | ✅ |
+| `saveCropEntryLocally()` | Saves legacy crop entry to `crop_entries` with `is_synced=false` | ✅ |
+| `saveMandiArrivalLocally()` | Saves mandi arrival to `mandi_arrivals` with `is_synced=false` | ✅ |
+
+#### Sync Engine (`src/sync/syncService.ts`)
+
+| Function | Description | Status |
+|---|---|---|
+| `syncPendingRecords()` | Finds all `is_synced=false` records across all 3 tables, POSTs to Django, marks synced; sets `result.offline=true` if no connectivity | ✅ |
+| `getPendingCount()` | Returns per-table and total pending counts (`SyncStats`) | ✅ |
+| `getLastSyncTime()` | Returns Unix timestamp of last successful sync from AsyncStorage | ✅ |
+| `SyncResult.offline` flag | Distinguishes "offline, didn't try" from "online, nothing pending" — fixes misleading Sync Now message | ✅ |
+
+#### Auto-Sync (`src/sync/useAutoSync.ts`)
+
+| Item | Status |
 |---|---|
-| Install WatermelonDB | `@nozbe/watermelondb` + `react-native-quick-sqlite` |
-| Define local schema | Mirror Django models, add `is_synced` + `server_id` |
-| WatermelonDB model classes | `CropEntry`, `FarmerVisit`, `MandiArrival` |
-| Refactor form screens | Save to local DB first (instant), not API directly |
-| Build sync service | `syncService.ts` — finds `is_synced=false`, POSTs to Django |
-| Auto-sync hook | `useAutoSync.ts` — NetInfo listener, sync on reconnect |
-| Seed reference data | Crop master, villages, mandis cached locally on login |
-| Sync status UI | Pending count badge + "Sync now" button on ProfileScreen |
+| NetInfo listener fires `syncPendingRecords()` when device goes online | ✅ |
+| Throttled to once per 60 seconds | ✅ |
+| Guard against concurrent sync runs | ✅ |
+| Mounted once at App root | ✅ |
 
-### Phase 3 Checklist
-- [ ] WatermelonDB installed and schema defined
-- [ ] Crop Monitoring wizard saves to local DB (works offline)
-- [ ] Legacy crop entry form saves to local DB (works offline)
-- [ ] Mandi entry form saves to local DB (works offline)
-- [ ] Pending count shows on profile screen
-- [ ] Background auto-sync triggers when internet detected
-- [ ] Manual "Sync now" button works
-- [ ] Reference data (crop master, districts, blocks) cached locally
-- [ ] Test: fill wizard offline → reconnect → verify in Django admin
+#### Reference Data Seeding (`src/sync/seedReferenceData.ts`)
+
+| Item | Status |
+|---|---|
+| Seeds districts from `/api/districts/` on login | ✅ |
+| Seeds blocks from `/api/blocks/` on login | ✅ |
+| Seeds crop master + varieties from `/api/crop-master/` on login | ✅ |
+| Seeds mandis from `/api/mandis/` on login | ✅ |
+| Skips seeding silently if already populated or offline | ✅ |
+
+#### Sync Dashboard (`src/screens/ProfileScreen.tsx`)
+
+| Item | Status |
+|---|---|
+| Per-table pending counts (Visits / Crop Entries / Mandi) | ✅ |
+| Total pending banner when count > 0 | ✅ |
+| Last synced timestamp | ✅ |
+| Live connectivity dot (Online / Offline) | ✅ |
+| Sync Now button with loading spinner | ✅ |
+| Expandable error list for failed records | ✅ |
+| Offline-aware Sync Now: shows pending count instead of "No records" when offline | ✅ |
+
+#### Phase 3 Checklist
+
+- [x] WatermelonDB installed and schema defined
+- [x] Crop Monitoring wizard saves to local DB (works offline)
+- [x] Legacy crop entry form saves to local DB (works offline)
+- [x] Mandi entry form saves to local DB (works offline)
+- [x] Pending count shows on profile screen (broken down by table)
+- [x] Background auto-sync triggers when internet detected
+- [x] Manual "Sync Now" button works correctly — shows right message online and offline
+- [x] Reference data (crop master, districts, blocks, mandis) cached locally
+- [x] Test: fill wizard offline → reconnect → records appear in Django Admin ✅ **Verified**
+
+---
+
+## Current File Tree (Phase 3 New Files)
+
+```
+mobile/FarmProsperity/src/
+├── database/
+│   ├── index.ts                ← Database instance
+│   ├── schema.ts               ← Full WatermelonDB schema
+│   ├── operations.ts           ← saveVisitLocally, saveCropEntryLocally, saveMandiArrivalLocally
+│   └── models/
+│       ├── FarmerVisitModel.ts
+│       ├── CropEntryModel.ts
+│       ├── MandiArrivalModel.ts
+│       ├── DistrictModel.ts
+│       ├── BlockModel.ts
+│       ├── CropMasterModel.ts
+│       └── MandiModel.ts
+└── sync/
+    ├── syncService.ts          ← syncPendingRecords, getPendingCount, getLastSyncTime
+    ├── syncTypes.ts            ← SyncResult (with offline flag), SyncStats
+    ├── useAutoSync.ts          ← NetInfo auto-sync hook
+    └── seedReferenceData.ts    ← Reference data cache on login
+```
 
 ---
 

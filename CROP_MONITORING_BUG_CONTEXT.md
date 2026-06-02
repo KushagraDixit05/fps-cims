@@ -1,7 +1,7 @@
 # Crop Monitoring Module — Step 2 → Step 3 Crash: Full Context
 
-> Paste this into a new chat to resume debugging/testing with full context.  
-> **Last updated: 31 May 2026**
+> **Status: ✅ RESOLVED & VERIFIED** — Crash is fixed and confirmed on physical device.  
+> **Last updated: 2 June 2026**
 
 ---
 
@@ -12,7 +12,7 @@
 | Root cause identified | ✅ Done (3 bugs found) |
 | Code fixes applied | ✅ Done (see below) |
 | TypeScript check | ✅ 0 errors (`npx tsc --noEmit`) |
-| Verified on device | ⏳ **PENDING — needs manual testing** |
+| Verified on device | ✅ **VERIFIED — crash does not occur** |
 
 ---
 
@@ -280,7 +280,7 @@ and share that in the new chat.
 | Engine | Hermes (enabled) |
 | Architecture | New Architecture enabled (`newArchEnabled=true`) |
 | Date picker | `@react-native-community/datetimepicker` |
-| GPS | `react-native-geolocation-service` (switched from `@react-native-community/geolocation` — they conflicted) |
+| GPS | `@react-native-community/geolocation` |
 | Form state | `useReducer` in `useCropMonitoringForm.ts` |
 | Validation | Pure functions in `cropMonitoringValidation.ts` |
 | Device | OnePlus 11R, Android 14, OxygenOS (known to have non-standard DatePicker dismiss behaviour) |
