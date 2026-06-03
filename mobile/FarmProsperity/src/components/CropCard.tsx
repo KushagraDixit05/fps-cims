@@ -198,20 +198,11 @@ const CropCard = ({
   // This prevents the native picker from being open during component unmount.
   React.useEffect(() => {
     if (Object.keys(errors).length > 0 && showDatePicker) {
-      console.log('[CropCard] Validation errors detected — force-closing date picker.');
       setShowDatePicker(false);
     }
   }, [errors, showDatePicker]);
 
   // Cleanup: ensure date picker is closed when component unmounts
-  React.useEffect(() => {
-    return () => {
-      if (isPickerOpenRef.current) {
-        console.log('[CropCard] Component unmounting with open date picker — cleaning up.');
-      }
-    };
-  }, []);
-
   // Build crop options from master data
   const cropOptions = cropMaster.map((c) => ({ value: c.crop_name, label: c.crop_name }));
 
@@ -264,28 +255,24 @@ const CropCard = ({
     // fires onChange with type='dismissed' but a truthy 'date' object.
     // Honour the dismissal — don't update state.
     if (event.type === 'dismissed') {
-      console.log('[CropCard] DatePicker dismissed — no state update.');
       return;
     }
 
     if (!date) {
-      console.log('[CropCard] DatePicker returned undefined date — ignoring.');
       return;
     }
 
-    // Bug fix #3: Guard against Invalid Date before calling toISOString().
+    // Guard against Invalid Date before calling toISOString().
     // toISOString() throws RangeError on Invalid Date — uncaught it crashes Hermes.
     if (!isValidDate(date)) {
-      console.warn('[CropCard] DatePicker returned Invalid Date — ignoring.');
       return;
     }
 
     try {
       const iso = date.toISOString().split('T')[0]; // "YYYY-MM-DD"
-      console.log('[CropCard] Date selected:', iso);
       onChange({ date_of_sowing: iso });
-    } catch (err) {
-      console.error('[CropCard] Failed to format selected date:', err);
+    } catch {
+      // date formatting failed — ignore silently
     }
   };
 

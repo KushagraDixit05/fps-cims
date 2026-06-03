@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-**Farm Prosperity Solutions (FPS / fps-cims)** is an internship project — a field data collection platform for agricultural field executives. Field executives visit farmers, log crop health observations (Crop Monitoring module) and mandi (market) arrival data, and submit it to a central Django backend. The app works **offline-first** (Phase 3 complete) — records are saved locally when there is no internet, and synced automatically when connectivity is restored.
+**Farm Prosperity Solutions (FPS / fps-cims)** is an internship project — a field data collection platform for agricultural field executives. Field executives visit farmers, log crop health observations (Crop Monitoring module) and mandi (market) arrival data, and submit it to a central Django backend. The app works **offline-first** (Phase 3 complete) — records are saved locally when there is no internet, and synced automatically when connectivity is restored. The UI was redesigned in Phase 4 (screens-v2, now active) with a premium design system, a new auth flow, and a drawer-based navigation.
 
 - **GitHub:** `https://github.com/KushagraDixit05/fps-cims`
 - **Branch:** `main`
@@ -22,7 +22,7 @@
 | Database | PostgreSQL 15 with PostGIS (geo extension) via Docker |
 | Mobile | React Native 0.85.3, TypeScript, New Architecture enabled |
 | Auth | JWT (access: 12h, refresh: 30d, rotation enabled) |
-| Mobile navigation | React Navigation 7 (stack + bottom tabs) |
+| Mobile navigation | React Navigation 7 (stack + bottom tabs + drawer) |
 | Mobile forms | react-hook-form + custom useReducer hook (wizard) |
 | Mobile local storage | WatermelonDB + react-native-quick-sqlite (offline-first DB) |
 | Mobile token storage | AsyncStorage (JWT tokens) |
@@ -31,6 +31,7 @@
 | Mobile GPS | @react-native-community/geolocation |
 | Mobile date picker | @react-native-community/datetimepicker |
 | Connectivity detection | @react-native-community/netinfo |
+| Gesture handling | react-native-gesture-handler (required for drawer nav) |
 
 ---
 
@@ -39,7 +40,11 @@
 ```
 fps/
 ├── backend/                        ← Django project
-│   ├── accounts/                   ← Custom user model, JWT auth
+│   ├── accounts/                   ← Custom user model, JWT auth, registration
+│   │   ├── models.py               ← Custom User (role + region + phone_number)
+│   │   ├── serializers.py          ← UserProfileSerializer, RegisterSerializer
+│   │   ├── views.py                ← MeView (GET), RegisterView (POST auto-login)
+│   │   └── urls.py                 ← /me/ and /register/
 │   ├── crops/                      ← Legacy CropEntry + new FarmerVisit module
 │   │   ├── models.py               ← ALL models (legacy + new)
 │   │   ├── serializers.py          ← Multipart + nested serializers
@@ -55,10 +60,11 @@ fps/
 │   └── venv/                       ← Python virtualenv
 │
 ├── mobile/FarmProsperity/          ← React Native app
+│   ├── App.tsx                     ← Root: AuthProvider + GestureHandlerRootView + AppNavigatorV2
 │   ├── src/
 │   │   ├── api/
 │   │   │   ├── client.ts           ← Axios instance, base URL logic, JWT interceptor
-│   │   │   ├── auth.ts             ← login(), logout(), getMe()
+│   │   │   ├── auth.ts             ← login(), logout(), getMe(), register()
 │   │   │   ├── crops.ts            ← Legacy: getCropEntries, createCropEntry, getDashboardSummary
 │   │   │   ├── mandi.ts            ← getMandis, getMandiArrivals, getYoYComparison
 │   │   │   └── cropMonitoring.ts   ← getCropMaster, getDistricts, getBlocks,
@@ -71,13 +77,13 @@ fps/
 │   │   │   ├── operations.ts       ← saveVisitLocally(), saveCropEntryLocally(),
 │   │   │   │                           saveMandiArrivalLocally() — called by all form screens
 │   │   │   └── models/
-│   │   │       ├── FarmerVisitModel.ts   ← WatermelonDB model for farmer_visits table
-│   │   │       ├── CropEntryModel.ts     ← WatermelonDB model for crop_entries table
-│   │   │       ├── MandiArrivalModel.ts  ← WatermelonDB model for mandi_arrivals table
-│   │   │       ├── DistrictModel.ts      ← Reference data model
-│   │   │       ├── BlockModel.ts         ← Reference data model
-│   │   │       ├── CropMasterModel.ts    ← Reference data model (with varieties JSON)
-│   │   │       └── MandiModel.ts         ← Reference data model
+│   │   │       ├── FarmerVisitModel.ts
+│   │   │       ├── CropEntryModel.ts
+│   │   │       ├── MandiArrivalModel.ts
+│   │   │       ├── DistrictModel.ts
+│   │   │       ├── BlockModel.ts
+│   │   │       ├── CropMasterModel.ts
+│   │   │       └── MandiModel.ts
 │   │   ├── sync/                   ← Sync engine (Phase 3)
 │   │   │   ├── syncService.ts      ← syncPendingRecords(), getPendingCount(), getLastSyncTime()
 │   │   │   ├── syncTypes.ts        ← SyncResult, SyncStats interfaces
@@ -88,47 +94,49 @@ fps/
 │   │   ├── store/
 │   │   │   └── authStore.tsx       ← React Context + useReducer auth state
 │   │   ├── navigation/
-│   │   │   ├── types.ts            ← RootStackParamList (all routes)
-│   │   │   └── AppNavigator.tsx    ← Auth-gated navigator
-│   │   ├── screens/
+│   │   │   ├── types.ts            ← RootStackParamList (all routes including v2)
+│   │   │   ├── AppNavigator.tsx    ← v1 navigator (preserved, not active)
+│   │   │   └── AppNavigatorV2.tsx  ← v2 navigator (ACTIVE) — Splash→Welcome→Login/Signup,
+│   │   │                               DrawerNavigator wrapping tabs + detail screens
+│   │   ├── screens/                ← v1 screens (all still used for most tabs)
 │   │   │   ├── LoginScreen.tsx
-│   │   │   ├── HomeScreen.tsx      ← Dashboard: visit summary strip + recent visits list
-│   │   │   ├── CropListScreen.tsx  ← Legacy crop list
-│   │   │   ├── CropEntryFormScreen.tsx ← Legacy 4-step crop wizard (saves locally, Phase 3)
+│   │   │   ├── HomeScreen.tsx
+│   │   │   ├── CropListScreen.tsx
+│   │   │   ├── CropEntryFormScreen.tsx
 │   │   │   ├── CropDetailScreen.tsx
 │   │   │   ├── MandiListScreen.tsx
-│   │   │   ├── MandiEntryFormScreen.tsx ← Saves locally, Phase 3
+│   │   │   ├── MandiEntryFormScreen.tsx
 │   │   │   ├── MandiDetailScreen.tsx
 │   │   │   ├── ReportsScreen.tsx
-│   │   │   ├── ProfileScreen.tsx   ← Sync dashboard: pending counts, last sync time,
-│   │   │   │                           connectivity indicator, Sync Now button
-│   │   │   └── cropMonitoring/     ← Crop Monitoring Wizard
-│   │   │       ├── CropMonitoringFormScreen.tsx ← Wizard shell (saves locally offline-first)
-│   │   │       ├── Step1_FarmerDetails.tsx      ← Farmer info + district/block dropdowns
-│   │   │       ├── Step2_CropDetails.tsx        ← Dynamic multi-crop card list
-│   │   │       ├── Step3_PhotosLocation.tsx     ← Photos + GPS + remark
-│   │   │       ├── ReviewScreen.tsx             ← Read-only confirm before submit
-│   │   │       ├── SuccessScreen.tsx            ← Animated confirmation
-│   │   │       └── CropMonitoringDetailScreen.tsx ← Visit detail (from dashboard)
-│   │   ├── components/
-│   │   │   ├── Button.tsx          ← primary / secondary / danger variants
-│   │   │   ├── Card.tsx
-│   │   │   ├── ConditionBadge.tsx  ← Legacy Good/Average/Poor pill
-│   │   │   ├── ConditionSelector.tsx ← 3-pill interactive selector
-│   │   │   ├── CropCard.tsx        ← Collapsible per-crop form card
-│   │   │   ├── EmptyState.tsx
-│   │   │   ├── FormInput.tsx
-│   │   │   ├── LoadingScreen.tsx
-│   │   │   ├── LocationCapture.tsx ← Auto-GPS with retry
-│   │   │   ├── PhotoPicker.tsx     ← Multi-photo picker (camera + gallery)
-│   │   │   └── ProblemCheckboxGroup.tsx ← 6-problem checkbox grid
+│   │   │   ├── ProfileScreen.tsx
+│   │   │   └── cropMonitoring/     ← Crop Monitoring Wizard (v1, still in use)
+│   │   │       ├── CropMonitoringFormScreen.tsx
+│   │   │       ├── Step1_FarmerDetails.tsx
+│   │   │       ├── Step2_CropDetails.tsx
+│   │   │       ├── Step3_PhotosLocation.tsx
+│   │   │       ├── ReviewScreen.tsx
+│   │   │       ├── SuccessScreen.tsx
+│   │   │       └── CropMonitoringDetailScreen.tsx
+│   │   ├── screens-v2/             ← v2 redesigned screens (ACTIVE via AppNavigatorV2)
+│   │   │   ├── SplashScreen.tsx    ← Animated brand splash (2–3s auto-advance)
+│   │   │   ├── WelcomeScreen.tsx   ← Value prop + "Sign In" / "Get Started" CTAs
+│   │   │   ├── LoginScreen.tsx     ← Redesigned login form
+│   │   │   ├── SignupScreen.tsx    ← Registration form (calls POST /api/auth/register/)
+│   │   │   ├── HomeScreen.tsx      ← Redesigned dashboard (drawer-aware)
+│   │   │   ├── SidebarContent.tsx  ← Drawer sidebar (user info + nav items)
+│   │   │   └── cropMonitoring/     ← (placeholder — not yet redesigned)
+│   │   ├── components/             ← v1 shared UI components
+│   │   │   ├── Button.tsx, Card.tsx, ConditionBadge.tsx, ConditionSelector.tsx
+│   │   │   ├── CropCard.tsx, EmptyState.tsx, FormInput.tsx, LoadingScreen.tsx
+│   │   │   ├── LocationCapture.tsx, PhotoPicker.tsx, ProblemCheckboxGroup.tsx
+│   │   ├── components-v2/          ← v2 design-system components (in progress)
 │   │   ├── types/
 │   │   │   ├── index.ts            ← Legacy domain interfaces
 │   │   │   └── cropMonitoring.ts   ← All crop monitoring interfaces
 │   │   └── utils/
-│   │       ├── colors.ts           ← Brand color tokens
+│   │       ├── colors.ts           ← Brand color tokens (updated for design system)
 │   │       ├── helpers.ts          ← formatDate, formatCurrency, conditionColor
-│   │       └── cropMonitoringValidation.ts ← Pure per-step validation functions
+│   │       └── cropMonitoringValidation.ts
 │   ├── android/
 │   │   ├── gradle.properties       ← reactNativeArchitectures=arm64-v8a,x86_64
 │   │   └── app/src/main/AndroidManifest.xml ← CAMERA, LOCATION, STORAGE permissions
@@ -144,6 +152,9 @@ fps/
 │   └── CropMonitoringPlan.md       ← Detailed spec for the crop monitoring module
 │
 ├── CONTEXT.md                      ← This file
+├── DESIGN.md                       ← Design system spec (colors, typography, components)
+├── PRODUCT.md                      ← Product vision, users, brand personality
+├── requirements.md                 ← Full UI/UX redesign requirements (18 requirements)
 ├── SETUP.md                        ← Step-by-step setup guide
 ├── TESTING_INSTRUCTIONS.md         ← Offline sync testing guide
 └── progress-report.md              ← Current module completion status
@@ -160,7 +171,7 @@ fps/
 | Phase 2 — Mobile Core | ✅ Done | All screens built, connected to live API, running on physical device |
 | **Crop Monitoring Module** | ✅ **Done** | Full 3-step wizard (backend + mobile) — Phases A through F complete |
 | **Phase 3 — Offline Sync** | ✅ **Done** | WatermelonDB local DB + background auto-sync + manual sync dashboard |
-| Phase 4 — Photos & Polish | ⏳ Future | Geo maps, polished reports, edit submitted entries |
+| **Phase 4 — UI Redesign** | 🔄 **In Progress** | Design system, new auth flow (Splash/Welcome/Login/Signup), redesigned Home, drawer nav — active via AppNavigatorV2 |
 
 ---
 
@@ -201,6 +212,15 @@ Resolved **at runtime** — no env files needed:
 - **Physical device (USB):** `http://localhost:8000/api` via `adb reverse`
 - **Wi-Fi override:** Set `MANUAL_IP = '192.168.x.x'` on line ~23 of `client.ts`
 
+### Active Navigator
+`App.tsx` currently imports `AppNavigatorV2` (v2 redesign active). To rollback to v1:
+```ts
+// In App.tsx, change:
+import AppNavigator from './src/navigation/AppNavigatorV2';
+// to:
+import AppNavigator from './src/navigation/AppNavigator';
+```
+
 ### npm Scripts
 | Command | Effect |
 |---|---|
@@ -235,6 +255,7 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 | POST | `/api/auth/login/` | Get JWT tokens |
 | POST | `/api/auth/refresh/` | Refresh access token |
 | GET | `/api/auth/me/` | Current user profile |
+| POST | `/api/auth/register/` | Create account + auto-login (returns access + refresh) |
 
 ### Legacy Crop Entries (preserved)
 | Method | Endpoint | Description |
@@ -274,6 +295,7 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 ### `accounts.User`
 - `role`: `field_executive` | `admin` | `viewer`
 - `region`: string (e.g. "Nanded", "Guntur")
+- `phone_number`: optional string
 
 ### `crops.FarmerVisit` (UUID PK)
 - `executive` → FK to User
@@ -318,18 +340,41 @@ syncPendingRecords() — POST to Django, mark is_synced = true
 ### Key Files
 | File | Role |
 |---|---|
-| `src/database/schema.ts` | Defines all WatermelonDB tables (farmer_visits, crop_entries, mandi_arrivals + reference tables) |
+| `src/database/schema.ts` | Defines all WatermelonDB tables |
 | `src/database/operations.ts` | Write helpers called by all form screens |
 | `src/sync/syncService.ts` | `syncPendingRecords()`, `getPendingCount()`, `getLastSyncTime()` |
 | `src/sync/syncTypes.ts` | `SyncResult` (includes `offline: boolean` flag), `SyncStats` |
 | `src/sync/useAutoSync.ts` | NetInfo listener hook — throttled to 1 sync/minute |
 | `src/sync/seedReferenceData.ts` | Seeds districts/blocks/crop master/mandis locally on login |
-| `src/screens/ProfileScreen.tsx` | Sync dashboard: per-table pending counts, last sync time, Sync Now button |
+| `src/screens/ProfileScreen.tsx` | Sync dashboard: pending counts, last sync time, Sync Now button |
 
-### SyncResult.offline Flag
-`syncPendingRecords()` sets `result.offline = true` when no internet is detected (early return).
-`handleManualSync()` in ProfileScreen checks this **before** interpreting `synced === 0` — so it shows
-"No Internet Connection — N records pending" instead of the misleading "No pending records to sync".
+---
+
+## Phase 4 — UI Redesign (In Progress)
+
+### What's Done
+| Item | Status |
+|---|---|
+| Design system defined (`DESIGN.md`) | ✅ |
+| `AppNavigatorV2` — Splash→Welcome→Login/Signup→Drawer→Tabs | ✅ Active |
+| `SplashScreen` — animated brand splash | ✅ |
+| `WelcomeScreen` — value prop + Sign In / Get Started CTAs | ✅ |
+| `LoginScreen` (v2) — redesigned login form | ✅ |
+| `SignupScreen` — registration form with auto-login | ✅ |
+| `HomeScreen` (v2) — redesigned dashboard | ✅ |
+| `SidebarContent` — drawer with user info + nav | ✅ |
+| `POST /api/auth/register/` backend endpoint | ✅ |
+
+### What Remains (Phase 4 backlog)
+- Redesign Crop Monitoring wizard screens (screens-v2/cropMonitoring/)
+- Redesign Mandi, Reports, Profile screens
+- Build components-v2 component library
+- Map view of visit GPS locations
+- Per-photo geo-tagging
+- Edit submitted visit after success
+- Farmer search / autocomplete
+- Export PDF / Excel reports
+- Push notifications for sync completion
 
 ---
 
@@ -344,6 +389,9 @@ syncPendingRecords() — POST to Django, mark is_synced = true
 | Runtime base URL detection | Same APK works on emulator and device |
 | WatermelonDB for offline storage | Fast SQLite with reactive queries; works well on New Architecture |
 | `offline: boolean` in SyncResult | Lets callers distinguish "offline, didn't try" from "online, nothing pending" |
+| `AppNavigatorV2` + DrawerNavigator | Enables sidebar without breaking existing tab/stack routes |
+| `GestureHandlerRootView` at root | Required by `@react-navigation/drawer` |
+| `POST /api/auth/register/` with auto-login | Returns tokens immediately — no separate login step needed after signup |
 
 ---
 
@@ -353,9 +401,10 @@ syncPendingRecords() — POST to Django, mark is_synced = true
 2. **API unreachable on physical device** — Fixed in `client.ts` with runtime emulator detection
 3. **`InteractionManager` deprecation warning** — Harmless, from React Navigation internals
 4. **Docker daemon not running** — Must start Docker Desktop before `docker compose up -d`
-5. **New native packages need rebuild** — `@react-native-community/geolocation`, `@react-native-community/datetimepicker`, and WatermelonDB all require a full `npm run android` (not just Metro restart)
+5. **New native packages need rebuild** — `@react-native-community/geolocation`, `@react-native-community/datetimepicker`, WatermelonDB, and `react-native-gesture-handler` all require a full `npm run android` (not just Metro restart)
 6. **DateTimePicker crash on Android (OxygenOS)** — Fixed: guard `event.type === 'dismissed'`, always return a valid `Date` to native bridge, 150ms delay before Step 2→3 navigation
 7. **Manual Sync Now shows "No pending records" while offline** — Fixed: `syncPendingRecords()` sets `result.offline = true` on early return; `handleManualSync()` checks this flag first
+8. **Drawer requires GestureHandlerRootView** — `App.tsx` wraps everything in `<GestureHandlerRootView style={{ flex: 1 }}>` to enable swipe-open gesture
 
 ---
 

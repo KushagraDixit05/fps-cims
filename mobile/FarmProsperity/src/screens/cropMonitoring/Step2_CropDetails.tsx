@@ -78,23 +78,17 @@ const Step2_CropDetails = ({
   };
 
   const handleNext = () => {
-    console.log('[Step2] handleNext called. Crop count:', crops.length);
-    
-    // Prevent double-tap
     if (isValidating) {
-      console.log('[Step2] Already validating — ignoring duplicate tap.');
       return;
     }
-    
+
     setIsValidating(true);
-    
+
     try {
       const errs = validateStep2(crops);
-      console.log('[Step2] Validation complete. Error count:', errs.size);
       setCropErrors(errs);
-      
+
       if (!hasCropErrors(errs)) {
-        console.log('[Step2] Validation passed → advancing to Step 3.');
         // Small delay to ensure any open native pickers are fully closed
         // before unmounting this component. Prevents JNI crashes on some Android builds.
         setTimeout(() => {
@@ -102,12 +96,10 @@ const Step2_CropDetails = ({
           setIsValidating(false);
         }, 150);
       } else {
-        console.log('[Step2] Validation failed. Showing error alert.');
         setIsValidating(false);
         Alert.alert('Fix Errors', 'Please fix all errors in the crop cards before continuing.');
       }
     } catch (e) {
-      console.error('[Step2] Unexpected error during validation:', e);
       setIsValidating(false);
       Alert.alert('Error', 'An unexpected error occurred. Please restart the form and try again.');
     }

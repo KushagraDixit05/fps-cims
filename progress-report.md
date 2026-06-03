@@ -1,7 +1,7 @@
 # Farm Prosperity Solutions (FPS) — Progress Report
 
-> **Last updated:** 2 June 2026  
-> **Overall status:** Phases 0–3 complete · Phase 4 (Polish) pending
+> **Last updated:** 4 June 2026  
+> **Overall status:** Phases 0–3 complete · Phase 4 (UI Redesign) in progress
 
 ---
 
@@ -13,6 +13,7 @@
 | React Native Mobile | ✅ All screens built, type-safe, running on physical device |
 | Crop Monitoring Module | ✅ End-to-end complete (backend + wizard + dashboard) |
 | Offline Sync (Phase 3) | ✅ Complete — WatermelonDB + auto-sync + sync dashboard |
+| UI Redesign (Phase 4) | 🔄 In progress — auth flow + home screen + drawer nav complete |
 
 ---
 
@@ -29,7 +30,7 @@
 ### ✅ Phase 1 — Backend API
 
 **Django apps:**
-- `accounts` — Custom User model (extends AbstractUser with `role` and `region`)
+- `accounts` — Custom User model (extends AbstractUser with `role`, `region`, `phone_number`)
 - `crops` — Crop entries + full Crop Monitoring models
 - `mandi` — Mandi master data + daily arrival entries
 
@@ -44,6 +45,7 @@
 | `POST /api/auth/login/` | ✅ |
 | `POST /api/auth/refresh/` | ✅ |
 | `GET /api/auth/me/` | ✅ |
+| `POST /api/auth/register/` | ✅ (added in Phase 4) |
 | `GET/POST /api/crops/` | ✅ (legacy) |
 | `GET /api/crops/summary/` | ✅ (legacy) |
 | `GET/POST /api/mandi-arrivals/` | ✅ |
@@ -204,7 +206,7 @@ Phase 3 introduces WatermelonDB as a local SQLite store. All three form types (F
 | `syncPendingRecords()` | Finds all `is_synced=false` records across all 3 tables, POSTs to Django, marks synced; sets `result.offline=true` if no connectivity | ✅ |
 | `getPendingCount()` | Returns per-table and total pending counts (`SyncStats`) | ✅ |
 | `getLastSyncTime()` | Returns Unix timestamp of last successful sync from AsyncStorage | ✅ |
-| `SyncResult.offline` flag | Distinguishes "offline, didn't try" from "online, nothing pending" — fixes misleading Sync Now message | ✅ |
+| `SyncResult.offline` flag | Distinguishes "offline, didn't try" from "online, nothing pending" | ✅ |
 
 #### Auto-Sync (`src/sync/useAutoSync.ts`)
 
@@ -237,46 +239,61 @@ Phase 3 introduces WatermelonDB as a local SQLite store. All three form types (F
 | Expandable error list for failed records | ✅ |
 | Offline-aware Sync Now: shows pending count instead of "No records" when offline | ✅ |
 
-#### Phase 3 Checklist
+---
 
-- [x] WatermelonDB installed and schema defined
-- [x] Crop Monitoring wizard saves to local DB (works offline)
-- [x] Legacy crop entry form saves to local DB (works offline)
-- [x] Mandi entry form saves to local DB (works offline)
-- [x] Pending count shows on profile screen (broken down by table)
-- [x] Background auto-sync triggers when internet detected
-- [x] Manual "Sync Now" button works correctly — shows right message online and offline
-- [x] Reference data (crop master, districts, blocks, mandis) cached locally
-- [x] Test: fill wizard offline → reconnect → records appear in Django Admin ✅ **Verified**
+### 🔄 Phase 4 — UI Redesign (In Progress)
+
+Phase 4 is a full UI/UX redesign based on a premium design system documented in `DESIGN.md` and a formal requirements spec in `requirements.md`. The redesigned screens live in `screens-v2/` and are activated via `AppNavigatorV2` (currently active in `App.tsx`).
+
+#### Design System
+
+| Item | Status |
+|---|---|
+| Color palette, typography, spacing, elevation documented | ✅ `DESIGN.md` |
+| Brand personality and product vision documented | ✅ `PRODUCT.md` |
+| 18 formal UI/UX requirements written | ✅ `requirements.md` |
+| `src/utils/colors.ts` updated to design system tokens | ✅ |
+
+#### Navigation Overhaul
+
+| Item | Status |
+|---|---|
+| `AppNavigatorV2` — Splash→Welcome→Login/Signup auth flow | ✅ Active |
+| DrawerNavigator wrapping tab navigator | ✅ |
+| `GestureHandlerRootView` at App root | ✅ |
+| `react-native-gesture-handler` installed | ✅ |
+| `@react-navigation/drawer` installed | ✅ |
+
+#### Redesigned Screens (screens-v2/)
+
+| Screen | Description | Status |
+|---|---|---|
+| `SplashScreen` | Animated brand splash, 2–3s auto-advance to Welcome | ✅ |
+| `WelcomeScreen` | Value proposition, "Sign In" + "Get Started" CTAs | ✅ |
+| `LoginScreen` | Redesigned login form per design system | ✅ |
+| `SignupScreen` | Registration: name, username, phone, region, password; auto-login on success | ✅ |
+| `HomeScreen` | Redesigned dashboard (drawer-aware header) | ✅ |
+| `SidebarContent` | Drawer: user info card + navigation items | ✅ |
+
+#### Backend Addition
+
+| Item | Status |
+|---|---|
+| `POST /api/auth/register/` — creates user + returns JWT tokens | ✅ |
+| `RegisterSerializer` with full_name split, phone_number, role, region | ✅ |
+| `RegisterView` (AllowAny) — auto-login after creation | ✅ |
+
+#### Remaining Redesign Backlog
+
+- [ ] Crop Monitoring wizard screens (screens-v2/cropMonitoring/)
+- [ ] Mandi module screens (v2)
+- [ ] Reports screen (v2)
+- [ ] Profile / Sync Dashboard (v2)
+- [ ] components-v2 component library
 
 ---
 
-## Current File Tree (Phase 3 New Files)
-
-```
-mobile/FarmProsperity/src/
-├── database/
-│   ├── index.ts                ← Database instance
-│   ├── schema.ts               ← Full WatermelonDB schema
-│   ├── operations.ts           ← saveVisitLocally, saveCropEntryLocally, saveMandiArrivalLocally
-│   └── models/
-│       ├── FarmerVisitModel.ts
-│       ├── CropEntryModel.ts
-│       ├── MandiArrivalModel.ts
-│       ├── DistrictModel.ts
-│       ├── BlockModel.ts
-│       ├── CropMasterModel.ts
-│       └── MandiModel.ts
-└── sync/
-    ├── syncService.ts          ← syncPendingRecords, getPendingCount, getLastSyncTime
-    ├── syncTypes.ts            ← SyncResult (with offline flag), SyncStats
-    ├── useAutoSync.ts          ← NetInfo auto-sync hook
-    └── seedReferenceData.ts    ← Reference data cache on login
-```
-
----
-
-## ⏳ Phase 4 — Future Scope
+## ⏳ Phase 5 — Future Scope
 
 - Map view of visit GPS locations
 - Per-photo geo-tagging

@@ -180,6 +180,25 @@ npm run android:phone
 
 ---
 
+## Navigator Versions
+
+The app ships with two navigators:
+
+| File | Status | Auth Flow |
+|---|---|---|
+| `AppNavigatorV2` (active) | **Currently in use** (imported in `App.tsx`) | Splash → Welcome → Login / Sign Up → Drawer+Tabs |
+| `AppNavigator` (v1) | Preserved, not active | Direct Login → Tabs |
+
+To switch back to v1, edit `App.tsx` (one line):
+```ts
+// Current (v2):
+import AppNavigator from './src/navigation/AppNavigatorV2';
+// Rollback (v1):
+import AppNavigator from './src/navigation/AppNavigator';
+```
+
+---
+
 ## Quick Start (Already Set Up)
 
 If you've already completed the one-time setup above and just want to get the project running, use the following commands. Open **three separate terminal tabs/windows**.

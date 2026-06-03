@@ -72,10 +72,6 @@ const MainTabs = () => (
         };
         return (
           <View style={styles.tabIcon}>
-            <View>
-              {/* We use emoji icons here since vector-icons requires native linking */}
-              {/* See README for linking react-native-vector-icons */}
-            </View>
             <EmojiIcon name={icons[route.name] ?? '•'} color={color} size={size} />
           </View>
         );
