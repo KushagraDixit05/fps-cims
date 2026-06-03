@@ -275,7 +275,7 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
         />
 
         <View style={{ height: 16 }} />
-        <Button title="NEXT →" onPress={handleNext} />
+        <Button title="NEXT" onPress={handleNext} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

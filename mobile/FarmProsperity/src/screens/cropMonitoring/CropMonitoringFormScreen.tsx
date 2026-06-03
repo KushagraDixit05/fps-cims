@@ -16,6 +16,8 @@ import type { RootStackParamList } from '../../navigation/types';
 
 import { colors } from '../../utils/colors';
 import { useCropMonitoringForm } from '../../hooks/useCropMonitoringForm';
+import AppIcon from '../../components/AppIcon';
+import { ChevronLeft, IconStroke } from '../../utils/icons';
 import Step1_FarmerDetails from './Step1_FarmerDetails';
 import Step2_CropDetails from './Step2_CropDetails';
 import Step3_PhotosLocation from './Step3_PhotosLocation';
@@ -112,7 +114,7 @@ const CropMonitoringFormScreen = () => {
           }}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={styles.backArrow}>←</Text>
+          <AppIcon icon={ChevronLeft} size={22} color="white" strokeWidth={2.5} />
         </TouchableOpacity>
         <Text style={styles.topTitle}>Crop Monitoring</Text>
         <View style={{ width: 36 }} />
@@ -181,7 +183,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   backBtn:   { width: 36, height: 36, justifyContent: 'center' },
-  backArrow: { fontSize: 22, color: 'white', fontWeight: '700' },
   topTitle:  { fontSize: 17, fontWeight: '700', color: 'white' },
 });
 

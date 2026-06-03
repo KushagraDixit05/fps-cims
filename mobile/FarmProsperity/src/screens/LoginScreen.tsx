@@ -23,6 +23,8 @@ import {
 import { useAuth } from '../store/authStore';
 import { colors } from '../utils/colors';
 import { seedReferenceData } from '../sync/seedReferenceData';
+import AppIcon from '../components/AppIcon';
+import { Eye, EyeOff, IconStroke } from '../utils/icons';
 
 const LoginScreen = () => {
   const { login } = useAuth();
@@ -46,9 +48,10 @@ const LoginScreen = () => {
       seedReferenceData().catch(() => {});
       // Navigation is automatic — AppNavigator detects user state change
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.detail ??
-        'Login failed. Please check your credentials and try again.';
+      const isNetworkError = !err?.response;
+      const msg = isNetworkError
+        ? 'Cannot reach server. Make sure the backend is running and you are connected.'
+        : (err?.response?.data?.detail ?? 'Invalid username or password.');
       setError(msg);
     } finally {
       setLoading(false);
@@ -119,7 +122,12 @@ const LoginScreen = () => {
               onPress={() => setShowPassword(prev => !prev)}
               activeOpacity={0.7}
             >
-              <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+              <AppIcon
+                icon={showPassword ? EyeOff : Eye}
+                size={18}
+                color={colors.textSecondary}
+                strokeWidth={IconStroke}
+              />
             </TouchableOpacity>
           </View>
 
@@ -133,7 +141,7 @@ const LoginScreen = () => {
             {loading ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text style={styles.buttonText}>Login →</Text>
+              <Text style={styles.buttonText}>Sign In</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -240,9 +248,6 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  eyeIcon: {
-    fontSize: 18,
   },
   button: {
     backgroundColor: colors.primary,

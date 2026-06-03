@@ -1,20 +1,20 @@
-/**
- * EmptyState — Shown when a list has no items or a fetch returned nothing.
- */
-
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../utils/colors';
+import AppIcon from './AppIcon';
+import { Inbox } from '../utils/icons';
 
 interface EmptyStateProps {
-  emoji?: string;
+  icon?: React.ComponentType<any>;
   title: string;
   subtitle?: string;
 }
 
-const EmptyState = ({ emoji = '📭', title, subtitle }: EmptyStateProps) => (
+const EmptyState = ({ icon = Inbox, title, subtitle }: EmptyStateProps) => (
   <View style={styles.container}>
-    <Text style={styles.emoji}>{emoji}</Text>
+    <View style={styles.iconWrap}>
+      <AppIcon icon={icon} size={44} color={colors.textMuted} strokeWidth={1.5} />
+    </View>
     <Text style={styles.title}>{title}</Text>
     {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
   </View>
@@ -28,10 +28,7 @@ const styles = StyleSheet.create({
     padding: 40,
     gap: 10,
   },
-  emoji: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
+  iconWrap: { marginBottom: 8, opacity: 0.55 },
   title: {
     fontSize: 16,
     fontWeight: '600',

@@ -27,6 +27,8 @@ import { colors } from '../utils/colors';
 import { formatDate, formatQuantity, formatCurrency } from '../utils/helpers';
 import EmptyState from '../components/EmptyState';
 import LoadingScreen from '../components/LoadingScreen';
+import AppIcon from '../components/AppIcon';
+import { Store, Plus, ChevronRight, IconStroke } from '../utils/icons';
 import type { Mandi, MandiArrival, YoYComparison } from '../types';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -177,7 +179,7 @@ const MandiListScreen = () => {
           }
           ListEmptyComponent={
             <EmptyState
-              emoji="📦"
+              icon={Store}
               title="No arrivals recorded"
               subtitle="Tap + to add a mandi arrival entry."
             />
@@ -198,7 +200,7 @@ const MandiListScreen = () => {
         onPress={() => navigation.navigate('MandiEntryForm')}
         activeOpacity={0.85}
       >
-        <Text style={styles.fabText}>+</Text>
+        <AppIcon icon={Plus} size={24} color="white" strokeWidth={2.5} />
       </TouchableOpacity>
     </View>
   );
@@ -288,7 +290,7 @@ const ArrivalRow = ({
         </View>
         <Text style={styles.sourceBadge}>{arrival.source}</Text>
       </View>
-      <Text style={styles.chevron}>›</Text>
+      <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} strokeWidth={2} />
     </TouchableOpacity>
   );
 };
@@ -428,7 +430,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textTransform: 'capitalize',
   },
-  chevron: {
+  _removed_chevron: {
     alignSelf: 'center',
     fontSize: 22,
     color: colors.textMuted,
@@ -452,7 +454,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
   },
-  fabText: { color: 'white', fontSize: 28, fontWeight: '300', lineHeight: 32 },
 });
 
 export default MandiListScreen;

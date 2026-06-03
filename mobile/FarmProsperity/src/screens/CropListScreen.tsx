@@ -25,6 +25,8 @@ import { colors } from '../utils/colors';
 import { formatDate, cropStageLabel } from '../utils/helpers';
 import ConditionBadge from '../components/ConditionBadge';
 import EmptyState from '../components/EmptyState';
+import AppIcon from '../components/AppIcon';
+import { Plus, ChevronRight, Leaf, IconStroke } from '../utils/icons';
 import LoadingScreen from '../components/LoadingScreen';
 import type { CropEntry } from '../types';
 import type { RootStackParamList } from '../navigation/types';
@@ -87,7 +89,7 @@ const CropListScreen = () => {
         }
         ListEmptyComponent={
           <EmptyState
-            emoji="🌾"
+            icon={Leaf}
             title="No crop entries yet"
             subtitle="Tap the + button to add your first field visit."
           />
@@ -106,7 +108,7 @@ const CropListScreen = () => {
         onPress={() => navigation.navigate('CropEntryForm')}
         activeOpacity={0.85}
       >
-        <Text style={styles.fabText}>+</Text>
+        <AppIcon icon={Plus} size={24} color="white" strokeWidth={2.5} />
       </TouchableOpacity>
     </View>
   );
@@ -166,7 +168,7 @@ const CropEntryRow = ({
       </View>
     </View>
 
-    <Text style={styles.chevron}>›</Text>
+    <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} strokeWidth={2} />
   </TouchableOpacity>
 );
 
@@ -231,13 +233,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   stageText: { fontSize: 11, color: colors.textSecondary, fontWeight: '500' },
-  chevron: {
-    alignSelf: 'center',
-    fontSize: 22,
-    color: colors.textMuted,
-    paddingRight: 12,
-  },
-
   // FAB
   fab: {
     position: 'absolute',
@@ -255,7 +250,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
   },
-  fabText: { color: 'white', fontSize: 28, fontWeight: '300', lineHeight: 32 },
 });
 
 export default CropListScreen;

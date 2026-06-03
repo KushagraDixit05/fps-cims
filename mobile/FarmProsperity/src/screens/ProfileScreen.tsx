@@ -26,6 +26,8 @@ import { colors }                        from '../utils/colors';
 import Card                              from '../components/Card';
 import { syncPendingRecords, getPendingCount, getLastSyncTime } from '../sync/syncService';
 import type { SyncStats }                from '../sync/syncTypes';
+import AppIcon                           from '../components/AppIcon';
+import { LogOut, IconStroke }            from '../utils/icons';
 
 const ROLE_LABELS: Record<string, string> = {
   field_executive: 'Field Executive',
@@ -237,7 +239,8 @@ const ProfileScreen = () => {
         onPress={handleLogout}
         activeOpacity={0.85}
       >
-        <Text style={styles.logoutText}>🚪 Logout</Text>
+        <AppIcon icon={LogOut} size={18} color={colors.error} strokeWidth={IconStroke} />
+        <Text style={styles.logoutText}> Logout</Text>
       </TouchableOpacity>
 
       <View style={{ height: 40 }} />
@@ -373,7 +376,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorBg,
     borderRadius:   12,
     padding:        15,
+    flexDirection:  'row',
     alignItems:     'center',
+    justifyContent: 'center',
     borderWidth:    1,
     borderColor:    colors.error,
   },

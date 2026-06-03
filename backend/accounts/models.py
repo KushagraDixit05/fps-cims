@@ -14,6 +14,7 @@ class User(AbstractUser):
         ('viewer', 'Viewer'),  # for institutional buyers (future)
     ]
 
+    email = models.EmailField(unique=True, null=True, blank=True)
     phone_number = models.CharField(max_length=15, unique=True, null=True, blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='field_executive')
     region = models.CharField(max_length=100, blank=True)  # e.g. "Nanded", "Guntur"

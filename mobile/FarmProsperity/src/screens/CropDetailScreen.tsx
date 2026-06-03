@@ -18,6 +18,8 @@ import { colors } from '../utils/colors';
 import { formatDate, formatArea, cropStageLabel } from '../utils/helpers';
 import ConditionBadge from '../components/ConditionBadge';
 import Card from '../components/Card';
+import AppIcon from '../components/AppIcon';
+import { CheckCircle, XCircle, Bug, CloudRain, TrendingDown, Check, Leaf, IconStroke } from '../utils/icons';
 import type { RootStackParamList } from '../navigation/types';
 
 type CropDetailRoute = RouteProp<RootStackParamList, 'CropDetail'>;
@@ -63,18 +65,28 @@ const CropDetailScreen = () => {
         {entry.expected_yield != null && (
           <DetailRow label="Expected Yield" value={`${entry.expected_yield} Qt/Ac`} />
         )}
-        <DetailRow
-          label="Buyer Interest"
-          value={entry.buyer_interest ? '✅ Yes' : '❌ No'}
-        />
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Buyer Interest</Text>
+          <View style={styles.detailIconValue}>
+            <AppIcon
+              icon={entry.buyer_interest ? CheckCircle : XCircle}
+              size={14}
+              color={entry.buyer_interest ? colors.good : colors.poor}
+              strokeWidth={2}
+            />
+            <Text style={[styles.detailValue, { color: entry.buyer_interest ? colors.good : colors.poor }]}>
+              {entry.buyer_interest ? ' Yes' : ' No'}
+            </Text>
+          </View>
+        </View>
       </SectionCard>
 
       {/* ── Field Issues ── */}
       <SectionCard title="Field Issues">
-        <IssueRow label="🦗 Pest" active={entry.problem_pest} />
-        <IssueRow label="🍂 Disease" active={entry.problem_disease} />
-        <IssueRow label="⛈️ Weather" active={entry.problem_weather} />
-        <IssueRow label="💰 Price Concern" active={entry.problem_price_concern} />
+        <IssueRow label="Pest" icon={Bug} active={entry.problem_pest} />
+        <IssueRow label="Disease" icon={Leaf} active={entry.problem_disease} />
+        <IssueRow label="Weather Damage" icon={CloudRain} active={entry.problem_weather} />
+        <IssueRow label="Price Concern" icon={TrendingDown} active={entry.problem_price_concern} />
         {entry.problem_other ? (
           <View style={styles.otherIssue}>
             <Text style={styles.otherIssueLabel}>Other:</Text>
@@ -86,7 +98,10 @@ const CropDetailScreen = () => {
           !entry.problem_weather &&
           !entry.problem_price_concern &&
           !entry.problem_other && (
-            <Text style={styles.noIssues}>No issues reported ✓</Text>
+            <View style={styles.noIssuesRow}>
+              <AppIcon icon={Check} size={14} color={colors.good} strokeWidth={2.5} />
+              <Text style={styles.noIssues}> No issues reported</Text>
+            </View>
           )}
       </SectionCard>
 
@@ -138,9 +153,20 @@ const DetailRow = ({ label, value }: { label: string; value: string }) => (
   </View>
 );
 
-const IssueRow = ({ label, active }: { label: string; active: boolean }) => (
+const IssueRow = ({
+  label,
+  icon,
+  active,
+}: {
+  label: string;
+  icon: React.ComponentType<any>;
+  active: boolean;
+}) => (
   <View style={styles.issueRow}>
-    <Text style={styles.issueLabel}>{label}</Text>
+    <View style={styles.issueLabelRow}>
+      <AppIcon icon={icon} size={14} color={active ? colors.poor : colors.textMuted} strokeWidth={IconStroke} />
+      <Text style={styles.issueLabel}> {label}</Text>
+    </View>
     <Text style={active ? styles.issueBadgeActive : styles.issueBadgeInactive}>
       {active ? 'Yes' : 'No'}
     </Text>
@@ -182,6 +208,7 @@ const styles = StyleSheet.create({
   detailLabel: { fontSize: 13, color: colors.textSecondary },
   detailValue: { fontSize: 13, color: colors.textPrimary, fontWeight: '500', textAlign: 'right', flex: 1, marginLeft: 10 },
 
+  detailIconValue: { flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' },
   issueRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -190,7 +217,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: colors.borderLight,
   },
+  issueLabelRow: { flexDirection: 'row', alignItems: 'center' },
   issueLabel: { fontSize: 13, color: colors.textPrimary },
+  noIssuesRow: { flexDirection: 'row', alignItems: 'center' },
   issueBadgeActive: {
     fontSize: 12,
     fontWeight: '600',

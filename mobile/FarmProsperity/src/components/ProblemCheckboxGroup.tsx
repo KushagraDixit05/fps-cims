@@ -11,6 +11,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { colors } from '../utils/colors';
+import AppIcon from './AppIcon';
+import { Check } from '../utils/icons';
 import type { ProblemType } from '../types/cropMonitoring';
 
 interface ProblemOption {
@@ -70,7 +72,7 @@ const ProblemCheckboxGroup = ({
             >
               {/* Custom checkbox indicator */}
               <View style={[styles.tick, isChecked && styles.tickChecked]}>
-                {isChecked && <Text style={styles.tickMark}>✓</Text>}
+                {isChecked && <AppIcon icon={Check} size={11} color="white" strokeWidth={3} />}
               </View>
               <Text style={[styles.checkLabel, isChecked && styles.checkLabelChecked]}>
                 {prob.label}
@@ -151,12 +153,6 @@ const styles = StyleSheet.create({
   tickChecked: {
     borderColor: colors.primary,
     backgroundColor: colors.primary,
-  },
-  tickMark: {
-    color: 'white',
-    fontSize: 11,
-    fontWeight: '700',
-    lineHeight: 13,
   },
   checkLabel: {
     fontSize: 13,

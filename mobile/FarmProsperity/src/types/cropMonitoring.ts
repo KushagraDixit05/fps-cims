@@ -121,6 +121,8 @@ export interface RecentVisit {
   district_name: string;
   crop_count: number;
   submitted_at: string;
+  /** True when the record lives only in local WatermelonDB (not yet synced to server). */
+  _pending?: boolean;
 }
 
 export interface CropRecordResponse {

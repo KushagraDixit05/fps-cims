@@ -134,7 +134,7 @@ const MandiEntryFormScreen = () => {
       // Phase 3: save locally first — syncs to server in background when online.
       await saveMandiArrivalLocally(payload, selectedMandi?.name);
 
-      Alert.alert('✓ Saved', 'Mandi arrival saved locally. Will sync when online.', [
+      Alert.alert('Saved', 'Mandi arrival saved locally. Will sync when online.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (err: any) {
@@ -341,7 +341,7 @@ const MandiEntryFormScreen = () => {
       />
 
       <Button
-        title="Save Entry ✓"
+        title="Save Entry"
         onPress={handleSubmit(onSubmit)}
         loading={submitting}
         style={{ marginTop: 8 }}

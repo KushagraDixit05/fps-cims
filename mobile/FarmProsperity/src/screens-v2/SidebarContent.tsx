@@ -1,11 +1,6 @@
 /**
  * SidebarContent (v2)
- *
- * Used as the drawer content component inside the Drawer Navigator.
- * Contains:
- *  - Header: FPS logo + user info + sync status
- *  - Nav items: Home, New Visit, Mandi, My Visits, Reports
- *  - Bottom: Profile, Sync Status, Logout
+ * Drawer nav with lucide icons throughout.
  */
 
 import React from 'react';
@@ -20,20 +15,25 @@ import {
 } from 'react-native';
 import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { useAuth } from '../store/authStore';
+import AppIcon from '../components/AppIcon';
+import {
+  Home, Leaf, Store, Map, BarChart2,
+  User, LogOut, RefreshCw, MapPin,
+  IconStroke,
+} from '../utils/icons';
 
 type NavItem = {
-  icon: string;
+  icon: React.ComponentType<any>;
   label: string;
   screen: string;
-  danger?: boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { icon: '🏠', label: 'Home', screen: 'Home' },
-  { icon: '🌾', label: 'New Visit', screen: 'CropMonitoringForm' },
-  { icon: '📦', label: 'Mandi', screen: 'Mandi' },
-  { icon: '🗺️', label: 'My Visits', screen: 'Crops' },
-  { icon: '📊', label: 'Reports', screen: 'Reports' },
+  { icon: Home,      label: 'Home',      screen: 'Home' },
+  { icon: Leaf,      label: 'New Visit', screen: 'CropMonitoringForm' },
+  { icon: Store,     label: 'Mandi',     screen: 'Mandi' },
+  { icon: Map,       label: 'My Visits', screen: 'Crops' },
+  { icon: BarChart2, label: 'Reports',   screen: 'Reports' },
 ];
 
 const SidebarContent = (props: DrawerContentComponentProps) => {
@@ -45,7 +45,6 @@ const SidebarContent = (props: DrawerContentComponentProps) => {
 
   const navigateTo = (screen: string) => {
     navigation.closeDrawer();
-    // Short delay so drawer close animation completes first
     setTimeout(() => navigation.navigate(screen as any), 150);
   };
 
@@ -63,10 +62,13 @@ const SidebarContent = (props: DrawerContentComponentProps) => {
           {user?.role === 'field_executive' ? 'Field Executive' : user?.role ?? ''}
         </Text>
         {user?.region ? (
-          <Text style={styles.userRegion}>📍 {user.region}</Text>
+          <View style={styles.regionRow}>
+            <AppIcon icon={MapPin} size={11} color="rgba(255,255,255,0.65)" strokeWidth={2} />
+            <Text style={styles.userRegion}> {user.region}</Text>
+          </View>
         ) : null}
         <View style={styles.syncPill}>
-          <Text style={styles.syncText}>● Synced</Text>
+          <Text style={styles.syncText}>Synced</Text>
         </View>
       </View>
 
@@ -81,7 +83,12 @@ const SidebarContent = (props: DrawerContentComponentProps) => {
               onPress={() => navigateTo(screen)}
               activeOpacity={0.75}
             >
-              <Text style={[styles.navIcon, isActive && styles.navIconActive]}>{icon}</Text>
+              <AppIcon
+                icon={icon}
+                size={20}
+                color={isActive ? '#1A4A2E' : '#6A7A6A'}
+                strokeWidth={isActive ? 2 : IconStroke}
+              />
               <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>{label}</Text>
             </TouchableOpacity>
           );
@@ -95,14 +102,14 @@ const SidebarContent = (props: DrawerContentComponentProps) => {
           onPress={() => { navigation.closeDrawer(); setTimeout(() => navigation.navigate('Profile' as any), 150); }}
           activeOpacity={0.75}
         >
-          <Text style={styles.navIcon}>👤</Text>
+          <AppIcon icon={User} size={20} color="#6A7A6A" strokeWidth={IconStroke} />
           <Text style={styles.navLabel}>Profile</Text>
         </TouchableOpacity>
 
         {/* Sync Status */}
         <View style={[styles.navItem, { justifyContent: 'space-between' }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Text style={styles.navIcon}>⟳</Text>
+          <View style={styles.navItemInner}>
+            <AppIcon icon={RefreshCw} size={20} color="#6A7A6A" strokeWidth={IconStroke} />
             <Text style={styles.navLabel}>Sync Status</Text>
           </View>
           <Text style={styles.syncedLabel}>Synced</Text>
@@ -114,13 +121,10 @@ const SidebarContent = (props: DrawerContentComponentProps) => {
         <View style={styles.divider} />
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => {
-            navigation.closeDrawer();
-            setTimeout(() => logout(), 200);
-          }}
+          onPress={() => { navigation.closeDrawer(); setTimeout(() => logout(), 200); }}
           activeOpacity={0.75}
         >
-          <Text style={[styles.navIcon, styles.dangerIcon]}>🚪</Text>
+          <AppIcon icon={LogOut} size={20} color="#D63333" strokeWidth={IconStroke} />
           <Text style={[styles.navLabel, styles.dangerLabel]}>Logout</Text>
         </TouchableOpacity>
       </View>
@@ -131,7 +135,6 @@ const SidebarContent = (props: DrawerContentComponentProps) => {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#FFFFFF' },
 
-  // Header
   drawerHeader: {
     backgroundColor: '#1A4A2E',
     paddingTop: 32,
@@ -141,7 +144,8 @@ const styles = StyleSheet.create({
   logo: { width: 44, height: 44, borderRadius: 22, marginBottom: 12, borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
   userName: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
   userRole: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 2 },
-  userRegion: { color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 2 },
+  regionRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
+  userRegion: { color: 'rgba(255,255,255,0.65)', fontSize: 12 },
   syncPill: {
     alignSelf: 'flex-start',
     backgroundColor: '#E1F2E8',
@@ -152,7 +156,6 @@ const styles = StyleSheet.create({
   },
   syncText: { color: '#1A8A3A', fontSize: 11, fontWeight: '600' },
 
-  // Nav
   navSection: { flex: 1, paddingTop: 8 },
   navItem: {
     flexDirection: 'row',
@@ -160,23 +163,19 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    gap: 12,
+    gap: 14,
     borderRadius: 8,
     marginHorizontal: 8,
   },
+  navItemInner: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   navItemActive: { backgroundColor: '#E1F2E8' },
-  navIcon: { fontSize: 20, color: '#6A7A6A', width: 28, textAlign: 'center' },
-  navIconActive: { color: '#1A4A2E' },
   navLabel: { fontSize: 15, color: '#1A3A25', fontWeight: '500' },
   navLabelActive: { color: '#1A4A2E', fontWeight: '700' },
   syncedLabel: { fontSize: 12, color: '#1A8A3A', fontWeight: '600' },
 
-  // Divider
   divider: { height: 1, backgroundColor: '#F0EDE6', marginVertical: 8, marginHorizontal: 8 },
 
-  // Logout
   logoutSection: { paddingBottom: 8 },
-  dangerIcon: { color: '#D63333' },
   dangerLabel: { color: '#D63333', fontWeight: '600' },
 });
 

@@ -15,6 +15,8 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Home, Leaf, Store, BarChart2 } from '../utils/icons';
+import { IconSize, IconStroke } from '../utils/icons';
 
 import { useAuth } from '../store/authStore';
 import { colors } from '../utils/colors';
@@ -63,18 +65,17 @@ const MainTabs = () => (
       },
       tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
       headerShown: false,
-      tabBarIcon: ({ color, size }) => {
-        const icons: Record<string, string> = {
-          Home: '🏠',
-          Crops: '🌾',
-          Mandi: '🏪',
-          Reports: '📊',
+      tabBarIcon: ({ color }) => {
+        const iconMap: Record<string, React.ComponentType<any>> = {
+          Home: Home,
+          Crops: Leaf,
+          Mandi: Store,
+          Reports: BarChart2,
         };
-        return (
-          <View style={styles.tabIcon}>
-            <EmojiIcon name={icons[route.name] ?? '•'} color={color} size={size} />
-          </View>
-        );
+        const Icon = iconMap[route.name];
+        return Icon ? (
+          <Icon size={IconSize.tab} color={color} strokeWidth={IconStroke} />
+        ) : null;
       },
     })}
   >
@@ -85,11 +86,6 @@ const MainTabs = () => (
   </Tab.Navigator>
 );
 
-/** Lightweight emoji-based tab icon (no native linking needed). */
-const EmojiIcon = ({ name, size }: { name: string; color: string; size: number }) => {
-  const { Text } = require('react-native');
-  return <Text style={{ fontSize: size - 4 }}>{name}</Text>;
-};
 
 // ─── Root Stack ───────────────────────────────────────────────────────────────
 const AppNavigator = () => {

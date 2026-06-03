@@ -33,6 +33,8 @@ import { colors } from '../utils/colors';
 import { todayISO, cropStageLabel } from '../utils/helpers';
 import FormInput from '../components/FormInput';
 import Button from '../components/Button';
+import AppIcon from '../components/AppIcon';
+import { Bug, CloudRain, TrendingDown, MapPin, Check, ChevronLeft, ChevronRight, Leaf, IconStroke } from '../utils/icons';
 import type { CropCondition, CropStage, CropEntryPayload, Farmer } from '../types';
 
 // ─── Step labels ──────────────────────────────────────────────────────────────
@@ -170,7 +172,7 @@ const CropEntryFormScreen = () => {
 
       // Phase 3: save locally first — syncs to server in background when online.
       await saveCropEntryLocally(payload);
-      Alert.alert('✓ Saved', 'Entry saved locally. Will sync to server when online.', [
+      Alert.alert('Saved', 'Entry saved locally. Will sync to server when online.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (err: any) {
@@ -457,10 +459,10 @@ const CropEntryFormScreen = () => {
 
             {(
               [
-                { name: 'problem_pest', label: '🦗 Pest attack' },
-                { name: 'problem_disease', label: '🍂 Disease' },
-                { name: 'problem_weather', label: '⛈️ Weather damage' },
-                { name: 'problem_price_concern', label: '💰 Price concern' },
+                { name: 'problem_pest', label: 'Pest attack' },
+                { name: 'problem_disease', label: 'Disease' },
+                { name: 'problem_weather', label: 'Weather damage' },
+                { name: 'problem_price_concern', label: 'Price concern' },
               ] as const
             ).map(({ name, label }) => (
               <Controller
@@ -476,7 +478,7 @@ const CropEntryFormScreen = () => {
                     <View
                       style={[styles.checkbox, value && styles.checkboxChecked]}
                     >
-                      {value && <Text style={styles.checkmark}>✓</Text>}
+                      {value && <AppIcon icon={Check} size={11} color="white" strokeWidth={3} />}
                     </View>
                     <Text style={styles.issueLabel}>{label}</Text>
                   </TouchableOpacity>
@@ -509,7 +511,10 @@ const CropEntryFormScreen = () => {
 
             {/* GPS status */}
             <View style={styles.gpsCard}>
-              <Text style={styles.gpsTitle}>📍 GPS Location</Text>
+              <View style={styles.gpsTitleRow}>
+                <AppIcon icon={MapPin} size={14} color={colors.info} strokeWidth={2} />
+                <Text style={styles.gpsTitle}> GPS Location</Text>
+              </View>
               {location ? (
                 <Text style={styles.gpsCoords}>
                   {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
@@ -546,7 +551,7 @@ const CropEntryFormScreen = () => {
         <View style={styles.navRow}>
           {step > 0 && (
             <Button
-              title="← Back"
+              title="Back"
               variant="secondary"
               onPress={() => setStep((s) => s - 1)}
               style={styles.navBtn}
@@ -554,7 +559,7 @@ const CropEntryFormScreen = () => {
           )}
           {step < STEPS.length - 1 ? (
             <Button
-              title="Next →"
+              title="Next"
               onPress={() => {
                 // Basic step validation before advancing
                 if (step === 0 && !watch('farmer_id')) {
@@ -571,7 +576,7 @@ const CropEntryFormScreen = () => {
             />
           ) : (
             <Button
-              title="Submit ✓"
+              title="Submit"
               onPress={handleSubmit(onSubmit)}
               loading={submitting}
               style={styles.navBtn}
@@ -752,7 +757,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  checkmark: { color: 'white', fontSize: 13, fontWeight: '700' },
+  gpsTitleRow: { flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 4 },
   issueLabel: { fontSize: 14, color: colors.textPrimary },
 
   // GPS card
@@ -764,7 +769,7 @@ const styles = StyleSheet.create({
     borderColor: colors.info,
     marginBottom: 14,
   },
-  gpsTitle: { fontSize: 13, fontWeight: '600', color: colors.info, marginBottom: 4 },
+  gpsTitle: { fontSize: 13, fontWeight: '600', color: colors.info },
   gpsCoords: { fontSize: 13, color: colors.info, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   gpsError: { fontSize: 12, color: colors.textMuted },
 

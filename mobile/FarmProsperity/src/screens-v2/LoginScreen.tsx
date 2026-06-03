@@ -53,9 +53,10 @@ const LoginScreen = ({ navigation }: Props) => {
       seedReferenceData().catch(() => {});
       // Navigation handled by AppNavigator (user state change)
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.detail ??
-        'Login failed. Please check your credentials and try again.';
+      const isNetworkError = !err?.response;
+      const msg = isNetworkError
+        ? 'Cannot reach server. Make sure the backend is running and you are connected.'
+        : (err?.response?.data?.detail ?? 'Invalid username or password.');
       setError(msg);
     } finally {
       setLoading(false);
@@ -142,7 +143,7 @@ const LoginScreen = ({ navigation }: Props) => {
               {loading ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text style={styles.submitText}>Sign In →</Text>
+                <Text style={styles.submitText}>Sign In</Text>
               )}
             </TouchableOpacity>
           </View>

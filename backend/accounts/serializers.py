@@ -8,20 +8,40 @@ class RegisterSerializer(serializers.ModelSerializer):
     Serializer for user self-registration.
     POST /api/auth/register/
     """
-    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password  = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True, label='Confirm password')
     full_name = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    email     = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:
         model = User
         fields = [
             'username', 'password', 'password2',
-            'full_name', 'phone_number', 'role', 'region',
+            'full_name', 'email', 'phone_number', 'role', 'region',
         ]
+        extra_kwargs = {
+            'phone_number': {
+                'validators': [],  # disable auto-UniqueValidator; handled in validate_phone_number
+            },
+        }
 
     def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
+        if User.objects.filter(username__iexact=value).exists():
             raise serializers.ValidationError('A user with this username already exists.')
+        return value.lower()
+
+    def validate_email(self, value):
+        if not value:
+            return None
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError('An account with this email already exists.')
+        return value.lower()
+
+    def validate_phone_number(self, value):
+        if not value:
+            return None
+        if User.objects.filter(phone_number=value).exists():
+            raise serializers.ValidationError('An account with this phone number already exists.')
         return value
 
     def validate(self, attrs):
@@ -30,18 +50,18 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        # Split full_name into first/last
         full_name = validated_data.pop('full_name', '')
         parts = full_name.strip().split(' ', 1)
         first_name = parts[0] if parts else ''
-        last_name = parts[1] if len(parts) > 1 else ''
+        last_name  = parts[1] if len(parts) > 1 else ''
 
         user = User.objects.create_user(
             username=validated_data['username'],
             password=validated_data['password'],
             first_name=first_name,
             last_name=last_name,
-            phone_number=validated_data.get('phone_number', None),
+            email=validated_data.get('email') or None,
+            phone_number=validated_data.get('phone_number') or None,
             role=validated_data.get('role', 'field_executive'),
             region=validated_data.get('region', ''),
         )
@@ -49,11 +69,6 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """
-    Serializer for the User model — safe read-only representation.
-    Used to embed user info in other serializers (e.g. submitted_by).
-    """
-
     class Meta:
         model = User
         fields = ['id', 'username', 'first_name', 'last_name', 'role', 'region', 'phone_number']
@@ -61,10 +76,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    """
-    Serializer for returning the authenticated user's own profile.
-    GET /api/auth/me/
-    """
     full_name = serializers.SerializerMethodField()
 
     class Meta:

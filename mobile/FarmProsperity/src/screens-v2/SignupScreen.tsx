@@ -1,10 +1,10 @@
 /**
  * SignupScreen (v2)
  *
- * - Calls POST /api/auth/register/
+ * - Calls POST /api/auth/register/ via shared apiClient (same URL detection as login)
  * - On success: stores tokens → auto-login (AppNavigator detects user state)
- * - Sections: Personal Info | Account | Details
- * - Error handling mirrors LoginScreen pattern
+ * - Fields: Full Name, Phone (optional), Email (optional), Username, Password, Region
+ * - Server enforces uniqueness on username, email, and phone number
  */
 
 import React, { useState, useRef } from 'react';
@@ -24,8 +24,7 @@ import {
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { AuthStackParamList } from '../navigation/types';
 import { useAuth } from '../store/authStore';
-
-const BASE_URL = 'http://10.0.2.2:8000'; // Android emulator → localhost
+import apiClient from '../api/client';
 
 type Props = {
   navigation: StackNavigationProp<AuthStackParamList, 'Signup'>;
@@ -34,28 +33,28 @@ type Props = {
 const SignupScreen = ({ navigation }: Props) => {
   const { loginWithTokens } = useAuth();
 
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [fullName,        setFullName]        = useState('');
+  const [phone,           setPhone]           = useState('');
+  const [email,           setEmail]           = useState('');
+  const [username,        setUsername]        = useState('');
+  const [password,        setPassword]        = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [region, setRegion] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [region,          setRegion]          = useState('');
+  const [showPassword,    setShowPassword]    = useState(false);
+  const [showConfirm,     setShowConfirm]     = useState(false);
+  const [loading,         setLoading]         = useState(false);
+  const [error,           setError]           = useState<string | null>(null);
 
-  // Field refs for keyboard navigation
-  const phoneRef = useRef<TextInputType>(null);
+  const phoneRef   = useRef<TextInputType>(null);
+  const emailRef   = useRef<TextInputType>(null);
   const usernameRef = useRef<TextInputType>(null);
   const passwordRef = useRef<TextInputType>(null);
-  const confirmRef = useRef<TextInputType>(null);
-  const regionRef = useRef<TextInputType>(null);
+  const confirmRef  = useRef<TextInputType>(null);
+  const regionRef   = useRef<TextInputType>(null);
 
   const handleSignup = async () => {
     setError(null);
 
-    // Client-side validation
     if (!username.trim() || !password || !confirmPassword) {
       setError('Username and password are required.');
       return;
@@ -68,40 +67,47 @@ const SignupScreen = ({ navigation }: Props) => {
       setError('Password must be at least 8 characters.');
       return;
     }
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
 
     setLoading(true);
     try {
-      const res = await fetch(`${BASE_URL}/api/auth/register/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: fullName.trim(),
-          phone_number: phone.trim() || undefined,
-          username: username.trim().toLowerCase(),
-          password,
-          password2: confirmPassword,
-          region: region.trim(),
-          role: 'field_executive',
-        }),
+      const { data } = await apiClient.post('/auth/register/', {
+        full_name:    fullName.trim() || undefined,
+        email:        email.trim().toLowerCase() || undefined,
+        phone_number: phone.trim() || undefined,
+        username:     username.trim().toLowerCase(),
+        password,
+        password2:    confirmPassword,
+        region:       region.trim() || undefined,
+        role:         'field_executive',
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        // Flatten DRF validation errors
-        const messages = Object.values(data)
-          .flat()
-          .join(' ');
-        setError(messages || 'Registration failed. Please try again.');
-        return;
-      }
-
-      // Auto-login: store tokens and user
       await loginWithTokens(data.access, data.refresh, data.user);
       // AppNavigator detects user → navigates to Main automatically
 
-    } catch {
-      setError('Network error. Please check your connection and try again.');
+    } catch (err: any) {
+      const isNetworkError = !err?.response;
+      if (isNetworkError) {
+        setError('Cannot reach server. Make sure the backend is running and you are connected.');
+        return;
+      }
+      // Flatten DRF validation errors (field-level or non-field)
+      const data = err.response?.data;
+      if (data && typeof data === 'object') {
+        const messages = Object.entries(data)
+          .flatMap(([field, v]) => {
+            const vals = Array.isArray(v) ? v : [String(v)];
+            const prefix = field === 'non_field_errors' ? '' : `${field}: `;
+            return vals.map(m => `${prefix}${m}`);
+          })
+          .join('\n');
+        setError(messages || 'Registration failed. Please try again.');
+      } else {
+        setError('Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -164,6 +170,23 @@ const SignupScreen = ({ navigation }: Props) => {
               placeholder="+91 98765 43210"
               placeholderTextColor="#8A8A7A"
               keyboardType="phone-pad"
+              returnKeyType="next"
+              onSubmitEditing={() => emailRef.current?.focus()}
+              editable={!loading}
+            />
+          </FormField>
+
+          <FormField label="Email" optional>
+            <TextInput
+              ref={emailRef}
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="ravi@example.com"
+              placeholderTextColor="#8A8A7A"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
               returnKeyType="next"
               onSubmitEditing={() => usernameRef.current?.focus()}
               editable={!loading}
@@ -286,17 +309,22 @@ const SignupScreen = ({ navigation }: Props) => {
   );
 };
 
-// ── Helper component ──────────────────────────────────────────────────────────
+// ── FormField helper ──────────────────────────────────────────────────────────
 
 const FormField = ({
   label,
+  optional,
   children,
 }: {
   label: string;
+  optional?: boolean;
   children: React.ReactNode;
 }) => (
   <View style={styles.fieldWrapper}>
-    <Text style={styles.fieldLabel}>{label}</Text>
+    <View style={styles.fieldLabelRow}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {optional ? <Text style={styles.optionalTag}>optional</Text> : null}
+    </View>
     {children}
   </View>
 );
@@ -307,13 +335,11 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#F8F6F1' },
   container: { paddingHorizontal: 16, paddingVertical: 24 },
 
-  // Header
   header: { alignItems: 'center', marginBottom: 20 },
   logo: { width: 56, height: 56, borderRadius: 28, marginBottom: 12 },
   title: { fontSize: 18, fontWeight: '700', color: '#1A3A25', textAlign: 'center' },
   subtitle: { fontSize: 13, color: '#6A7A6A', marginTop: 4 },
 
-  // Error
   errorBanner: {
     backgroundColor: '#FCEBEB',
     borderWidth: 1,
@@ -324,7 +350,6 @@ const styles = StyleSheet.create({
   },
   errorText: { fontSize: 13, color: '#D63333' },
 
-  // Form card
   formCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -339,70 +364,43 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#6A7A6A',
-    letterSpacing: 0.8,
-    marginBottom: 12,
-    marginTop: 4,
+    fontSize: 11, fontWeight: '700', color: '#6A7A6A',
+    letterSpacing: 0.8, marginBottom: 12, marginTop: 4,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#F0EDE6',
-    marginVertical: 16,
-  },
+  divider: { height: 1, backgroundColor: '#F0EDE6', marginVertical: 16 },
 
-  // Fields
   fieldWrapper: { marginBottom: 14 },
-  fieldLabel: {
-    fontSize: 13,
-    color: '#6A7A6A',
-    fontWeight: '500',
-    marginBottom: 6,
+  fieldLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  fieldLabel: { fontSize: 13, color: '#6A7A6A', fontWeight: '500' },
+  optionalTag: {
+    fontSize: 10, color: '#8A8A7A', fontWeight: '500',
+    backgroundColor: '#F0EDE6', paddingHorizontal: 6, paddingVertical: 1,
+    borderRadius: 4,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#E0DDD5',
-    borderRadius: 12,
-    minHeight: 52,
-    paddingHorizontal: 13,
-    paddingVertical: 13,
-    fontSize: 14,
-    color: '#1A3A25',
-    backgroundColor: '#FFFFFF',
+    borderWidth: 1, borderColor: '#E0DDD5', borderRadius: 12,
+    minHeight: 52, paddingHorizontal: 13, paddingVertical: 13,
+    fontSize: 14, color: '#1A3A25', backgroundColor: '#FFFFFF',
   },
   passwordRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0DDD5',
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    minHeight: 52,
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1, borderColor: '#E0DDD5', borderRadius: 12,
+    backgroundColor: '#FFFFFF', minHeight: 52,
   },
   passwordInput: {
-    flex: 1,
-    paddingHorizontal: 13,
-    paddingVertical: 13,
-    fontSize: 14,
-    color: '#1A3A25',
+    flex: 1, paddingHorizontal: 13, paddingVertical: 13,
+    fontSize: 14, color: '#1A3A25',
   },
   eyeBtn: { paddingHorizontal: 13, paddingVertical: 13, justifyContent: 'center' },
   eyeText: { fontSize: 12, color: '#6A7A6A', fontWeight: '600' },
 
-  // Submit
   submitBtn: {
-    backgroundColor: '#1A4A2E',
-    borderRadius: 12,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 14,
+    backgroundColor: '#1A4A2E', borderRadius: 12, height: 52,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
   },
   submitDisabled: { opacity: 0.65 },
   submitText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
 
-  // Sign in link
   signInLink: { alignItems: 'center', paddingVertical: 8 },
   signInText: { fontSize: 14, color: '#6A7A6A' },
   signInHighlight: { color: '#1A4A2E', fontWeight: '700' },

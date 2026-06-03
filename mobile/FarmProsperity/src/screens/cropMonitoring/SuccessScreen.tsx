@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
+import AppIcon from '../../components/AppIcon';
+import { Check } from '../../utils/icons';
 
 interface SuccessScreenProps {
   onAddNew: () => void;
@@ -53,7 +55,7 @@ const SuccessScreen = ({
           { transform: [{ scale: scaleAnim }] },
         ]}
       >
-        <Text style={styles.checkmark}>✓</Text>
+        <AppIcon icon={Check} size={52} color={colors.success} strokeWidth={2.5} />
       </Animated.View>
 
       <Animated.View style={{ opacity: opacityAnim, alignItems: 'center', width: '100%' }}>
@@ -102,7 +104,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
   },
-  checkmark:  { fontSize: 48, color: colors.success, lineHeight: 56 },
   title: {
     fontSize: 24,
     fontWeight: '800',

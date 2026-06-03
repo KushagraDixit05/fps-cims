@@ -9,7 +9,7 @@
  *  - Pull-to-refresh reloads both summary and recent entries
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,17 +18,54 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
+import { Q } from '@nozbe/watermelondb';
 
 import { getVisitSummary, getFarmerVisits } from '../api/cropMonitoring';
 import { useAuth } from '../store/authStore';
 import { colors } from '../utils/colors';
+import database from '../database';
+import { FarmerVisitModel } from '../database/models/FarmerVisitModel';
 import type { FarmerVisitSummary, RecentVisit } from '../types/cropMonitoring';
 import type { RootStackParamList } from '../navigation/types';
+import AppIcon from '../components/AppIcon';
+import {
+  Leaf, Store, Map, BarChart2, MapPin,
+  Sprout, ArrowRight, ChevronRight, IconStroke,
+} from '../utils/icons';
 
 type Nav = StackNavigationProp<RootStackParamList>;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const localToRecentVisit = (v: FarmerVisitModel): RecentVisit => ({
+  id: v.serverId ?? v.id,
+  farmer_name: v.farmerName,
+  village_name: v.villageName,
+  block_name: v.blockName,
+  district_name: v.districtName,
+  crop_count: (() => {
+    try { return JSON.parse(v.cropsJson || '[]').length; } catch { return 0; }
+  })(),
+  submitted_at: new Date(v.createdAtLocal).toISOString(),
+  _pending: !v.isSynced,
+});
+
+const buildLocalSummary = (records: FarmerVisitModel[]): FarmerVisitSummary => {
+  const now = Date.now();
+  const todayStart = new Date().setHours(0, 0, 0, 0);
+  const weekStart  = now - 7 * 24 * 60 * 60 * 1000;
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+  return {
+    today:        records.filter(v => v.createdAtLocal >= todayStart).length,
+    this_week:    records.filter(v => v.createdAtLocal >= weekStart).length,
+    this_month:   records.filter(v => v.createdAtLocal >= monthStart).length,
+    team_members: 1,
+  };
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -42,29 +79,73 @@ const HomeScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = useCallback(async () => {
+    setLoadingVisits(true);
+
+    // Phase 1 — instant local read (WatermelonDB)
+    let localRecords: FarmerVisitModel[] = [];
+    try {
+      localRecords = await database.collections
+        .get<FarmerVisitModel>('farmer_visits')
+        .query()
+        .fetch();
+
+      if (localRecords.length > 0) {
+        const sorted = [...localRecords].sort((a, b) => b.createdAtLocal - a.createdAtLocal);
+        setRecentVisits(sorted.slice(0, 10).map(localToRecentVisit));
+        setSummary(buildLocalSummary(sorted));
+      }
+    } catch { /* DB unavailable */ }
+
+    // Phase 2 — authoritative API read
     try {
       const [sum, paginated] = await Promise.all([
         getVisitSummary(),
         getFarmerVisits(1),
       ]);
-      setSummary(sum);
-      setRecentVisits(paginated.results ?? []);
+
+      const pendingLocal = localRecords
+        .filter(v => !v.isSynced)
+        .sort((a, b) => b.createdAtLocal - a.createdAtLocal)
+        .map(localToRecentVisit);
+
+      const serverIds = new Set((paginated.results ?? []).map(r => r.id));
+      const trulyPending = pendingLocal.filter(p => !serverIds.has(p.id));
+
+      const todayStart = new Date().setHours(0, 0, 0, 0);
+      const weekStart  = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+
+      setSummary({
+        ...sum,
+        today:      sum.today      + trulyPending.filter(p => new Date(p.submitted_at).getTime() >= todayStart).length,
+        this_week:  sum.this_week  + trulyPending.filter(p => new Date(p.submitted_at).getTime() >= weekStart).length,
+        this_month: sum.this_month + trulyPending.filter(p => new Date(p.submitted_at).getTime() >= monthStart).length,
+      });
+      setRecentVisits([...trulyPending, ...(paginated.results ?? [])]);
     } catch {
-      // Silently fail — show stale / '—' values
+      // API unavailable — local data from Phase 1 remains displayed
     } finally {
       setLoadingVisits(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useFocusEffect(
+    useCallback(() => { loadData(); }, [loadData]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
   }, [loadData]);
+
+  const handleVisitPress = useCallback((visit: RecentVisit) => {
+    if (visit._pending) {
+      Alert.alert('Pending Sync', 'This visit is saved locally and will sync when you go online.');
+      return;
+    }
+    navigation.navigate('CropMonitoringDetail', { visitId: visit.id });
+  }, [navigation]);
 
   const displayName = user ? user.first_name || user.username : 'User';
 
@@ -83,12 +164,15 @@ const HomeScreen = () => {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, {displayName} 👋</Text>
+          <Text style={styles.greeting}>Hello, {displayName}</Text>
           <Text style={styles.role}>
             {user?.role === 'field_executive' ? 'Field Executive' : user?.role ?? ''}
           </Text>
           {user?.region ? (
-            <Text style={styles.region}>📍 {user.region}</Text>
+            <View style={styles.regionRow}>
+              <AppIcon icon={MapPin} size={11} color="rgba(255,255,255,0.7)" strokeWidth={2} />
+              <Text style={styles.region}> {user.region}</Text>
+            </View>
           ) : null}
         </View>
         <TouchableOpacity
@@ -120,7 +204,9 @@ const HomeScreen = () => {
           onPress={() => navigation.navigate('CropMonitoringForm')}
           activeOpacity={0.85}
         >
-          <Text style={styles.menuEmoji}>🌾</Text>
+          <View style={styles.menuIconWrap}>
+            <AppIcon icon={Leaf} size={24} color="#1A4A2E" strokeWidth={IconStroke} />
+          </View>
           <Text style={styles.menuTitle}>New Visit</Text>
           <Text style={styles.menuSub}>Log a field visit</Text>
         </TouchableOpacity>
@@ -133,7 +219,9 @@ const HomeScreen = () => {
           <View style={styles.badge}>
             <Text style={styles.badgeText}>Live</Text>
           </View>
-          <Text style={styles.menuEmoji}>📦</Text>
+          <View style={styles.menuIconWrap}>
+            <AppIcon icon={Store} size={24} color="#C8900A" strokeWidth={IconStroke} />
+          </View>
           <Text style={styles.menuTitle}>Mandi</Text>
           <Text style={styles.menuSub}>Prices · Trends</Text>
         </TouchableOpacity>
@@ -143,7 +231,9 @@ const HomeScreen = () => {
           onPress={() => navigation.navigate('Main')}
           activeOpacity={0.85}
         >
-          <Text style={styles.menuEmoji}>🗺️</Text>
+          <View style={styles.menuIconWrap}>
+            <AppIcon icon={Map} size={24} color="#185FA5" strokeWidth={IconStroke} />
+          </View>
           <Text style={styles.menuTitle}>My Visits</Text>
           <Text style={styles.menuSub}>History</Text>
         </TouchableOpacity>
@@ -153,7 +243,9 @@ const HomeScreen = () => {
           onPress={() => navigation.navigate('Main')}
           activeOpacity={0.85}
         >
-          <Text style={styles.menuEmoji}>📊</Text>
+          <View style={styles.menuIconWrap}>
+            <AppIcon icon={BarChart2} size={24} color="#7C3AED" strokeWidth={IconStroke} />
+          </View>
           <Text style={styles.menuTitle}>Reports</Text>
           <Text style={styles.menuSub}>Analytics · YoY</Text>
         </TouchableOpacity>
@@ -170,12 +262,16 @@ const HomeScreen = () => {
         </View>
       ) : recentVisits.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🌱</Text>
+          <View style={styles.emptyIconWrap}>
+            <AppIcon icon={Sprout} size={40} color={colors.textMuted} strokeWidth={1.5} />
+          </View>
           <Text style={styles.emptyText}>No visits recorded yet.</Text>
           <TouchableOpacity
+            style={styles.emptyActionRow}
             onPress={() => navigation.navigate('CropMonitoringForm')}
           >
-            <Text style={styles.emptyAction}>Log your first visit →</Text>
+            <Text style={styles.emptyAction}>Log your first visit</Text>
+            <AppIcon icon={ArrowRight} size={14} color={colors.primary} strokeWidth={2} />
           </TouchableOpacity>
         </View>
       ) : (
@@ -183,9 +279,7 @@ const HomeScreen = () => {
           <TouchableOpacity
             key={visit.id}
             style={styles.visitCard}
-            onPress={() =>
-              navigation.navigate('CropMonitoringDetail', { visitId: visit.id })
-            }
+            onPress={() => handleVisitPress(visit)}
             activeOpacity={0.85}
           >
             <View style={styles.visitCardLeft}>
@@ -201,11 +295,19 @@ const HomeScreen = () => {
                 })}
               </Text>
             </View>
-            <View style={styles.cropBadge}>
-              <Text style={styles.cropBadgeText}>
-                {visit.crop_count} crop{visit.crop_count !== 1 ? 's' : ''}
-              </Text>
+            <View style={styles.visitRight}>
+              <View style={styles.cropBadge}>
+                <Text style={styles.cropBadgeText}>
+                  {visit.crop_count} crop{visit.crop_count !== 1 ? 's' : ''}
+                </Text>
+              </View>
+              {visit._pending ? (
+                <View style={styles.pendingBadge}>
+                  <Text style={styles.pendingText}>Pending</Text>
+                </View>
+              ) : null}
             </View>
+            <AppIcon icon={ChevronRight} size={16} color={colors.textMuted} strokeWidth={2} />
           </TouchableOpacity>
         ))
       )}
@@ -247,7 +349,8 @@ const styles = StyleSheet.create({
   },
   greeting:    { color: 'rgba(255,255,255,0.75)', fontSize: 13 },
   role:        { color: 'white', fontSize: 18, fontWeight: '700', marginTop: 2 },
-  region:      { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2 },
+  regionRow:   { flexDirection: 'row' as const, alignItems: 'center' as const, marginTop: 3 },
+  region:      { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
   profileBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -299,7 +402,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: 2,
   },
   badgeText:    { color: 'white', fontSize: 9, fontWeight: '700' },
-  menuEmoji:    { fontSize: 28, marginBottom: 8 },
+  menuIconWrap: { marginBottom: 10 },
   menuTitle:    { fontSize: 14, fontWeight: '600', color: colors.textPrimary, lineHeight: 18 },
   menuSub:      { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
 
@@ -307,10 +410,11 @@ const styles = StyleSheet.create({
   visitLoader:  { paddingVertical: 24, alignItems: 'center' },
 
   // Empty state
-  emptyState:   { alignItems: 'center', paddingVertical: 32, gap: 8 },
-  emptyIcon:    { fontSize: 36 },
-  emptyText:    { fontSize: 14, color: colors.textSecondary },
-  emptyAction:  { fontSize: 14, color: colors.primary, fontWeight: '600' },
+  emptyState:     { alignItems: 'center', paddingVertical: 32, gap: 8 },
+  emptyIconWrap:  { opacity: 0.5, marginBottom: 4 },
+  emptyText:      { fontSize: 14, color: colors.textSecondary },
+  emptyActionRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 4 },
+  emptyAction:    { fontSize: 14, color: colors.primary, fontWeight: '600' },
 
   // Visit cards
   visitCard: {
@@ -323,7 +427,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -331,6 +434,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   visitCardLeft:  { flex: 1, marginRight: 10 },
+  visitRight:     { alignItems: 'flex-end', gap: 4, marginRight: 8 },
   visitFarmer:    { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
   visitLocation:  { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   visitDate:      { fontSize: 11, color: colors.textMuted, marginTop: 3 },
@@ -338,9 +442,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   cropBadgeText:  { fontSize: 12, fontWeight: '700', color: colors.primary },
+  pendingBadge: {
+    backgroundColor: '#FEF3DA',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  pendingText: { fontSize: 10, fontWeight: '700', color: '#C8900A' },
 });
 
 export default HomeScreen;

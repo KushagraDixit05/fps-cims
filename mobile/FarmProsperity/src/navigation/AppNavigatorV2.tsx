@@ -24,6 +24,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
+import { Home, Leaf, Store, BarChart2, IconSize, IconStroke } from '../utils/icons';
 
 import { useAuth } from '../store/authStore';
 import { colors } from '../utils/colors';
@@ -67,11 +68,6 @@ const headerOptions = {
   headerTitleStyle: { fontWeight: '600' as const, fontSize: 16 },
 };
 
-// ── Emoji tab icon (no native linking needed) ─────────────────────────────────
-const EmojiIcon = ({ name, size }: { name: string; color: string; size: number }) => {
-  const { Text } = require('react-native');
-  return <Text style={{ fontSize: size - 4 }}>{name}</Text>;
-};
 
 // ── Bottom Tabs ───────────────────────────────────────────────────────────────
 const MainTabs = () => (
@@ -87,11 +83,17 @@ const MainTabs = () => (
       },
       tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
       headerShown: false,
-      tabBarIcon: ({ color, size }) => {
-        const icons: Record<string, string> = {
-          Home: '🏠', Crops: '🌾', Mandi: '📦', Reports: '📊',
+      tabBarIcon: ({ color }) => {
+        const iconMap: Record<string, React.ComponentType<any>> = {
+          Home: Home,
+          Crops: Leaf,
+          Mandi: Store,
+          Reports: BarChart2,
         };
-        return <EmojiIcon name={icons[route.name] ?? '•'} color={color} size={size} />;
+        const Icon = iconMap[route.name];
+        return Icon ? (
+          <Icon size={IconSize.tab} color={color} strokeWidth={IconStroke} />
+        ) : null;
       },
     })}
   >
