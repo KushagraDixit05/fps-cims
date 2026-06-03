@@ -1,5 +1,5 @@
 # Phase 2 — Mobile App: Core Screens & Navigation
-**Farm Prosperity Solution · React Native**
+**Farm Prosperity Solutions · React Native**
 **Duration: Week 6–9**
 
 ---
@@ -448,7 +448,7 @@ const LoginScreen = ({ navigation }: any) => {
         <View style={styles.logoCircle}>
           <Text style={styles.logoEmoji}>🌱</Text>
         </View>
-        <Text style={styles.brandName}>Farm Prosperity Solution</Text>
+        <Text style={styles.brandName}>Farm Prosperity Solutions</Text>
         <Text style={styles.brandSub}>Crop Intelligence Platform</Text>
       </View>
 

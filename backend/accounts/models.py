@@ -4,7 +4,7 @@ from django.db import models
 
 class User(AbstractUser):
     """
-    Custom user model for Farm Prosperity Solution.
+    Custom user model for Farm Prosperity Solutions.
     Covers field executives, admins, and institutional viewers.
     """
 

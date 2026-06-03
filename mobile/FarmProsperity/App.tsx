@@ -1,29 +1,25 @@
 /**
- * App.tsx — Root entry point for Farm Prosperity Solution mobile app.
+ * App.tsx — Root entry point for Farm Prosperity Solutions mobile app.
  *
- * Phase 3 addition:
- *  - useAutoSync() is called at the root level so the connectivity listener
- *    runs for the entire authenticated session lifetime.
+ * v2 Redesign:
+ *  - Uses AppNavigatorV2 which adds Splash → Welcome → Signup | Login flow
+ *  - Drawer Navigator wraps the tab navigator (Sidebar ☰)
+ *  - GestureHandlerRootView required by @react-navigation/drawer
  *
- * Wraps the entire app in AuthProvider, which:
- *  - Manages the user session state
- *  - Shows a splash spinner while restoring session on cold start
- *
- * AppNavigator reads authStore and shows Login or Main stack accordingly.
+ * ROLLBACK: change AppNavigatorV2 back to AppNavigator (one line)
  */
 
 import React from 'react';
 import { StatusBar } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AuthProvider } from './src/store/authStore';
-import AppNavigator    from './src/navigation/AppNavigator';
+import AppNavigator    from './src/navigation/AppNavigatorV2'; // ← v2
 import { colors }      from './src/utils/colors';
 import { useAutoSync } from './src/sync/useAutoSync';
 
-// Inner component so useAutoSync() can run inside the AuthProvider context
-// (which is where the Axios token interceptor lives).
 const AppInner = () => {
-  useAutoSync(); // background sync listener — throttled to 60 s
+  useAutoSync();
   return (
     <>
       <StatusBar backgroundColor={colors.primary} barStyle="light-content" />
@@ -33,9 +29,12 @@ const AppInner = () => {
 };
 
 const App = () => (
-  <AuthProvider>
-    <AppInner />
-  </AuthProvider>
+  <GestureHandlerRootView style={{ flex: 1 }}>
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
+  </GestureHandlerRootView>
 );
 
 export default App;
+

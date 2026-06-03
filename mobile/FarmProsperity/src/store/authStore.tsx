@@ -59,6 +59,7 @@ function authReducer(state: AuthState, action: Action): AuthState {
 
 interface AuthContextValue extends AuthState {
   login: (username: string, password: string) => Promise<void>;
+  loginWithTokens: (access: string, refresh: string, user: User) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -98,13 +99,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     void tokenData;
   }, []);
 
+  const loginWithTokens = useCallback(async (access: string, refresh: string, user: User) => {
+    // Persist tokens so future API calls work
+    await authApi.storeTokens(access, refresh);
+    dispatch({ type: 'LOGIN', user });
+  }, []);
+
   const logout = useCallback(async () => {
     await apiLogout();
     dispatch({ type: 'LOGOUT' });
   }, []);
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, loginWithTokens, logout }}>
       {children}
     </AuthContext.Provider>
   );

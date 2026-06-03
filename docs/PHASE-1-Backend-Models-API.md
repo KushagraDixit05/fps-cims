@@ -1,5 +1,5 @@
 # Phase 1 — Backend: Models, API & Django Admin
-**Farm Prosperity Solution · Django + PostgreSQL**
+**Farm Prosperity Solutions · Django + PostgreSQL**
 **Duration: Week 3–5**
 
 ---

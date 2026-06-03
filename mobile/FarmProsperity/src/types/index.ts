@@ -1,5 +1,5 @@
 /**
- * Domain types for Farm Prosperity Solution mobile app.
+ * Domain types for Farm Prosperity Solutions mobile app.
  * All API responses and form data are shaped by these interfaces.
  */
 

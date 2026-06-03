@@ -1,5 +1,5 @@
 /**
- * Axios API client for Farm Prosperity Solution.
+ * Axios API client for Farm Prosperity Solutions.
  *
  * Features:
  *  - Automatically attaches Bearer token from AsyncStorage to every request.

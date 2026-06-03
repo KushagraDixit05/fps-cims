@@ -1,5 +1,5 @@
 /**
- * Brand color tokens for Farm Prosperity Solution.
+ * Brand color tokens for Farm Prosperity Solutions.
  * All UI components should reference these — never use raw hex strings in components.
  */
 export const colors = {

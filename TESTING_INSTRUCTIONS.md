@@ -1,4 +1,4 @@
-# Farm Prosperity Solution (FPS) — Testing Instructions
+# Farm Prosperity Solutions (FPS) — Testing Instructions
 
 > **Current scope:** Offline-First Sync (Phase 3)  
 > **Status:** Phase 3 implemented and verified on physical device.

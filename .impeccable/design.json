@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-03T10:26:00Z",
+  "title": "Design System: Farm Prosperity Solutions",
+  "extensions": {
+    "colorMeta": {
+      "primary":        { "role": "primary",   "displayName": "Deep Forest Green",    "canonical": "#1A4A2E", "tonalRamp": ["#0A1A10", "#112E1A", "#1A4A2E", "#2A6A44", "#3A8A5C", "#6AAA84", "#A0CCAC", "#D4EEDD"] },
+      "primary-mid":    { "role": "primary",   "displayName": "Forest Mid",           "canonical": "#2A6A44", "tonalRamp": ["#0F2A1A", "#1A4A2E", "#2A6A44", "#3A8A5C", "#58A878", "#86C49A", "#B4DCB8", "#E1F2E8"] },
+      "primary-light":  { "role": "primary",   "displayName": "Field Mint",           "canonical": "#E1F2E8", "tonalRamp": ["#B8DEC6", "#C8E8D4", "#D8F0E2", "#E1F2E8", "#EAF5EE", "#F0F8F2", "#F6FAF7", "#FAFDFB"] },
+      "background":     { "role": "neutral",   "displayName": "Off-White Canvas",     "canonical": "#F8F6F1", "tonalRamp": ["#D0CEC9", "#DCDAD5", "#E8E6E1", "#F0EDE8", "#F4F2ED", "#F8F6F1", "#FAFAF6", "#FDFDFB"] },
+      "surface":        { "role": "neutral",   "displayName": "Pure White Surface",   "canonical": "#FFFFFF", "tonalRamp": ["#C8C8C8", "#D8D8D8", "#E8E8E8", "#F0F0F0", "#F5F5F5", "#FAFAFA", "#FDFDFD", "#FFFFFF"] },
+      "border":         { "role": "neutral",   "displayName": "Stone Border",         "canonical": "#E0DDD5", "tonalRamp": ["#B8B5AD", "#C8C5BD", "#D4D1C9", "#DCD9D1", "#E0DDD5", "#E8E5DD", "#F0EDE5", "#F8F5EE"] },
+      "text-primary":   { "role": "neutral",   "displayName": "Forest Ink",           "canonical": "#1A3A25", "tonalRamp": ["#0A1510", "#12251A", "#1A3A25", "#2A5A3A", "#3A7A52", "#66A47C", "#A0C8AA", "#D4E8D8"] },
+      "text-secondary": { "role": "neutral",   "displayName": "Sage Secondary",       "canonical": "#6A7A6A", "tonalRamp": ["#283028", "#3A4A3A", "#4E5E4E", "#6A7A6A", "#828E82", "#A0ACA0", "#BCCABC", "#D8E4D8"] },
+      "text-muted":     { "role": "neutral",   "displayName": "Muted Fieldwork",      "canonical": "#8A8A7A", "tonalRamp": ["#3A3A2E", "#525248", "#686858", "#7A7A6C", "#8A8A7A", "#A0A092", "#BCBCB0", "#D8D8CC"] },
+      "good":           { "role": "tertiary",  "displayName": "Healthy Green",        "canonical": "#1A8A3A", "tonalRamp": ["#0A3018", "#12501C", "#1A7030", "#1A8A3A", "#2AAA4C", "#50C46C", "#8CD8A4", "#C8EED4"] },
+      "average":        { "role": "secondary", "displayName": "Harvest Amber",        "canonical": "#C8900A", "tonalRamp": ["#4A3002", "#6A4804", "#926208", "#C8900A", "#E8A818", "#F0C040", "#F6D880", "#FAF0C0"] },
+      "poor":           { "role": "secondary", "displayName": "Alert Red",            "canonical": "#D63333", "tonalRamp": ["#4A0C0C", "#6A1414", "#922020", "#C83030", "#D63333", "#E26060", "#EE9898", "#F8D0D0"] },
+      "info":           { "role": "tertiary",  "displayName": "Field Blue",           "canonical": "#185FA5", "tonalRamp": ["#082035", "#0E3260", "#144888", "#185FA5", "#2278C8", "#569AD8", "#90BEEA", "#C8DEFA"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "KPI summary numbers and hero values only. Dashboard tile counts." },
+      "headline": { "displayName": "Headline", "purpose": "Screen titles, section headers, farmer names in cards." },
+      "title": { "displayName": "Title", "purpose": "Card titles, form section names, button labels." },
+      "body": { "displayName": "Body", "purpose": "All descriptive text, input values, metadata. Floor: 14sp." },
+      "label": { "displayName": "Label", "purpose": "Section zone markers only (QUICK ACTIONS, RECENT VISITS). Uppercase, tracked." }
+    },
+    "shadows": [
+      { "name": "card-ambient-ios", "value": "shadowColor: #000, shadowOffset: {width:0,height:1}, shadowOpacity: 0.06, shadowRadius: 4", "purpose": "All Card components. Barely perceptible surface lift." },
+      { "name": "card-ambient-android", "value": "elevation: 2", "purpose": "Android equivalent of card-ambient-ios." },
+      { "name": "form-container-ios", "value": "shadowColor: #000, shadowOffset: {width:0,height:2}, shadowOpacity: 0.06, shadowRadius: 6", "purpose": "Login form card, modal containers." },
+      { "name": "form-container-android", "value": "elevation: 2", "purpose": "Android equivalent of form-container." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for all state transitions. Loading, press feedback, toggle." },
+      { "name": "duration-short", "value": "150ms", "purpose": "Button press, touch feedback." },
+      { "name": "duration-medium", "value": "250ms", "purpose": "Screen transitions, form state changes." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main CTA. Full-width in forms. Used for Submit, Login, Sync Now, Log Visit.",
+      "html": "<button class=\"ds-btn-primary\">Log Visit</button>",
+      "css": ".ds-btn-primary { display: flex; align-items: center; justify-content: center; background: #1A4A2E; color: #FFFFFF; border: none; border-radius: 12px; padding: 14px 20px; min-height: 48px; font-size: 15px; font-weight: 600; font-family: -apple-system, system-ui, sans-serif; cursor: pointer; width: 100%; transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-primary:hover { background: #2A6A44; } .ds-btn-primary:focus-visible { outline: 3px solid #2A6A44; outline-offset: 2px; } .ds-btn-primary:active { opacity: 0.85; } .ds-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Outlined action. Used when primary would dominate. Cancel, View All.",
+      "html": "<button class=\"ds-btn-secondary\">View All</button>",
+      "css": ".ds-btn-secondary { display: flex; align-items: center; justify-content: center; background: #FFFFFF; color: #1A4A2E; border: 1.5px solid #1A4A2E; border-radius: 12px; padding: 14px 20px; min-height: 48px; font-size: 15px; font-weight: 600; font-family: -apple-system, system-ui, sans-serif; cursor: pointer; width: 100%; transition: background 150ms ease; } .ds-btn-secondary:hover { background: #E1F2E8; } .ds-btn-secondary:focus-visible { outline: 3px solid #1A4A2E; outline-offset: 2px; } .ds-btn-secondary:active { opacity: 0.85; } .ds-btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive confirms only. Delete, Clear, Discard. Always behind a confirmation step.",
+      "html": "<button class=\"ds-btn-danger\">Delete Visit</button>",
+      "css": ".ds-btn-danger { display: flex; align-items: center; justify-content: center; background: #D63333; color: #FFFFFF; border: none; border-radius: 12px; padding: 14px 20px; min-height: 48px; font-size: 15px; font-weight: 600; font-family: -apple-system, system-ui, sans-serif; cursor: pointer; width: 100%; transition: opacity 150ms ease; } .ds-btn-danger:hover { background: #B82828; } .ds-btn-danger:focus-visible { outline: 3px solid #D63333; outline-offset: 2px; } .ds-btn-danger:active { opacity: 0.85; } .ds-btn-danger:disabled { opacity: 0.55; cursor: not-allowed; }"
+    },
+    {
+      "name": "Content Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Primary content container. Visit entries, form sections, data rows.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-title\">Ramesh Kumar</p><p class=\"ds-card-meta\">Bakeri Village · Block A</p><p class=\"ds-card-timestamp\">02 Jun 2026</p></div>",
+      "css": ".ds-card { background: #FFFFFF; border-radius: 14px; padding: 14px; border: 0.5px solid #E0DDD5; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 8px; font-family: -apple-system, system-ui, sans-serif; } .ds-card-title { font-size: 15px; font-weight: 700; color: #1A3A25; margin: 0 0 4px 0; } .ds-card-meta { font-size: 12px; color: #6A7A6A; margin: 0 0 4px 0; } .ds-card-timestamp { font-size: 11px; color: #8A8A7A; margin: 0; }"
+    },
+    {
+      "name": "Form Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Labelled text field. Used across all data entry forms.",
+      "html": "<div class=\"ds-input-wrapper\"><label class=\"ds-input-label\">Farmer Name <span class=\"ds-input-required\">*</span></label><input class=\"ds-input\" type=\"text\" placeholder=\"Enter farmer name\" /></div>",
+      "css": ".ds-input-wrapper { margin-bottom: 14px; font-family: -apple-system, system-ui, sans-serif; } .ds-input-label { display: block; font-size: 13px; font-weight: 500; color: #6A7A6A; margin-bottom: 6px; } .ds-input-required { color: #D63333; } .ds-input { display: block; width: 100%; box-sizing: border-box; border: 1px solid #E0DDD5; border-radius: 12px; padding: 13px; font-size: 14px; font-family: inherit; background: #FFFFFF; color: #1A3A25; transition: border-color 200ms ease; } .ds-input:focus { outline: none; border-color: #1A4A2E; } .ds-input::placeholder { color: #8A8A7A; } .ds-input.error { border-color: #D63333; } .ds-input-error-text { margin-top: 4px; font-size: 12px; color: #D63333; }"
+    },
+    {
+      "name": "Condition Badge — Good",
+      "kind": "chip",
+      "refersTo": "badge-good",
+      "description": "Crop health signal: Good condition. Always text + color — never color alone.",
+      "html": "<span class=\"ds-badge ds-badge-good\">Good</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; border-radius: 8px; border-width: 1px; border-style: solid; padding: 4px 10px; font-size: 13px; font-weight: 600; font-family: -apple-system, system-ui, sans-serif; } .ds-badge-good { background: #E1F2E8; color: #1A8A3A; border-color: #1A8A3A; } .ds-badge-average { background: #FEF3DA; color: #C8900A; border-color: #C8900A; } .ds-badge-poor { background: #FCEBEB; color: #D63333; border-color: #D63333; }"
+    },
+    {
+      "name": "Condition Badge — Average",
+      "kind": "chip",
+      "refersTo": "badge-average",
+      "description": "Crop health signal: Average condition.",
+      "html": "<span class=\"ds-badge ds-badge-average\">Average</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; border-radius: 8px; border-width: 1px; border-style: solid; padding: 4px 10px; font-size: 13px; font-weight: 600; font-family: -apple-system, system-ui, sans-serif; } .ds-badge-average { background: #FEF3DA; color: #C8900A; border-color: #C8900A; }"
+    },
+    {
+      "name": "Condition Badge — Poor",
+      "kind": "chip",
+      "refersTo": "badge-poor",
+      "description": "Crop health signal: Poor condition. Highest urgency reading.",
+      "html": "<span class=\"ds-badge ds-badge-poor\">Poor</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; border-radius: 8px; border-width: 1px; border-style: solid; padding: 4px 10px; font-size: 13px; font-weight: 600; font-family: -apple-system, system-ui, sans-serif; } .ds-badge-poor { background: #FCEBEB; color: #D63333; border-color: #D63333; }"
+    },
+    {
+      "name": "App Header",
+      "kind": "nav",
+      "description": "Top navigation bar. Deep Forest Green, white type, profile avatar.",
+      "html": "<header class=\"ds-app-header\"><div class=\"ds-header-left\"><p class=\"ds-header-greeting\">Hello, Ravi</p><p class=\"ds-header-role\">Field Executive</p><p class=\"ds-header-region\">📍 Nashik Region</p></div><button class=\"ds-profile-btn\">R</button></header>",
+      "css": ".ds-app-header { background: #1A4A2E; padding: 52px 20px 20px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; font-family: -apple-system, system-ui, sans-serif; } .ds-header-left { flex: 1; } .ds-header-greeting { color: rgba(255,255,255,0.75); font-size: 13px; margin: 0; } .ds-header-role { color: #FFFFFF; font-size: 18px; font-weight: 700; margin: 2px 0 0; } .ds-header-region { color: rgba(255,255,255,0.7); font-size: 12px; margin: 2px 0 0; } .ds-profile-btn { width: 40px; height: 40px; border-radius: 20px; background: rgba(255,255,255,0.2); border: none; color: #FFFFFF; font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; } .ds-profile-btn:hover { background: rgba(255,255,255,0.3); } .ds-profile-btn:focus-visible { outline: 2px solid rgba(255,255,255,0.6); outline-offset: 2px; }"
+    },
+    {
+      "name": "Quick Action Tile",
+      "kind": "card",
+      "description": "Home screen navigation tile. 2-column grid, category-tinted background, large tap target.",
+      "html": "<button class=\"ds-action-tile ds-action-tile--crop\"><span class=\"ds-tile-icon\">🌾</span><p class=\"ds-tile-title\">New Visit</p><p class=\"ds-tile-sub\">Log a field visit</p></button>",
+      "css": ".ds-action-tile { display: flex; flex-direction: column; align-items: flex-start; width: 47%; border-radius: 16px; padding: 16px; border: 0.5px solid #E0DDD5; min-height: 110px; cursor: pointer; text-align: left; position: relative; transition: opacity 150ms ease; font-family: -apple-system, system-ui, sans-serif; } .ds-action-tile--crop { background: #E1F2E8; } .ds-action-tile--mandi { background: #FEF3DA; } .ds-action-tile--visits { background: #E6F1FB; } .ds-action-tile--reports { background: #F3E8FF; } .ds-action-tile:active { opacity: 0.85; } .ds-tile-icon { font-size: 28px; margin-bottom: 8px; } .ds-tile-title { font-size: 14px; font-weight: 600; color: #1A3A25; margin: 0 0 2px 0; } .ds-tile-sub { font-size: 11px; color: #6A7A6A; margin: 0; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Field Commander's Instrument",
+    "overview": "This design system exists for one purpose: to make a field executive in direct sunlight, one hand occupied, moving between farms, feel completely in control. It is not a consumer app. It is not a marketing surface. It is a precision instrument — the kind of tool a professional trusts because it has never let them down. Every visual decision is measured against a single question: does this help a person get their job done faster, with more confidence, in a difficult environment?\n\nThe system is clean and deliberate without being sterile. A restrained warm-neutral canvas gives breathing room. The forest-green primary is not decoration — it is a data signal for health and vitality, used sparingly so it retains meaning. Typography is legible at a glance: heavy weights for hierarchy, generous sizes for outdoor readability, tight spacing where density is required. Motion is minimal — state transitions only, nothing choreographed. There is no room for scroll-driven theatrics when you're standing in a field.\n\nThis system explicitly rejects: the cluttered density of legacy government software, the saturated green wallpaper of consumer farming apps, the carousel-heavy aesthetics of agri-commerce platforms, and the brochure-style scroll narratives of marketing sites. It rejects dark mode — these screens live in sunlight, not in studios.",
+    "keyCharacteristics": [
+      "Light mode only; optimized for direct sunlight and outdoor glare",
+      "Restrained warm-neutral background with a single, meaningful primary green",
+      "High-contrast text hierarchy: deep forest ink on off-white canvas",
+      "Large touch targets (≥ 48pt) throughout; no precision tapping required",
+      "Color is always semantic: green = health/success, amber = warning, red = error, blue = info",
+      "Elevation is flat-by-default; subtle border + minimal shadow as the only surface treatment",
+      "No gradient text, no glassmorphism, no illustrative decoration"
+    ],
+    "rules": [
+      { "name": "The Semantic Color Rule", "body": "Green, amber, and red are reserved exclusively for data status signals (crop condition, sync state, error/success). They are never used as decorative accents or brand splashes.", "section": "colors" },
+      { "name": "The One Voice Rule", "body": "The Deep Forest primary appears in ≤3 places per screen: the header, one primary action, and one key data value. Its authority depends on its scarcity.", "section": "colors" },
+      { "name": "The 14sp Floor Rule", "body": "No text renders below 14sp for body content, or 12sp for supporting metadata. The outdoor environment demands it.", "section": "typography" },
+      { "name": "The Uppercase Restraint Rule", "body": "All-caps labels appear only as section-zone markers and status labels in badges. Never in body copy, form labels, or button text.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "No element gets a shadow unless it is a Card, a modal, or a floating overlay. Decorative shadows on buttons, navigation elements, or list items are prohibited.", "section": "elevation" },
+      { "name": "The Anti-Ghost-Card Rule", "body": "Never pair a 0.5pt border AND a drop shadow on the same element for decorative effect. The card uses a border as its primary surface definition; the shadow is the secondary subtle cue.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Deep Forest Green (#1A4A2E) for all primary actions, active states, and key KPI values.",
+      "Do render all text at or above 14sp for body, 12sp for metadata, outdoors-optimized.",
+      "Do show sync status and offline state in a persistent, always-visible location.",
+      "Do use 48pt minimum touch targets on all interactive elements.",
+      "Do use semantic color roles: green for success/good, amber for warning/average, red for error/poor, blue for info.",
+      "Do write button labels as verb + object: 'Log Visit', 'Submit Form', 'Sync Now'.",
+      "Do place destructive actions behind a confirmation step and render them in danger red.",
+      "Do ensure every empty list has a clear, actionable empty state with a call to action."
+    ],
+    "donts": [
+      "Don't use dark mode or dark backgrounds — this app is used in direct sunlight.",
+      "Don't use saturated green as a wallpaper, background, or decorative surface color.",
+      "Don't make the UI look like old enterprise software (SAP, government portals).",
+      "Don't make it look like a consumer farming app — illustrative imagery, bright greens everywhere.",
+      "Don't use gradient text (background-clip: text).",
+      "Don't use glassmorphism, blur effects, or translucent overlays as surface treatments.",
+      "Don't use border-left stripe accents (> 1px) on cards or callouts as decoration.",
+      "Don't use border-radius above 16px on cards.",
+      "Don't render text below 12sp anywhere in the production UI.",
+      "Don't use scrolling choreography, entrance animations, or staggered reveals.",
+      "Don't rely on color alone to communicate status — always pair with text label or icon.",
+      "Don't design empty states as afterthoughts."
+    ]
+  }
+}

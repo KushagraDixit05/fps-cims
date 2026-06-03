@@ -1,4 +1,4 @@
-# Farm Prosperity Solution (FPS) — Setup Guide
+# Farm Prosperity Solutions (FPS) — Setup Guide
 
 A step-by-step guide for a **first-time user** to get the project running from scratch.
 

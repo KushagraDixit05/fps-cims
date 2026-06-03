@@ -5,10 +5,21 @@
 
 import type { CropEntry, MandiArrival } from '../types';
 
+// ─── Auth Stack (pre-login screens) ──────────────────────────────────────────
+
+export type AuthStackParamList = {
+  Splash: undefined;
+  Welcome: undefined;
+  Signup: undefined;
+  Login: undefined;
+};
+
 // ─── Root Stack (includes Auth + App) ────────────────────────────────────────
 
 export type RootStackParamList = {
-  // Auth
+  // Auth flow container (v2 navigator only)
+  Auth: undefined;
+  // Legacy auth (v1 navigator)
   Login: undefined;
 
   // Main tab container

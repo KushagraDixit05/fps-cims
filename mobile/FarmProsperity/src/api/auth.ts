@@ -47,3 +47,13 @@ export const getMe = async (): Promise<User> => {
   const { data } = await apiClient.get<User>('/auth/me/');
   return data;
 };
+
+/**
+ * Stores JWT tokens received from an external source (e.g. register endpoint).
+ * Used by SignupScreen to persist tokens after auto-login without a second API call.
+ */
+export const storeTokens = async (access: string, refresh: string): Promise<void> => {
+  await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access);
+  await AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refresh);
+};
+

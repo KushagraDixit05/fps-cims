@@ -71,7 +71,7 @@ const LoginScreen = () => {
             source={require('../assets/fps_logo.jpeg')}
             style={styles.logoImage}
           />
-          <Text style={styles.brandName}>Farm Prosperity Solution</Text>
+          <Text style={styles.brandName}>Farm Prosperity Solutions</Text>
           <Text style={styles.brandSub}>Crop Intelligence Platform</Text>
         </View>
 
@@ -139,7 +139,7 @@ const LoginScreen = () => {
         </View>
 
         <Text style={styles.footer}>
-          Farm Prosperity Solution · v2.0
+          Farm Prosperity Solutions · v2.0
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>

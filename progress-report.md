@@ -1,4 +1,4 @@
-# Farm Prosperity Solution (FPS) — Progress Report
+# Farm Prosperity Solutions (FPS) — Progress Report
 
 > **Last updated:** 2 June 2026  
 > **Overall status:** Phases 0–3 complete · Phase 4 (Polish) pending

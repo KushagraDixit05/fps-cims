@@ -1,5 +1,5 @@
 # Phase 0 — Foundation & Setup
-**Farm Prosperity Solution · Crop Intelligence & Monitoring System**
+**Farm Prosperity Solutions · Crop Intelligence & Monitoring System**
 **Duration: Week 1–2**
 
 ---

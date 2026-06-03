@@ -1,4 +1,4 @@
-# Farm Prosperity Solution (FPS) — Project Context
+# Farm Prosperity Solutions (FPS) — Project Context
 
 > Paste this file at the start of a new chat to resume work with full context.
 
@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-**Farm Prosperity Solution (FPS / fps-cims)** is an internship project — a field data collection platform for agricultural field executives. Field executives visit farmers, log crop health observations (Crop Monitoring module) and mandi (market) arrival data, and submit it to a central Django backend. The app works **offline-first** (Phase 3 complete) — records are saved locally when there is no internet, and synced automatically when connectivity is restored.
+**Farm Prosperity Solutions (FPS / fps-cims)** is an internship project — a field data collection platform for agricultural field executives. Field executives visit farmers, log crop health observations (Crop Monitoring module) and mandi (market) arrival data, and submit it to a central Django backend. The app works **offline-first** (Phase 3 complete) — records are saved locally when there is no internet, and synced automatically when connectivity is restored.
 
 - **GitHub:** `https://github.com/KushagraDixit05/fps-cims`
 - **Branch:** `main`
