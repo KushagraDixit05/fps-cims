@@ -23,7 +23,12 @@ COPY . .
 
 EXPOSE 8000
 
-# migrate + collectstatic run at container start so SECRET_KEY and DATABASE_URL are available
+# All setup runs at container start so env vars (SECRET_KEY, DATABASE_URL) are available.
+# createsuperuser --noinput uses DJANGO_SUPERUSER_* env vars; || true skips if user exists.
+# Seed commands use get_or_create so they're safe to run on every deploy.
 CMD python manage.py migrate && \
     python manage.py collectstatic --noinput && \
+    python manage.py createsuperuser --noinput || true && \
+    python manage.py seed_crop_master && \
+    python manage.py seed_product_master && \
     gunicorn fps_backend.wsgi:application --bind 0.0.0.0:$PORT
