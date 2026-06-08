@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-**Farm Prosperity Solutions (FPS / fps-cims)** is an internship project — a field data collection platform for agricultural field executives. Field executives visit farmers, log crop health observations (Crop Monitoring module) and mandi (market) arrival data, and submit it to a central Django backend. The app works **offline-first** (Phase 3 complete) — records are saved locally when there is no internet, and synced automatically when connectivity is restored. The UI was redesigned in Phase 4 (screens-v2, now active) with a premium design system, a new auth flow, and a drawer-based navigation.
+**Farm Prosperity Solutions (FPS / fps-cims)** is an internship project — a field data collection platform for agricultural field executives. Field executives visit farmers, log crop health observations (Crop Monitoring module), mandi (market) arrival data, and product demonstration visits (Product Demo module), and submit it to a central Django backend. The app works **offline-first** (Phase 3 complete) — records are saved locally when there is no internet, and synced automatically when connectivity is restored. The UI was redesigned in Phase 4 (screens-v2, now active) with a premium design system, a new auth flow, and a drawer-based navigation.
 
 - **GitHub:** `https://github.com/KushagraDixit05/fps-cims`
 - **Branch:** `main`
@@ -53,6 +53,14 @@ fps/
 │   │   └── management/commands/
 │   │       └── seed_crop_master.py ← Seeds 8 crops, 25 varieties, 46 blocks
 │   ├── mandi/                      ← Mandi master + daily arrivals
+│   ├── product_demo/               ← Product Demo module (new)
+│   │   ├── models.py               ← ProductMaster, ProductDemo, DemoPhoto
+│   │   ├── serializers.py          ← create/list/detail serializers
+│   │   ├── views.py                ← ProductDemoViewSet, ProductMasterViewSet
+│   │   ├── urls.py                 ← /api/product-demos/, /api/product-master/
+│   │   ├── admin.py                ← Admin with DemoPhotoInline
+│   │   └── management/commands/
+│   │       └── seed_product_master.py ← Seeds 20 common agrochemicals
 │   ├── fps_backend/                ← Django project settings & urls
 │   ├── .env                        ← DB credentials (not in git — already on disk)
 │   ├── docker-compose.yml          ← PostGIS container
@@ -70,16 +78,19 @@ fps/
 │   │   │   └── cropMonitoring.ts   ← getCropMaster, getDistricts, getBlocks,
 │   │   │                               submitFarmerVisit, getVisitSummary, getFarmerVisits,
 │   │   │                               getFarmerVisitDetail
-│   │   ├── database/               ← WatermelonDB local database (Phase 3)
+│   │   ├── database/               ← WatermelonDB local database (Phase 3, schema v3)
 │   │   │   ├── index.ts            ← Database instance (SQLiteAdapter + all model classes)
-│   │   │   ├── schema.ts           ← Full WatermelonDB schema (farmer_visits, crop_entries,
-│   │   │   │                           mandi_arrivals + reference tables)
+│   │   │   ├── schema.ts           ← Full schema v3 (farmer_visits, crop_entries,
+│   │   │   │                           mandi_arrivals, product_demos + reference tables)
+│   │   │   ├── migrations.ts       ← v1→v2 (mandi wizard cols), v2→v3 (product_demos table)
 │   │   │   ├── operations.ts       ← saveVisitLocally(), saveCropEntryLocally(),
-│   │   │   │                           saveMandiArrivalLocally() — called by all form screens
+│   │   │   │                           saveMandiArrivalLocally(), saveMandiArrivalWizardLocally(),
+│   │   │   │                           saveProductDemoLocally()
 │   │   │   └── models/
 │   │   │       ├── FarmerVisitModel.ts
 │   │   │       ├── CropEntryModel.ts
 │   │   │       ├── MandiArrivalModel.ts
+│   │   │       ├── ProductDemoModel.ts
 │   │   │       ├── DistrictModel.ts
 │   │   │       ├── BlockModel.ts
 │   │   │       ├── CropMasterModel.ts
@@ -90,11 +101,15 @@ fps/
 │   │   │   ├── useAutoSync.ts      ← NetInfo hook — auto-triggers sync on reconnect
 │   │   │   └── seedReferenceData.ts← Seeds districts, blocks, crop master, mandis on login
 │   │   ├── hooks/
-│   │   │   └── useCropMonitoringForm.ts  ← useReducer wizard state manager + calls saveVisitLocally()
+│   │   │   ├── useCropMonitoringForm.ts  ← useReducer wizard state manager + calls saveVisitLocally()
+│   │   │   ├── useMandiArrivalForm.ts    ← Mandi Arrival wizard state (5 steps)
+│   │   │   └── useProductDemoForm.ts     ← Product Demo wizard state (4 steps)
 │   │   ├── store/
 │   │   │   └── authStore.tsx       ← React Context + useReducer auth state
 │   │   ├── navigation/
 │   │   │   ├── types.ts            ← RootStackParamList (all routes including v2)
+│   │   │   │                           Includes: CropMonitoringForm/Detail, MandiArrivalForm,
+│   │   │   │                                     ProductDemoForm, ProductDemoDetail
 │   │   │   ├── AppNavigator.tsx    ← v1 navigator (preserved, not active)
 │   │   │   └── AppNavigatorV2.tsx  ← v2 navigator (ACTIVE) — Splash→Welcome→Login/Signup,
 │   │   │                               DrawerNavigator wrapping tabs + detail screens
@@ -109,14 +124,31 @@ fps/
 │   │   │   ├── MandiDetailScreen.tsx
 │   │   │   ├── ReportsScreen.tsx
 │   │   │   ├── ProfileScreen.tsx
-│   │   │   └── cropMonitoring/     ← Crop Monitoring Wizard (v1, still in use)
-│   │   │       ├── CropMonitoringFormScreen.tsx
+│   │   │   ├── cropMonitoring/     ← Crop Monitoring Wizard (3-step)
+│   │   │   │   ├── CropMonitoringFormScreen.tsx
+│   │   │   │   ├── Step1_FarmerDetails.tsx
+│   │   │   │   ├── Step2_CropDetails.tsx
+│   │   │   │   ├── Step3_PhotosLocation.tsx
+│   │   │   │   ├── ReviewScreen.tsx
+│   │   │   │   ├── SuccessScreen.tsx
+│   │   │   │   └── CropMonitoringDetailScreen.tsx
+│   │   │   ├── mandiArrival/       ← Mandi Arrival Wizard (5-step)
+│   │   │   │   ├── MandiArrivalFormScreen.tsx
+│   │   │   │   ├── Step1_MandiDetails.tsx
+│   │   │   │   ├── Step2_CropVarieties.tsx
+│   │   │   │   ├── Step3_SourceRemark.tsx
+│   │   │   │   ├── Step4_Photos.tsx
+│   │   │   │   ├── Step5_Location.tsx
+│   │   │   │   ├── ReviewScreen.tsx
+│   │   │   │   └── SuccessScreen.tsx
+│   │   │   └── productDemo/        ← Product Demo Wizard (4-step)
+│   │   │       ├── ProductDemoFormScreen.tsx
 │   │   │       ├── Step1_FarmerDetails.tsx
-│   │   │       ├── Step2_CropDetails.tsx
-│   │   │       ├── Step3_PhotosLocation.tsx
+│   │   │       ├── Step2_CropStageDetails.tsx
+│   │   │       ├── Step3_ProductDoseDetails.tsx
+│   │   │       ├── Step4_PhotosResultRemark.tsx
 │   │   │       ├── ReviewScreen.tsx
-│   │   │       ├── SuccessScreen.tsx
-│   │   │       └── CropMonitoringDetailScreen.tsx
+│   │   │       └── SuccessScreen.tsx
 │   │   ├── screens-v2/             ← v2 redesigned screens (ACTIVE via AppNavigatorV2)
 │   │   │   ├── SplashScreen.tsx    ← Animated brand splash (2–3s auto-advance)
 │   │   │   ├── WelcomeScreen.tsx   ← Value prop + "Sign In" / "Get Started" CTAs
@@ -125,18 +157,25 @@ fps/
 │   │   │   ├── HomeScreen.tsx      ← Redesigned dashboard (drawer-aware)
 │   │   │   ├── SidebarContent.tsx  ← Drawer sidebar (user info + nav items)
 │   │   │   └── cropMonitoring/     ← (placeholder — not yet redesigned)
-│   │   ├── components/             ← v1 shared UI components
-│   │   │   ├── Button.tsx, Card.tsx, ConditionBadge.tsx, ConditionSelector.tsx
-│   │   │   ├── CropCard.tsx, EmptyState.tsx, FormInput.tsx, LoadingScreen.tsx
-│   │   │   ├── LocationCapture.tsx, PhotoPicker.tsx, ProblemCheckboxGroup.tsx
+│   │   ├── components/             ← shared UI components (used across all modules)
+│   │   │   ├── AppIcon.tsx, Button.tsx, Card.tsx
+│   │   │   ├── ConditionBadge.tsx, ConditionSelector.tsx, DemoResultSelector.tsx
+│   │   │   ├── CropCard.tsx, EmptyState.tsx, FormInput.tsx, InlinePicker.tsx
+│   │   │   ├── LoadingScreen.tsx, LocationCapture.tsx, PhotoPicker.tsx
+│   │   │   └── ProblemCheckboxGroup.tsx
 │   │   ├── components-v2/          ← v2 design-system components (in progress)
 │   │   ├── types/
 │   │   │   ├── index.ts            ← Legacy domain interfaces
-│   │   │   └── cropMonitoring.ts   ← All crop monitoring interfaces
+│   │   │   ├── cropMonitoring.ts   ← Crop Monitoring module interfaces
+│   │   │   ├── mandiArrival.ts     ← Mandi Arrival module interfaces
+│   │   │   └── productDemo.ts      ← Product Demo module interfaces
 │   │   └── utils/
-│   │       ├── colors.ts           ← Brand color tokens (updated for design system)
+│   │       ├── colors.ts           ← Brand color tokens (design system)
 │   │       ├── helpers.ts          ← formatDate, formatCurrency, conditionColor
-│   │       └── cropMonitoringValidation.ts
+│   │       ├── icons.ts            ← Centralised lucide-react-native exports
+│   │       ├── cropMonitoringValidation.ts
+│   │       ├── mandiArrivalValidation.ts
+│   │       └── productDemoValidation.ts
 │   ├── android/
 │   │   ├── gradle.properties       ← reactNativeArchitectures=arm64-v8a,x86_64
 │   │   └── app/src/main/AndroidManifest.xml ← CAMERA, LOCATION, STORAGE permissions
@@ -170,7 +209,9 @@ fps/
 | Phase 1 — Backend API | ✅ Done | Django models, JWT auth, all REST endpoints |
 | Phase 2 — Mobile Core | ✅ Done | All screens built, connected to live API, running on physical device |
 | **Crop Monitoring Module** | ✅ **Done** | Full 3-step wizard (backend + mobile) — Phases A through F complete |
-| **Phase 3 — Offline Sync** | ✅ **Done** | WatermelonDB local DB + background auto-sync + manual sync dashboard |
+| **Mandi Arrival Module** | ✅ **Done** | Full 5-step wizard (backend + mobile) — schema v2, InlinePicker component |
+| **Product Demo Module** | ✅ **Done** | Full 4-step wizard (backend + mobile) — new `product_demo` Django app, schema v3 |
+| **Phase 3 — Offline Sync** | ✅ **Done** | WatermelonDB v3 schema, 5 write operations, background auto-sync, sync dashboard |
 | **Phase 4 — UI Redesign** | 🔄 **In Progress** | Design system, new auth flow (Splash/Welcome/Login/Signup), redesigned Home, drawer nav — active via AppNavigatorV2 |
 
 ---
@@ -282,6 +323,14 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 | GET | `/api/mandi-arrivals/yoy_comparison/?mandi_id=1` | Year-on-year comparison |
 | GET | `/api/mandis/` | Mandi master list |
 
+### Product Demo
+| Method | Endpoint | Description |
+|---|---|---|
+| GET/POST | `/api/product-demos/` | List / create demo entries (multipart/form-data) |
+| GET | `/api/product-demos/<uuid>/` | Full demo detail with before/after photos |
+| GET | `/api/product-demos/summary/` | Dashboard counts (today/week/month) |
+| GET | `/api/product-master/` | Active product catalogue for dropdown |
+
 ### Master Data
 | Method | Endpoint | Description |
 |---|---|---|
@@ -319,6 +368,26 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 ### `crops.CropEntry` (legacy — preserved, UUID PK)
 - Single-crop per entry; kept intact for backward compatibility
 
+### `product_demo.ProductMaster`
+- `name`: unique agrochemical product name
+- `category`: Insecticide / Fungicide / etc.
+- `is_active`: controls dropdown visibility
+
+### `product_demo.ProductDemo` (UUID PK)
+- `executive` → FK to User
+- `farmer_name`, `mobile_number`, `village_name`, `block_name`, `district_name`, `total_land_acre`
+- `crop_name`, `variety`, `crop_stage`, `crop_stage_days`, `demo_date`
+- `product_name`, `dose`, `dose_unit` (ml/acre, gm/acre, kg/acre, lt/acre, kg/ha)
+- `demo_result`: excellent / good / average / poor / no_effect
+- `additional_observations`, `remark`
+- `location` (PostGIS Point), `latitude`, `longitude`
+- `local_id`, `is_synced`, `submitted_at`
+
+### `product_demo.DemoPhoto` (UUID PK)
+- `demo` → FK to ProductDemo
+- `image`: ImageField → `demo_photos/%Y/%m/`
+- `photo_type`: before / after
+
 ---
 
 ## Phase 3 — Offline-First Architecture
@@ -329,6 +398,7 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 User fills form
       ↓
 saveVisitLocally() / saveCropEntryLocally() / saveMandiArrivalLocally()
+  / saveMandiArrivalWizardLocally() / saveProductDemoLocally()
       ↓
 WatermelonDB (SQLite) — is_synced = false   ← INSTANT, works offline
       ↓
@@ -337,11 +407,24 @@ useAutoSync() detects internet via NetInfo
 syncPendingRecords() — POST to Django, mark is_synced = true
 ```
 
+### WatermelonDB Schema (v3)
+| Table | Purpose |
+|---|---|
+| `farmer_visits` | Crop Monitoring wizard submissions |
+| `crop_entries` | Legacy 4-step crop form |
+| `mandi_arrivals` | Mandi entry + wizard (v2 cols: varieties_json, photos_json, GPS) |
+| `product_demos` | Product Demo wizard submissions |
+| `districts` | Reference: district master |
+| `blocks` | Reference: block/taluka master |
+| `crop_master` | Reference: crops + varieties |
+| `mandis` | Reference: mandi master |
+
 ### Key Files
 | File | Role |
 |---|---|
-| `src/database/schema.ts` | Defines all WatermelonDB tables |
-| `src/database/operations.ts` | Write helpers called by all form screens |
+| `src/database/schema.ts` | Defines all WatermelonDB tables (v3) |
+| `src/database/migrations.ts` | v1→v2 (mandi wizard cols), v2→v3 (product_demos table) |
+| `src/database/operations.ts` | 5 write helpers called by all form screens |
 | `src/sync/syncService.ts` | `syncPendingRecords()`, `getPendingCount()`, `getLastSyncTime()` |
 | `src/sync/syncTypes.ts` | `SyncResult` (includes `offline: boolean` flag), `SyncStats` |
 | `src/sync/useAutoSync.ts` | NetInfo listener hook — throttled to 1 sync/minute |
@@ -367,8 +450,10 @@ syncPendingRecords() — POST to Django, mark is_synced = true
 
 ### What Remains (Phase 4 backlog)
 - Redesign Crop Monitoring wizard screens (screens-v2/cropMonitoring/)
-- Redesign Mandi, Reports, Profile screens
+- Redesign Mandi Arrival, Product Demo, Reports, Profile screens (screens-v2/)
 - Build components-v2 component library
+- Online API sync for Mandi Arrival and Product Demo modules
+- `ProductDemoDetailScreen` — full detail view
 - Map view of visit GPS locations
 - Per-photo geo-tagging
 - Edit submitted visit after success
@@ -382,16 +467,20 @@ syncPendingRecords() — POST to Django, mark is_synced = true
 
 | Decision | Reason |
 |---|---|
-| `useReducer` in `useCropMonitoringForm` | Review & Edit navigation never loses data |
+| `useReducer` in all wizard hooks | Review & Edit navigation never loses data across steps |
 | Review/Success as in-tree components, not routes | Prevents deep-linking to mid-wizard screens |
 | `crops` as JSON string in FormData | RN multipart cannot send nested arrays natively |
+| Before/after photos stored as separate JSON arrays | Preserves photo type metadata without a separate model |
+| Hardcoded product list in Step3 (Product Demo) | No separate product_master DB table needed on mobile; seeded on backend |
 | Legacy `CropEntry` preserved | Zero risk to existing data; both modules coexist |
 | Runtime base URL detection | Same APK works on emulator and device |
 | WatermelonDB for offline storage | Fast SQLite with reactive queries; works well on New Architecture |
+| Schema migrations (v1→v2→v3) additive only | Never destroys existing records; old app versions stay schema-valid |
 | `offline: boolean` in SyncResult | Lets callers distinguish "offline, didn't try" from "online, nothing pending" |
 | `AppNavigatorV2` + DrawerNavigator | Enables sidebar without breaking existing tab/stack routes |
 | `GestureHandlerRootView` at root | Required by `@react-navigation/drawer` |
 | `POST /api/auth/register/` with auto-login | Returns tokens immediately — no separate login step needed after signup |
+| One Django app per feature module | `crops`, `mandi`, `product_demo` — clear separation of concerns, independent migrations |
 
 ---
 

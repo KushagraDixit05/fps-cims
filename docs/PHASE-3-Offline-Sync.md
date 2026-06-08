@@ -57,17 +57,24 @@ module.exports = {
 
 ## 3.3 — Local Database Schema (`src/database/schema.ts`)
 
-Three user-data tables (with `is_synced` + `server_id`) and four reference-data tables:
+**Current schema version: 3**
 
-| Table | Purpose |
-|---|---|
-| `farmer_visits` | Crop Monitoring wizard submissions |
-| `crop_entries` | Legacy 4-step crop entry form |
-| `mandi_arrivals` | Mandi arrival data |
-| `districts` | Cached from `/api/districts/` on login |
-| `blocks` | Cached from `/api/blocks/` on login |
-| `crop_master` | Cached from `/api/crop-master/` on login (varieties stored as JSON) |
-| `mandis` | Cached from `/api/mandis/` on login |
+Four user-data tables (with `is_synced` + `server_id`) and four reference-data tables:
+
+| Table | Purpose | Added |
+|---|---|---|
+| `farmer_visits` | Crop Monitoring wizard submissions | v1 |
+| `crop_entries` | Legacy 4-step crop entry form | v1 |
+| `mandi_arrivals` | Mandi arrival data (+ wizard cols in v2) | v1 / v2 |
+| `product_demos` | Product Demo wizard submissions | v3 |
+| `districts` | Cached from `/api/districts/` on login | v1 |
+| `blocks` | Cached from `/api/blocks/` on login | v1 |
+| `crop_master` | Cached from `/api/crop-master/` on login | v1 |
+| `mandis` | Cached from `/api/mandis/` on login | v1 |
+
+**Migrations:**
+- v1→v2: Added `varieties_json`, `photos_json`, `total_arrival_qt`, `latitude`, `longitude` to `mandi_arrivals`
+- v2→v3: Created `product_demos` table
 
 All user-data tables share these sync columns:
 ```
@@ -86,7 +93,8 @@ updated_at_local — Unix ms timestamp
 |---|---|---|
 | `FarmerVisitModel.ts` | `farmer_visits` | farmerName, villageName, blockName, districtName, cropsJson, photosJson, latitude, longitude, isSynced |
 | `CropEntryModel.ts` | `crop_entries` | farmerId, cropName, areaThisYear, cropStage, cropCondition, isSynced |
-| `MandiArrivalModel.ts` | `mandi_arrivals` | mandiId, commodity, date, arrivalQuantity, avgRate, isSynced |
+| `MandiArrivalModel.ts` | `mandi_arrivals` | mandiId, commodity, date, arrivalQuantity, varietiesJson, photosJson, totalArrivalQt, latitude, longitude, isSynced |
+| `ProductDemoModel.ts` | `product_demos` | farmerName, cropName, variety, cropStage, cropStageDays, demoDate, productName, dose, doseUnit, demoResult, beforePhotosJson, afterPhotosJson, latitude, longitude, isSynced |
 | `DistrictModel.ts` | `districts` | serverId, name, state |
 | `BlockModel.ts` | `blocks` | serverId, name, districtServerId |
 | `CropMasterModel.ts` | `crop_master` | serverId, cropName, varietiesJson |
@@ -117,7 +125,7 @@ export default database;
 
 ## 3.6 — Write Operations (`src/database/operations.ts`)
 
-Three functions called by form screens — the only way form screens interact with WatermelonDB:
+Five functions called by form screens — the only way form screens interact with WatermelonDB:
 
 ### `saveVisitLocally(state: CropMonitoringFormState)`
 - Saves a complete Crop Monitoring wizard submission to `farmer_visits`
@@ -129,9 +137,20 @@ Three functions called by form screens — the only way form screens interact wi
 - Saves a legacy crop entry to `crop_entries`
 
 ### `saveMandiArrivalLocally(payload: MandiArrivalPayload, mandiName?)`
-- Saves a mandi arrival to `mandi_arrivals`
+- Saves a legacy mandi arrival to `mandi_arrivals`
 
-All three set `isSynced = false`, `serverId = null`, `syncError = null`.
+### `saveMandiArrivalWizardLocally(state: MandiArrivalFormState)`
+- Saves a complete 5-step Mandi Arrival wizard submission
+- Serializes varieties as `varietiesJson`, photos as `photosJson`
+- Fills legacy `commodity`/`arrivalQuantity` columns from the first variety (backward compat)
+- Returns `{ id, mandi_name, variety_count }`
+
+### `saveProductDemoLocally(state: ProductDemoFormState)`
+- Saves a complete 4-step Product Demo wizard submission to `product_demos`
+- Serializes before/after photos as separate `beforePhotosJson`/`afterPhotosJson` arrays
+- Returns `{ id, farmer_name, product_name }`
+
+All five set `isSynced = false`, `serverId = null`, `syncError = null`.
 
 ---
 

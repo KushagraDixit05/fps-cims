@@ -16,7 +16,7 @@
 
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
-export const DB_SCHEMA_VERSION = 1;
+export const DB_SCHEMA_VERSION = 3;
 
 export default appSchema({
   version: DB_SCHEMA_VERSION,
@@ -87,6 +87,7 @@ export default appSchema({
       columns: [
         { name: 'mandi_id',          type: 'number' },
         { name: 'mandi_name',        type: 'string', isOptional: true },
+        // Legacy single-commodity columns (kept for backward compat with old form + server-synced records)
         { name: 'commodity',         type: 'string' },
         { name: 'date',              type: 'string' },
         { name: 'arrival_quantity',  type: 'number' },
@@ -95,6 +96,12 @@ export default appSchema({
         { name: 'max_rate',          type: 'number', isOptional: true },
         { name: 'source',            type: 'string' },
         { name: 'remark',            type: 'string', isOptional: true },
+        // New wizard columns (v2) — JSON arrays + GPS
+        { name: 'varieties_json',    type: 'string', isOptional: true }, // JSON: CropVarietyPayload[]
+        { name: 'photos_json',       type: 'string', isOptional: true }, // JSON: {uri,name,type}[]
+        { name: 'total_arrival_qt',  type: 'number', isOptional: true }, // new wizard field
+        { name: 'latitude',          type: 'number', isOptional: true },
+        { name: 'longitude',         type: 'number', isOptional: true },
         // Sync fields
         { name: 'server_id',         type: 'string', isOptional: true },
         { name: 'is_synced',         type: 'boolean' },
@@ -145,6 +152,46 @@ export default appSchema({
         { name: 'district',  type: 'string', isOptional: true },
         { name: 'state',     type: 'string', isOptional: true },
         { name: 'is_active', type: 'boolean' },
+      ],
+    }),
+
+    // ── Product Demo wizard ───────────────────────────────────────────────────
+    tableSchema({
+      name: 'product_demos',
+      columns: [
+        // Step 1 — Farmer details
+        { name: 'farmer_name',     type: 'string' },
+        { name: 'mobile_number',   type: 'string', isOptional: true },
+        { name: 'village_name',    type: 'string' },
+        { name: 'block_name',      type: 'string' },
+        { name: 'district_name',   type: 'string' },
+        { name: 'total_land_acre', type: 'string', isOptional: true },
+        // Step 2 — Crop & stage
+        { name: 'crop_name',       type: 'string' },
+        { name: 'variety',         type: 'string' },
+        { name: 'crop_stage',      type: 'string' },
+        { name: 'crop_stage_days', type: 'string' },
+        { name: 'demo_date',       type: 'string' },
+        // Step 3 — Product & dose
+        { name: 'product_name',    type: 'string' },
+        { name: 'dose',            type: 'string' },
+        { name: 'dose_unit',       type: 'string' },
+        // Step 4 — Result
+        { name: 'demo_result',     type: 'string' },
+        { name: 'additional_observations', type: 'string', isOptional: true },
+        { name: 'remark',          type: 'string', isOptional: true },
+        // Step 4 — Photos (JSON arrays)
+        { name: 'before_photos_json', type: 'string', isOptional: true },
+        { name: 'after_photos_json',  type: 'string', isOptional: true },
+        // GPS
+        { name: 'latitude',        type: 'number', isOptional: true },
+        { name: 'longitude',       type: 'number', isOptional: true },
+        // Sync tracking
+        { name: 'server_id',       type: 'string', isOptional: true },
+        { name: 'is_synced',       type: 'boolean' },
+        { name: 'sync_error',      type: 'string', isOptional: true },
+        { name: 'created_at_local', type: 'number' },
+        { name: 'updated_at_local', type: 'number' },
       ],
     }),
   ],

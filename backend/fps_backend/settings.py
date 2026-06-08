@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'accounts',
     'crops',
     'mandi',
+    'product_demo',
 ]
 
 MIDDLEWARE = [

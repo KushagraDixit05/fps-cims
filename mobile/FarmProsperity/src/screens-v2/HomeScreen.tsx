@@ -25,7 +25,7 @@ import type { RootStackParamList } from '../navigation/types';
 import AppIcon from '../components/AppIcon';
 import {
   Menu, MapPin, Leaf, Store, Map, BarChart2,
-  Sprout, ArrowRight, ChevronRight, IconStroke,
+  Sprout, ArrowRight, ChevronRight, Package, IconStroke,
 } from '../utils/icons';
 
 type Nav = StackNavigationProp<RootStackParamList>;
@@ -43,10 +43,10 @@ type ActionTile = {
 };
 
 const ACTION_TILES: ActionTile[] = [
-  { bg: '#E1F2E8', icon: Leaf,      iconColor: '#1A4A2E', title: 'New Visit',  sub: 'Log a field visit',  screen: 'CropMonitoringForm' },
-  { bg: '#FEF3DA', icon: Store,     iconColor: '#C8900A', title: 'Mandi',      sub: 'Prices · Trends',    screen: 'Main', badge: 'Live' },
-  { bg: '#E6F1FB', icon: Map,       iconColor: '#185FA5', title: 'My Visits',  sub: 'History',            screen: 'Main' },
-  { bg: '#F3E8FF', icon: BarChart2, iconColor: '#7C3AED', title: 'Reports',    sub: 'Analytics · YoY',    screen: 'Main' },
+  { bg: '#E1F2E8', icon: Leaf,      iconColor: '#1A4A2E', title: 'New Visit',     sub: 'Log a field visit',  screen: 'CropMonitoringForm' },
+  { bg: '#FEF3DA', icon: Store,     iconColor: '#C8900A', title: 'Mandi',         sub: 'Prices · Trends',    screen: 'MandiArrivalForm', badge: 'Live' },
+  { bg: '#E8F4FD', icon: Package,   iconColor: '#0277BD', title: 'Product Demo',  sub: 'Demo · Result',      screen: 'ProductDemoList' },
+  { bg: '#F3E8FF', icon: BarChart2, iconColor: '#7C3AED', title: 'Reports',       sub: 'Analytics · YoY',    screen: 'Main' },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

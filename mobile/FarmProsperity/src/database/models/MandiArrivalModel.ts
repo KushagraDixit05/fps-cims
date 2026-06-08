@@ -20,6 +20,13 @@ export class MandiArrivalModel extends Model {
   @field('source')            source!: string;
   @field('remark')            remark!: string | null;
 
+  // New wizard columns (v2)
+  @field('varieties_json')    varietiesJson!: string | null;
+  @field('photos_json')       photosJson!: string | null;
+  @field('total_arrival_qt')  totalArrivalQt!: number | null;
+  @field('latitude')          latitude!: number | null;
+  @field('longitude')         longitude!: number | null;
+
   // Sync tracking
   @field('server_id')         serverId!: string | null;
   @field('is_synced')         isSynced!: boolean;

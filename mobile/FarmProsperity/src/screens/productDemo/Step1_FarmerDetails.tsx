@@ -1,6 +1,7 @@
-// src/screens/cropMonitoring/Step1_FarmerDetails.tsx
-// Wizard Step 1 — Farmer Basic Details form sub-component.
-// Rendered inside CropMonitoringFormScreen.tsx when step === 1.
+// src/screens/productDemo/Step1_FarmerDetails.tsx
+// Product Demo wizard Step 1 — Farmer & Location Details.
+// Identical field set to CMM Step1_FarmerDetails. Reuses all the same
+// district→block cascading logic and local DB queries.
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -16,37 +17,34 @@ import { colors } from '../../utils/colors';
 import FormInput from '../../components/FormInput';
 import Button from '../../components/Button';
 import InlinePicker from '../../components/InlinePicker';
-import type { FarmerDetailsDraft, FarmerDetailsErrors, District, Block } from '../../types/cropMonitoring';
+import type {
+  DemoFarmerDetailsDraft,
+  DemoFarmerDetailsErrors,
+} from '../../types/productDemo';
+import type { District, Block } from '../../types/cropMonitoring';
 import { getDistricts, getBlocks } from '../../api/cropMonitoring';
-import { validateStep1, hasErrors } from '../../utils/cropMonitoringValidation';
+import { validateStep1, hasErrors } from '../../utils/productDemoValidation';
 import { Q } from '@nozbe/watermelondb';
 import database from '../../database';
 import { DistrictModel } from '../../database/models/DistrictModel';
 import { BlockModel }    from '../../database/models/BlockModel';
 
-
-
-// ── Step1 ──────────────────────────────────────────────────────────────────────
-
 interface Step1Props {
-  data: FarmerDetailsDraft;
-  onChange: (data: Partial<FarmerDetailsDraft>) => void;
+  data: DemoFarmerDetailsDraft;
+  onChange: (data: Partial<DemoFarmerDetailsDraft>) => void;
   onNext: () => void;
 }
 
 const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
-  const [errors, setErrors] = useState<FarmerDetailsErrors>({});
+  const [errors, setErrors] = useState<DemoFarmerDetailsErrors>({});
   const [districts, setDistricts] = useState<District[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [loadingMaster, setLoadingMaster] = useState(true);
-
-  // Selected district ID for block filtering
   const [selectedDistrictId, setSelectedDistrictId] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     const load = async () => {
       try {
-        // Phase 3: load from local DB first (works offline)
         const localDistricts = await database.collections
           .get<DistrictModel>('districts')
           .query()
@@ -61,7 +59,6 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
             })),
           );
         } else {
-          // Cache empty — try API
           const dists = await getDistricts();
           setDistricts(dists);
         }
@@ -76,7 +73,6 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
 
     const loadBlocks = async () => {
       try {
-        // Phase 3: load from local DB first (works offline)
         const localBlocks = await database.collections
           .get<BlockModel>('blocks')
           .query(Q.where('district_server_id', selectedDistrictId))
@@ -92,7 +88,6 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
             })),
           );
         } else {
-          // Cache empty — try API
           const apiBlocks = await getBlocks(selectedDistrictId);
           setBlocks(apiBlocks);
         }
@@ -118,7 +113,7 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
   };
 
   const districtOptions = districts.map(d => ({ value: d.name, label: d.name }));
-  const blockOptions = blocks.map(b => ({ value: b.name, label: b.name }));
+  const blockOptions    = blocks.map(b => ({ value: b.name, label: b.name }));
 
   return (
     <KeyboardAvoidingView
@@ -131,9 +126,9 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.stepLabel}>STEP 1 OF 3</Text>
-        <Text style={styles.heading}>Farmer Details</Text>
-        <Text style={styles.subtext}>Enter the basic information for this field visit.</Text>
+        <Text style={styles.stepLabel}>STEP 1 OF 4</Text>
+        <Text style={styles.heading}>Farmer & Location Details</Text>
+        <Text style={styles.subtext}>Enter the basic information for this demo visit.</Text>
 
         {loadingMaster && (
           <View style={styles.masterLoader}>

@@ -50,9 +50,14 @@ const MandiListScreen = () => {
       try {
         const data = await getMandis();
         setMandis(data);
-        if (data.length > 0) setSelectedMandi(data[0]);
+        if (data.length > 0) {
+          setSelectedMandi(data[0]);
+        } else {
+          setLoading(false);
+        }
       } catch {
         Alert.alert('Error', 'Could not load mandi list.');
+        setLoading(false);
       }
     };
     loadMandis();
@@ -197,7 +202,7 @@ const MandiListScreen = () => {
       {/* ── FAB ── */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => navigation.navigate('MandiEntryForm')}
+        onPress={() => navigation.navigate('MandiArrivalForm')}
         activeOpacity={0.85}
       >
         <AppIcon icon={Plus} size={24} color="white" strokeWidth={2.5} />

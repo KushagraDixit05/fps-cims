@@ -43,6 +43,18 @@ export type RootStackParamList = {
   /** Full visit detail (tapped from dashboard Recent Entries). */
   CropMonitoringDetail: { visitId: string };
 
+  // ── Mandi Arrival Module (new) ──────────────────────────────────────────────
+  /** Entry point — launches 5-step mandi arrival wizard. */
+  MandiArrivalForm: undefined;
+
+  // ── Product Demo Module (new) ────────────────────────────────────────────────
+  /** Entry point — lists past product demos */
+  ProductDemoList: undefined;
+  /** Entry point — launches 4-step product demo wizard. */
+  ProductDemoForm: undefined;
+  /** Full demo detail (tapped from history). */
+  ProductDemoDetail: { demoId: string };
+
   // ── Misc ───────────────────────────────────────────────────────────────────
   Profile: undefined;
 };

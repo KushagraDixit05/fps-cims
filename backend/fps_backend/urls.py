@@ -19,6 +19,7 @@ urlpatterns = [
     # --- App API routes ---
     path('api/', include('crops.urls')),
     path('api/', include('mandi.urls')),
+    path('api/', include('product_demo.urls')),
 ]
 
 
