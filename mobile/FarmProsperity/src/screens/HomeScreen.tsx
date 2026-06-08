@@ -27,6 +27,7 @@ import { Q } from '@nozbe/watermelondb';
 import { getVisitSummary, getFarmerVisits } from '../api/cropMonitoring';
 import { useAuth } from '../store/authStore';
 import { colors } from '../utils/colors';
+import { HEADER } from '../utils/headerTokens';
 import database from '../database';
 import { FarmerVisitModel } from '../database/models/FarmerVisitModel';
 import type { FarmerVisitSummary, RecentVisit } from '../types/cropMonitoring';
@@ -341,22 +342,23 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.primary,
     paddingHorizontal: 20,
-    paddingTop: 52,
-    paddingBottom: 20,
+    paddingTop:   HEADER.DASHBOARD_PADDING_TOP,
+    paddingBottom: HEADER.DASHBOARD_PADDING_BOTTOM,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  greeting:    { color: 'rgba(255,255,255,0.75)', fontSize: 13 },
-  role:        { color: 'white', fontSize: 18, fontWeight: '700', marginTop: 2 },
+  greeting:    { color: 'rgba(255,255,255,0.75)', fontSize: HEADER.GREETING_FONT },
+  role:        { color: 'white', fontSize: HEADER.ROLE_FONT, fontWeight: '700', marginTop: 2 },
   regionRow:   { flexDirection: 'row' as const, alignItems: 'center' as const, marginTop: 3 },
-  region:      { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
+  region:      { color: 'rgba(255,255,255,0.7)', fontSize: HEADER.REGION_FONT },
   profileBtn: {
-    width: 40, height: 40, borderRadius: 20,
+    width: HEADER.AVATAR_SIZE, height: HEADER.AVATAR_SIZE,
+    borderRadius: HEADER.AVATAR_SIZE / 2,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center', alignItems: 'center',
   },
-  profileInitial: { color: 'white', fontSize: 18, fontWeight: '700' },
+  profileInitial: { color: 'white', fontSize: HEADER.AVATAR_FONT, fontWeight: '700' },
 
   // Summary strip
   summaryStrip: {
@@ -367,18 +369,18 @@ const styles = StyleSheet.create({
   },
   summaryTile: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: HEADER.SUMMARY_TILE_PADDING_V,
     alignItems: 'center',
     borderRightWidth: 0.5,
     borderRightColor: colors.border,
   },
-  summaryValue: { fontSize: 22, fontWeight: '800', color: colors.primary },
+  summaryValue: { fontSize: 20, fontWeight: '800', color: colors.primary },
   summaryLabel: { fontSize: 10, color: colors.textMuted, marginTop: 2, fontWeight: '600' },
 
   // Section header
   sectionHeader: {
     paddingHorizontal: 14,
-    paddingTop: 18,
+    paddingTop: HEADER.SECTION_HEADER_PADDING_TOP,
     paddingBottom: 8,
   },
   sectionTitle: {

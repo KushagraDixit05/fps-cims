@@ -7,6 +7,7 @@ from .models import (
     Village, Farmer, CropEntry, CropPhoto,
     District, Block, CropMaster, CropVariety,
     FarmerVisit, CropRecord, VisitPhoto,
+    VillageMaster,
 )
 
 
@@ -118,6 +119,19 @@ class CropVarietySerializer(serializers.ModelSerializer):
     class Meta:
         model = CropVariety
         fields = ['id', 'variety_name']
+
+
+class VillageMasterSerializer(serializers.ModelSerializer):
+    """
+    Minimal read-only serializer for village dropdowns.
+    Returns block id + name for cascade filtering on mobile.
+    """
+    block_name = serializers.CharField(source='block.name', read_only=True)
+    district_name = serializers.CharField(source='block.district.name', read_only=True)
+
+    class Meta:
+        model = VillageMaster
+        fields = ['id', 'name', 'block', 'block_name', 'district_name']
 
 
 class CropMasterSerializer(serializers.ModelSerializer):

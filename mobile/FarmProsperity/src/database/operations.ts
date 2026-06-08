@@ -12,6 +12,7 @@ import { CropEntryModel }    from './models/CropEntryModel';
 import { MandiArrivalModel } from './models/MandiArrivalModel';
 import { FarmerVisitModel }  from './models/FarmerVisitModel';
 import { ProductDemoModel }  from './models/ProductDemoModel';
+import { OTHERS_VALUE }      from '../components/SmartDropdown';
 
 // ─── Crop Monitoring Wizard ───────────────────────────────────────────────────
 
@@ -31,9 +32,10 @@ export const saveVisitLocally = async (
   const now = Date.now();
 
   // Build the crops JSON string — same shape as cropsPayload in buildFormData()
+  // If variety is 'Others', resolve to the custom_variety text.
   const cropsPayload = crops.map((c: CropRecordDraft, i: number) => ({
     crop_name:            c.crop_name,
-    variety:              c.variety,
+    variety:              c.variety === 'Others' ? (c.custom_variety.trim() || 'Others') : c.variety,
     date_of_sowing:       c.date_of_sowing,
     current_area_acre:    c.current_area_acre,
     last_year_area_acre:  c.last_year_area_acre || null,
@@ -59,7 +61,13 @@ export const saveVisitLocally = async (
       .create((v) => {
         v.farmerName     = farmerDetails.farmer_name.trim();
         v.mobileNumber   = farmerDetails.mobile_number.trim() || null;
-        v.villageName    = farmerDetails.village_name.trim();
+        // Resolve Others sentinel: store custom text as village_name
+        v.villageName    = farmerDetails.village_name === OTHERS_VALUE
+          ? (farmerDetails.custom_village_name?.trim() || 'Custom')
+          : farmerDetails.village_name.trim();
+        (v as any).villageId = farmerDetails.village_name === OTHERS_VALUE
+          ? null
+          : (farmerDetails.village_id ?? null);
         v.blockName      = farmerDetails.block_name.trim();
         v.districtName   = farmerDetails.district_name.trim();
         v.totalLandAcre  = farmerDetails.total_land_acre.trim() || null;
@@ -268,13 +276,22 @@ export const saveProductDemoLocally = async (
         // Step 1
         d.farmerName     = farmerDetails.farmer_name.trim();
         d.mobileNumber   = farmerDetails.mobile_number.trim() || null;
-        d.villageName    = farmerDetails.village_name.trim();
+        // Resolve Others sentinel: store custom text as village_name
+        d.villageName    = farmerDetails.village_name === OTHERS_VALUE
+          ? (farmerDetails.custom_village_name?.trim() || 'Custom')
+          : farmerDetails.village_name.trim();
+        (d as any).villageId = farmerDetails.village_name === OTHERS_VALUE
+          ? null
+          : (farmerDetails.village_id ?? null);
         d.blockName      = farmerDetails.block_name.trim();
         d.districtName   = farmerDetails.district_name.trim();
         d.totalLandAcre  = farmerDetails.total_land_acre.trim() || null;
         // Step 2
         d.cropName       = cropStage.crop_name.trim();
-        d.variety        = cropStage.variety.trim();
+        // Resolve Others variety sentinel
+        d.variety        = cropStage.variety === OTHERS_VALUE
+          ? (cropStage.custom_variety.trim() || 'Others')
+          : cropStage.variety.trim();
         d.cropStage      = cropStage.crop_stage as string;
         d.cropStageDays  = cropStage.crop_stage_days.trim();
         d.demoDate       = cropStage.demo_date.trim();

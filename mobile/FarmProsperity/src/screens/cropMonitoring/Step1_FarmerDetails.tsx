@@ -1,32 +1,21 @@
 // src/screens/cropMonitoring/Step1_FarmerDetails.tsx
-// Wizard Step 1 — Farmer Basic Details form sub-component.
-// Rendered inside CropMonitoringFormScreen.tsx when step === 1.
+// Wizard Step 1 — Farmer Basic Details.
+// District → Block → Village cascade using useLocationHierarchy.
+// Village uses SmartDropdown (Others fallback for empty/custom villages).
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
+  View, Text, ScrollView, StyleSheet,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { colors } from '../../utils/colors';
 import FormInput from '../../components/FormInput';
 import Button from '../../components/Button';
 import InlinePicker from '../../components/InlinePicker';
-import type { FarmerDetailsDraft, FarmerDetailsErrors, District, Block } from '../../types/cropMonitoring';
-import { getDistricts, getBlocks } from '../../api/cropMonitoring';
+import SmartDropdown, { OTHERS_VALUE } from '../../components/SmartDropdown';
+import type { FarmerDetailsDraft, FarmerDetailsErrors } from '../../types/cropMonitoring';
 import { validateStep1, hasErrors } from '../../utils/cropMonitoringValidation';
-import { Q } from '@nozbe/watermelondb';
-import database from '../../database';
-import { DistrictModel } from '../../database/models/DistrictModel';
-import { BlockModel }    from '../../database/models/BlockModel';
-
-
-
-// ── Step1 ──────────────────────────────────────────────────────────────────────
+import { useLocationHierarchy } from '../../hooks/useLocationHierarchy';
 
 interface Step1Props {
   data: FarmerDetailsDraft;
@@ -36,80 +25,12 @@ interface Step1Props {
 
 const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
   const [errors, setErrors] = useState<FarmerDetailsErrors>({});
-  const [districts, setDistricts] = useState<District[]>([]);
-  const [blocks, setBlocks] = useState<Block[]>([]);
-  const [loadingMaster, setLoadingMaster] = useState(true);
 
-  // Selected district ID for block filtering
-  const [selectedDistrictId, setSelectedDistrictId] = useState<number | undefined>(undefined);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        // Phase 3: load from local DB first (works offline)
-        const localDistricts = await database.collections
-          .get<DistrictModel>('districts')
-          .query()
-          .fetch();
-
-        if (localDistricts.length > 0) {
-          setDistricts(
-            localDistricts.map((d) => ({
-              id:    d.serverId,
-              name:  d.name,
-              state: d.state ?? '',
-            })),
-          );
-        } else {
-          // Cache empty — try API
-          const dists = await getDistricts();
-          setDistricts(dists);
-        }
-      } catch { /* silently fall back to empty */ }
-      finally { setLoadingMaster(false); }
-    };
-    load();
-  }, []);
-
-  useEffect(() => {
-    if (selectedDistrictId === undefined) return;
-
-    const loadBlocks = async () => {
-      try {
-        // Phase 3: load from local DB first (works offline)
-        const localBlocks = await database.collections
-          .get<BlockModel>('blocks')
-          .query(Q.where('district_server_id', selectedDistrictId))
-          .fetch();
-
-        if (localBlocks.length > 0) {
-          setBlocks(
-            localBlocks.map((b) => ({
-              id:            b.serverId,
-              name:          b.name,
-              district:      b.districtServerId,
-              district_name: b.districtName ?? '',
-            })),
-          );
-        } else {
-          // Cache empty — try API
-          const apiBlocks = await getBlocks(selectedDistrictId);
-          setBlocks(apiBlocks);
-        }
-      } catch {
-        setBlocks([]);
-      }
-    };
-
-    loadBlocks();
-  }, [selectedDistrictId]);
-
-  const handleDistrictSelect = (districtName: string) => {
-    const district = districts.find(d => d.name === districtName);
-    onChange({ district_name: districtName, block_name: '' });
-    setSelectedDistrictId(district?.id);
-    setBlocks([]);
-  };
+  const {
+    districts, blocks, villages,
+    loadingDistricts, loadingBlocks, loadingVillages,
+    handleDistrictSelect, handleBlockSelect, handleVillageSelect,
+  } = useLocationHierarchy(data.district_name, data.block_name);
 
   const handleNext = () => {
     const errs = validateStep1(data);
@@ -118,7 +39,27 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
   };
 
   const districtOptions = districts.map(d => ({ value: d.name, label: d.name }));
-  const blockOptions = blocks.map(b => ({ value: b.name, label: b.name }));
+  const blockOptions    = blocks.map(b => ({ value: b.name, label: b.name }));
+  const villageOptions  = villages.map(v => ({ value: v.name, label: v.name }));
+
+  // ── Village SmartDropdown handlers ─────────────────────────────────────────
+  const handleVillageSmartSelect = (val: string) => {
+    if (val === OTHERS_VALUE) {
+      // Others selected — clear village_id, keep custom_village_name as-is
+      onChange({ village_name: OTHERS_VALUE, village_id: null });
+    } else {
+      const village = villages.find(v => v.name === val);
+      onChange({
+        village_name:        val,
+        village_id:          village?.id ?? null,
+        custom_village_name: '',
+      });
+    }
+  };
+
+  const handleVillageCustomChange = (text: string) => {
+    onChange({ custom_village_name: text });
+  };
 
   return (
     <KeyboardAvoidingView
@@ -135,7 +76,7 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
         <Text style={styles.heading}>Farmer Details</Text>
         <Text style={styles.subtext}>Enter the basic information for this field visit.</Text>
 
-        {loadingMaster && (
+        {loadingDistricts && (
           <View style={styles.masterLoader}>
             <ActivityIndicator size="small" color={colors.primary} />
             <Text style={styles.masterLoaderText}>Loading master data…</Text>
@@ -163,24 +104,15 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
           error={errors.mobile_number}
         />
 
-        <FormInput
-          label="Village Name"
-          required
-          value={data.village_name}
-          onChangeText={v => onChange({ village_name: v })}
-          placeholder="e.g. Rampura"
-          error={errors.village_name}
-          autoCapitalize="words"
-        />
-
+        {/* District → Block cascade (standard InlinePicker — always has data) */}
         <InlinePicker
           label="District"
           required
           value={data.district_name}
           options={districtOptions}
-          onSelect={handleDistrictSelect}
-          placeholder={loadingMaster ? 'Loading…' : 'Select district…'}
-          disabled={loadingMaster}
+          onSelect={name => handleDistrictSelect(name, onChange)}
+          placeholder={loadingDistricts ? 'Loading…' : 'Select district…'}
+          disabled={loadingDistricts}
           error={errors.district_name}
         />
 
@@ -189,10 +121,33 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
           required
           value={data.block_name}
           options={blockOptions}
-          onSelect={v => onChange({ block_name: v })}
-          placeholder={data.district_name ? 'Select block…' : 'Select district first…'}
-          disabled={!data.district_name || blocks.length === 0}
+          onSelect={name => handleBlockSelect(name, onChange)}
+          placeholder={
+            !data.district_name ? 'Select district first…'
+            : loadingBlocks ? 'Loading blocks…'
+            : 'Select block…'
+          }
+          disabled={!data.district_name || loadingBlocks}
           error={errors.block_name}
+        />
+
+        {/* Village — SmartDropdown handles empty list (Others auto-select) */}
+        <SmartDropdown
+          label="Village"
+          required
+          value={data.village_name}
+          customValue={data.custom_village_name}
+          options={villageOptions}
+          onSelect={handleVillageSmartSelect}
+          onCustomChange={handleVillageCustomChange}
+          placeholder={
+            !data.block_name ? 'Select block first…'
+            : 'Select village…'
+          }
+          loading={loadingVillages}
+          disabled={!data.block_name}
+          error={errors.village_name}
+          customError={errors.custom_village_name}
         />
 
         <FormInput
@@ -213,12 +168,12 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
 };
 
 const styles = StyleSheet.create({
-  scroll:     { flex: 1, backgroundColor: colors.background },
-  content:    { padding: 20, paddingBottom: 40 },
-  stepLabel:  { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, marginBottom: 4 },
-  heading:    { fontSize: 22, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
-  subtext:    { fontSize: 13, color: colors.textSecondary, marginBottom: 20 },
-  masterLoader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  scroll:           { flex: 1, backgroundColor: colors.background },
+  content:          { padding: 20, paddingBottom: 40 },
+  stepLabel:        { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, marginBottom: 4 },
+  heading:          { fontSize: 22, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
+  subtext:          { fontSize: 13, color: colors.textSecondary, marginBottom: 20 },
+  masterLoader:     { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   masterLoaderText: { fontSize: 12, color: colors.textMuted },
 });
 

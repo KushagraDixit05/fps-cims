@@ -16,8 +16,7 @@ import type { RootStackParamList } from '../../navigation/types';
 
 import { colors } from '../../utils/colors';
 import { useCropMonitoringForm } from '../../hooks/useCropMonitoringForm';
-import AppIcon from '../../components/AppIcon';
-import { ChevronLeft, IconStroke } from '../../utils/icons';
+import ScreenHeader from '../../components/ScreenHeader';
 import Step1_FarmerDetails from './Step1_FarmerDetails';
 import Step2_CropDetails from './Step2_CropDetails';
 import Step3_PhotosLocation from './Step3_PhotosLocation';
@@ -97,28 +96,17 @@ const CropMonitoringFormScreen = () => {
 
   return (
     <View style={styles.root}>
-      {/* ── Top bar with back button + progress bar ── */}
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => {
-            if (state.step === 1) {
-              navigation.goBack();
-            } else if (state.step === 2) {
-              form.setStep(1);
-            } else if (state.step === 3) {
-              form.setStep(2);
-            } else {
-              form.setStep(3);
-            }
-          }}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <AppIcon icon={ChevronLeft} size={22} color="white" strokeWidth={2.5} />
-        </TouchableOpacity>
-        <Text style={styles.topTitle}>Crop Monitoring</Text>
-        <View style={{ width: 36 }} />
-      </View>
+      {/* ── Compact header with step-aware back navigation ── */}
+      <ScreenHeader
+        title="Crop Monitoring"
+        subtitle={state.step !== 'review' ? `Step ${state.step} of 3` : 'Review'}
+        onBack={() => {
+          if (state.step === 1) navigation.goBack();
+          else if (state.step === 2) form.setStep(1);
+          else if (state.step === 3) form.setStep(2);
+          else form.setStep(3);
+        }}
+      />
 
       {state.step !== 'review' && <ProgressBar step={state.step} />}
 
@@ -178,11 +166,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.primary,
-    paddingTop: 48,
-    paddingBottom: 14,
+    paddingTop: 28,
+    paddingBottom: 10,
     paddingHorizontal: 16,
   },
-  backBtn:   { width: 36, height: 36, justifyContent: 'center' },
+  backBtn:   { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
   topTitle:  { fontSize: 17, fontWeight: '700', color: 'white' },
 });
 

@@ -14,6 +14,7 @@ import { ProductDemoModel } from '../../database/models/ProductDemoModel';
 import { colors } from '../../utils/colors';
 import EmptyState from '../../components/EmptyState';
 import LoadingScreen from '../../components/LoadingScreen';
+import ScreenHeader from '../../components/ScreenHeader';
 import AppIcon from '../../components/AppIcon';
 import { Package, Plus, ChevronRight, ChevronLeft } from '../../utils/icons';
 import type { RootStackParamList } from '../../navigation/types';
@@ -61,10 +62,7 @@ const ProductDemoListScreen = () => {
   return (
     <View style={styles.root}>
       {/* ── Header ── */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Product Demos</Text>
-        <Text style={styles.headerSub}>{demos.length} records</Text>
-      </View>
+      <ScreenHeader title="Product Demos" subtitle={`${demos.length} records`} onBack={() => navigation.goBack()} />
 
       {/* ── List ── */}
       <FlatList
@@ -145,14 +143,11 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.primary,
     paddingHorizontal: 16,
-    paddingTop: 52,
-    paddingBottom: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    paddingTop: 28,
+    paddingBottom: 10,
   },
-  headerTitle: { color: 'white', fontSize: 20, fontWeight: '700', paddingLeft: 40 },
-  headerSub: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
+  headerTitle: { color: 'white', fontSize: 18, fontWeight: '700' },
+  headerSub:   { color: 'rgba(255,255,255,0.72)', fontSize: 12, marginTop: 2, paddingLeft: 0 },
   list: { padding: 12, paddingBottom: 80 },
   emptyList: { flex: 1 },
   row: {

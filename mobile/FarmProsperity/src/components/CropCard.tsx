@@ -19,6 +19,7 @@ import Card from './Card';
 import FormInput from './FormInput';
 import ConditionSelector from './ConditionSelector';
 import ProblemCheckboxGroup from './ProblemCheckboxGroup';
+import SmartDropdown, { OTHERS_VALUE } from './SmartDropdown';
 
 import type {
   CropRecordDraft,
@@ -206,7 +207,7 @@ const CropCard = ({
   // Build crop options from master data
   const cropOptions = cropMaster.map((c) => ({ value: c.crop_name, label: c.crop_name }));
 
-  // Build variety options filtered by the selected crop
+  // Build variety options filtered by the selected crop — SmartDropdown appends 'Others' automatically
   const selectedCropMaster = cropMaster.find((c) => c.crop_name === data.crop_name);
   const varietyOptions = (selectedCropMaster?.varieties ?? []).map((v) => ({
     value: v.variety_name,
@@ -214,8 +215,8 @@ const CropCard = ({
   }));
 
   const handleCropChange = (cropName: string) => {
-    // Selecting a new crop must reset variety (plan requirement)
-    onChange({ crop_name: cropName, variety: '' });
+    // Selecting a new crop must reset variety and custom variety
+    onChange({ crop_name: cropName, variety: '', custom_variety: '' });
   };
 
   // ── Date helpers ────────────────────────────────────────────────────────────
@@ -336,16 +337,19 @@ const CropCard = ({
             error={errors.crop_name}
           />
 
-          {/* Variety dropdown — disabled until crop selected */}
-          <SimpleSelect
+          {/* Variety — SmartDropdown handles Others + custom text field */}
+          <SmartDropdown
             label="Variety"
+            required
             value={data.variety}
+            customValue={data.custom_variety}
             options={varietyOptions}
-            onSelect={(v) => onChange({ variety: v })}
+            onSelect={v => onChange({ variety: v, custom_variety: v !== OTHERS_VALUE ? '' : data.custom_variety })}
+            onCustomChange={v => onChange({ custom_variety: v })}
             placeholder={data.crop_name ? 'Select variety' : 'Select crop first'}
             disabled={!data.crop_name}
-            required
             error={errors.variety}
+            customError={errors.custom_variety}
           />
 
           {/* Date of Sowing */}

@@ -7,6 +7,7 @@ from .models import (
     Village, Farmer, CropEntry, CropPhoto,
     District, Block, CropMaster, CropVariety,
     FarmerVisit, CropRecord, VisitPhoto,
+    VillageMaster,
 )
 
 
@@ -89,11 +90,29 @@ class DistrictAdmin(admin.ModelAdmin):
 
 @admin.register(Block)
 class BlockAdmin(admin.ModelAdmin):
-    list_display = ['name', 'district', 'is_active']
+    list_display = ['name', 'district', 'is_active', 'village_count']
     list_filter = ['district__state', 'district', 'is_active']
     search_fields = ['name', 'district__name']
     list_editable = ['is_active']
     raw_id_fields = ['district']
+
+    def village_count(self, obj: Block) -> int:
+        return obj.villages.count()
+    village_count.short_description = 'Villages'
+
+
+@admin.register(VillageMaster)
+class VillageMasterAdmin(admin.ModelAdmin):
+    list_display = ['name', 'block', 'district_name', 'is_active']
+    list_filter = ['block__district__state', 'block__district', 'block', 'is_active']
+    search_fields = ['name', 'block__name', 'block__district__name']
+    list_editable = ['is_active']
+    raw_id_fields = ['block']
+
+    def district_name(self, obj: VillageMaster) -> str:
+        return obj.block.district.name
+    district_name.short_description = 'District'
+    district_name.admin_order_field = 'block__district__name'
 
 
 class CropVarietyInline(admin.TabularInline):

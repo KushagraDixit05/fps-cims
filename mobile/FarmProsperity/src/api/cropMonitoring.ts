@@ -7,6 +7,7 @@ import type {
   CropMaster,
   District,
   Block,
+  VillageMaster,
   FarmerVisitSummary,
   RecentVisit,
   FarmerVisitDetail,
@@ -47,6 +48,18 @@ export const getBlocks = async (districtId?: number): Promise<Block[]> => {
     params.district = districtId;
   }
   const { data } = await apiClient.get<Block[]>('/blocks/', { params });
+  return data;
+};
+
+/**
+ * GET /api/village-master/?block=<blockId>
+ * Returns all active villages for a given block.
+ * Used to populate the Village dropdown in Step 1, filtered after block selection.
+ */
+export const getVillages = async (blockId: number): Promise<VillageMaster[]> => {
+  const { data } = await apiClient.get<VillageMaster[]>('/village-master/', {
+    params: { block: blockId },
+  });
   return data;
 };
 

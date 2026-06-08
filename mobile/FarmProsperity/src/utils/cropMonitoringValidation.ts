@@ -10,6 +10,7 @@ import type {
   PhotoDraft,
   LocationDraft,
 } from '../types/cropMonitoring';
+import { OTHERS_VALUE } from '../components/SmartDropdown';
 
 // ─── Step 1 — Farmer Details ──────────────────────────────────────────────────
 
@@ -30,16 +31,25 @@ export const validateStep1 = (
     errors.mobile_number = 'Enter a valid 10-digit mobile number.';
   }
 
-  if (!data.village_name.trim()) {
-    errors.village_name = 'Village name is required.';
+  if (!data.district_name.trim()) {
+    errors.district_name = 'District is required.';
   }
 
   if (!data.block_name.trim()) {
-    errors.block_name = 'Block name is required.';
+    errors.block_name = 'Block is required.';
   }
 
-  if (!data.district_name.trim()) {
-    errors.district_name = 'District name is required.';
+  // Village: require either a master selection (village_id) or a custom entry (Others path)
+  if (data.village_name === OTHERS_VALUE || !data.village_id) {
+    if (data.village_name === OTHERS_VALUE) {
+      // Others selected — custom text required
+      if (!data.custom_village_name || data.custom_village_name.trim().length < 2) {
+        errors.custom_village_name = 'Please enter the village name (at least 2 characters).';
+      }
+    } else {
+      // No village selected at all
+      errors.village_name = 'Please select a village from the list.';
+    }
   }
 
   const landVal = parseFloat(data.total_land_acre);
@@ -61,8 +71,15 @@ export const validateCropRecord = (crop: CropRecordDraft): CropRecordErrors => {
     errors.crop_name = 'Please select a crop.';
   }
 
-  if (!crop.variety.trim()) {
-    errors.variety = 'Please select a variety.';
+  if (!crop.variety.trim() || crop.variety === OTHERS_VALUE) {
+    if (!crop.variety.trim()) {
+      errors.variety = 'Please select a variety.';
+    } else if (crop.variety === OTHERS_VALUE) {
+      // Others selected — custom text required
+      if (!crop.custom_variety || crop.custom_variety.trim().length < 2) {
+        errors.custom_variety = 'Please enter the variety name (at least 2 characters).';
+      }
+    }
   }
 
   if (!crop.date_of_sowing || !crop.date_of_sowing.trim()) {

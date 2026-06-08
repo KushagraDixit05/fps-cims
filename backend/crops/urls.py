@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     VillageViewSet, FarmerViewSet, CropEntryViewSet,
     DistrictViewSet, BlockViewSet, CropMasterViewSet,
+    VillageMasterViewSet,
     FarmerVisitViewSet,
 )
 
@@ -18,6 +19,7 @@ router.register(r'crops', CropEntryViewSet, basename='crop')
 # ── New Crop Monitoring routes ────────────────────────────────────────────────
 router.register(r'districts', DistrictViewSet, basename='district')
 router.register(r'blocks', BlockViewSet, basename='block')
+router.register(r'village-master', VillageMasterViewSet, basename='village-master')
 router.register(r'crop-master', CropMasterViewSet, basename='crop-master')
 router.register(r'farmer-visits', FarmerVisitViewSet, basename='farmer-visit')
 

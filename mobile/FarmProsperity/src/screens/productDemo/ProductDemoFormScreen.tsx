@@ -16,8 +16,7 @@ import type { RootStackParamList } from '../../navigation/types';
 
 import { colors } from '../../utils/colors';
 import { useProductDemoForm } from '../../hooks/useProductDemoForm';
-import AppIcon from '../../components/AppIcon';
-import { ChevronLeft } from '../../utils/icons';
+import ScreenHeader from '../../components/ScreenHeader';
 import Step1_FarmerDetails        from './Step1_FarmerDetails';
 import Step2_CropStageDetails     from './Step2_CropStageDetails';
 import Step3_ProductDoseDetails   from './Step3_ProductDoseDetails';
@@ -106,18 +105,12 @@ const ProductDemoFormScreen = () => {
 
   return (
     <View style={styles.root}>
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={handleBack}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <AppIcon icon={ChevronLeft} size={22} color="white" strokeWidth={2.5} />
-        </TouchableOpacity>
-        <Text style={styles.topTitle}>Product Demo Entry</Text>
-        <View style={{ width: 36 }} />
-      </View>
+      {/* ── Compact header ── */}
+      <ScreenHeader
+        title="Product Demo Entry"
+        subtitle={state.step !== 'review' ? `Step ${state.step} of 4` : 'Review'}
+        onBack={handleBack}
+      />
 
       {state.step !== 'review' && <ProgressBar step={state.step} />}
 
@@ -183,11 +176,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.primary,
-    paddingTop: 48,
-    paddingBottom: 14,
+    paddingTop: 28,
+    paddingBottom: 10,
     paddingHorizontal: 16,
   },
-  backBtn:  { width: 36, height: 36, justifyContent: 'center' },
+  backBtn:  { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
   topTitle: { fontSize: 17, fontWeight: '700', color: 'white' },
 });
 

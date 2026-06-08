@@ -17,6 +17,14 @@ export interface Block {
   district_name: string;
 }
 
+export interface VillageMaster {
+  id: number;
+  name: string;
+  block: number;
+  block_name: string;
+  district_name: string;
+}
+
 export interface CropVariety {
   id: number;
   variety_name: string;
@@ -54,6 +62,8 @@ export interface CropRecordDraft {
   localKey: string;
   crop_name: string;
   variety: string;
+  /** When variety === 'Others', user types free text here. Stored as variety on submit. */
+  custom_variety: string;
   /** ISO date string: YYYY-MM-DD */
   date_of_sowing: string;
   current_area_acre: string;
@@ -72,7 +82,12 @@ export type CropRecordErrors = Partial<Record<keyof CropRecordDraft, string>>;
 export interface FarmerDetailsDraft {
   farmer_name: string;
   mobile_number: string;
+  /** Resolved village name (auto-filled from dropdown OR equals custom_village_name when Others). */
   village_name: string;
+  /** Server ID of the selected VillageMaster record. Null when 'Others' is typed manually. */
+  village_id: number | null;
+  /** Free-text village entered when 'Others (Please specify)' is selected. */
+  custom_village_name: string;
   block_name: string;
   district_name: string;
   total_land_acre: string;

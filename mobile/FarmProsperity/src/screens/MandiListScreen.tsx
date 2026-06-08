@@ -24,6 +24,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 
 import { getMandis, getMandiArrivals, getYoYComparison } from '../api/mandi';
 import { colors } from '../utils/colors';
+import ScreenHeader from '../components/ScreenHeader';
 import { formatDate, formatQuantity, formatCurrency } from '../utils/helpers';
 import EmptyState from '../components/EmptyState';
 import LoadingScreen from '../components/LoadingScreen';
@@ -98,10 +99,7 @@ const MandiListScreen = () => {
   return (
     <View style={styles.root}>
       {/* ── Header ── */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mandi Arrivals</Text>
-        <Text style={styles.headerSub}>{arrivals.length} records</Text>
-      </View>
+      <ScreenHeader title="Mandi Arrivals" subtitle={`${arrivals.length} records`} />
 
       {/* ── Mandi Picker ── */}
       <View style={styles.pickerSection}>
@@ -304,18 +302,6 @@ const ArrivalRow = ({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
-
-  header: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingTop: 52,
-    paddingBottom: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  headerTitle: { color: 'white', fontSize: 20, fontWeight: '700' },
-  headerSub: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
 
   // Mandi picker
   pickerSection: {

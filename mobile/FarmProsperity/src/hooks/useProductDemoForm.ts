@@ -38,6 +38,8 @@ const INITIAL_STATE: ProductDemoFormState = {
     farmer_name: '',
     mobile_number: '',
     village_name: '',
+    village_id: null,
+    custom_village_name: '',
     block_name: '',
     district_name: '',
     total_land_acre: '',
@@ -45,6 +47,7 @@ const INITIAL_STATE: ProductDemoFormState = {
   cropStage: {
     crop_name: '',
     variety: '',
+    custom_variety: '',
     crop_stage: '',
     crop_stage_days: '',
     demo_date: '',

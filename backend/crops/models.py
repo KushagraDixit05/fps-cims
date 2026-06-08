@@ -185,6 +185,27 @@ class Block(models.Model):
         return f"{self.name} ({self.district.name})"
 
 
+class VillageMaster(models.Model):
+    """
+    Master list of villages, linked to a Block (taluka/tehsil).
+    This is the NEW village master used by the Crop Monitoring and Product Demo
+    modules — distinct from the legacy Village model used by Farmer/CropEntry.
+    Seeded via seed_crop_master management command.
+    """
+    name = models.CharField(max_length=200)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name='villages')
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['block__district__name', 'block__name', 'name']
+        unique_together = [['name', 'block']]
+        verbose_name = 'Village Master'
+        verbose_name_plural = 'Village Masters'
+
+    def __str__(self):
+        return f"{self.name} — {self.block.name} ({self.block.district.name})"
+
+
 class CropMaster(models.Model):
     """
     Master list of crop types (e.g. Chilli, Soybean).

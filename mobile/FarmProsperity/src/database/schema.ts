@@ -16,7 +16,7 @@
 
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
-export const DB_SCHEMA_VERSION = 3;
+export const DB_SCHEMA_VERSION = 4;
 
 export default appSchema({
   version: DB_SCHEMA_VERSION,
@@ -29,6 +29,7 @@ export default appSchema({
         { name: 'farmer_name',     type: 'string' },
         { name: 'mobile_number',   type: 'string', isOptional: true },
         { name: 'village_name',    type: 'string' },
+        { name: 'village_id',      type: 'number', isOptional: true }, // FK to VillageMaster.server_id
         { name: 'block_name',      type: 'string' },
         { name: 'district_name',   type: 'string' },
         { name: 'total_land_acre', type: 'string', isOptional: true },
@@ -163,6 +164,7 @@ export default appSchema({
         { name: 'farmer_name',     type: 'string' },
         { name: 'mobile_number',   type: 'string', isOptional: true },
         { name: 'village_name',    type: 'string' },
+        { name: 'village_id',      type: 'number', isOptional: true }, // FK to VillageMaster.server_id
         { name: 'block_name',      type: 'string' },
         { name: 'district_name',   type: 'string' },
         { name: 'total_land_acre', type: 'string', isOptional: true },
@@ -192,6 +194,16 @@ export default appSchema({
         { name: 'sync_error',      type: 'string', isOptional: true },
         { name: 'created_at_local', type: 'number' },
         { name: 'updated_at_local', type: 'number' },
+      ],
+    }),
+    // ── Reference: Villages ───────────────────────────────────────────────────
+    tableSchema({
+      name: 'villages',
+      columns: [
+        { name: 'server_id',      type: 'number' },   // Django PK
+        { name: 'name',           type: 'string' },
+        { name: 'block_server_id', type: 'number' },  // FK to blocks.server_id
+        { name: 'block_name',     type: 'string', isOptional: true },
       ],
     }),
   ],

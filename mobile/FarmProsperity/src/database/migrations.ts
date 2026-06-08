@@ -64,5 +64,34 @@ export default schemaMigrations({
         }),
       ],
     },
+    // ── v3 → v4: Village hierarchy + village_id columns ───────────────────────────
+    // Adds villages reference table.
+    // Adds village_id (optional FK) to farmer_visits and product_demos.
+    {
+      toVersion: 4,
+      steps: [
+        createTable({
+          name: 'villages',
+          columns: [
+            { name: 'server_id',       type: 'number' },
+            { name: 'name',            type: 'string' },
+            { name: 'block_server_id', type: 'number' },
+            { name: 'block_name',      type: 'string', isOptional: true },
+          ],
+        }),
+        addColumns({
+          table: 'farmer_visits',
+          columns: [
+            { name: 'village_id', type: 'number', isOptional: true },
+          ],
+        }),
+        addColumns({
+          table: 'product_demos',
+          columns: [
+            { name: 'village_id', type: 'number', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

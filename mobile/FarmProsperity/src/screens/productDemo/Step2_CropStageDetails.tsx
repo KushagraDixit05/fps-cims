@@ -19,6 +19,7 @@ import { colors } from '../../utils/colors';
 import FormInput from '../../components/FormInput';
 import Button from '../../components/Button';
 import InlinePicker from '../../components/InlinePicker';
+import SmartDropdown, { OTHERS_VALUE } from '../../components/SmartDropdown';
 import type { CropStageDraft, CropStageErrors } from '../../types/productDemo';
 import type { CropMaster } from '../../types/cropMonitoring';
 import { validateStep2, hasErrors } from '../../utils/productDemoValidation';
@@ -101,7 +102,7 @@ const Step2_CropStageDetails = ({ data, onChange, onNext, onBack }: Step2Props) 
   }, []);
 
   const handleCropSelect = (cropName: string) => {
-    onChange({ crop_name: cropName, variety: '' });
+    onChange({ crop_name: cropName, variety: '', custom_variety: '' });
   };
 
   const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
@@ -122,10 +123,13 @@ const Step2_CropStageDetails = ({ data, onChange, onNext, onBack }: Step2Props) 
 
   const cropOptions = cropMaster.map(c => ({ value: c.crop_name, label: c.crop_name }));
   const selectedCropMaster = cropMaster.find(c => c.crop_name === data.crop_name);
-  const varietyOptions = (selectedCropMaster?.varieties ?? []).map(v => ({
-    value: v.variety_name,
-    label: v.variety_name,
-  }));
+  const varietyOptions = [
+    ...(selectedCropMaster?.varieties ?? []).map(v => ({
+      value: v.variety_name,
+      label: v.variety_name,
+    })),
+    ...(selectedCropMaster ? [{ value: 'Others', label: 'Others (enter manually)' }] : []),
+  ];
 
   const parsedDate = parseDate(data.demo_date);
   const displayDate = parsedDate
@@ -168,15 +172,19 @@ const Step2_CropStageDetails = ({ data, onChange, onNext, onBack }: Step2Props) 
           error={errors.crop_name}
         />
 
-        <InlinePicker
+        {/* Variety — SmartDropdown handles Others + custom text */}
+        <SmartDropdown
           label="Variety"
           required
           value={data.variety}
+          customValue={data.custom_variety}
           options={varietyOptions}
-          onSelect={v => onChange({ variety: v })}
+          onSelect={v => onChange({ variety: v, custom_variety: v !== OTHERS_VALUE ? '' : data.custom_variety })}
+          onCustomChange={v => onChange({ custom_variety: v })}
           placeholder={data.crop_name ? 'Select variety…' : 'Select crop first…'}
-          disabled={!data.crop_name || varietyOptions.length === 0}
+          disabled={!data.crop_name}
           error={errors.variety}
+          customError={errors.custom_variety}
         />
 
         <InlinePicker

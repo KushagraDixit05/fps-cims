@@ -35,7 +35,12 @@ export type CropStage =
 export interface DemoFarmerDetailsDraft {
   farmer_name: string;
   mobile_number: string;
+  /** Resolved village name (auto-filled from dropdown OR equals custom_village_name when Others). */
   village_name: string;
+  /** Server ID of the selected VillageMaster record. Null when 'Others' is typed manually. */
+  village_id: number | null;
+  /** Free-text village entered when 'Others (Please specify)' is selected. */
+  custom_village_name: string;
   block_name: string;
   district_name: string;
   total_land_acre: string;
@@ -46,6 +51,8 @@ export type DemoFarmerDetailsErrors = Partial<Record<keyof DemoFarmerDetailsDraf
 export interface CropStageDraft {
   crop_name: string;
   variety: string;
+  /** When variety === 'Others', user types free text here. Stored as variety on submit. */
+  custom_variety: string;
   crop_stage: CropStage | '';
   /** Stored as a string for controlled input; parsed to int on submit */
   crop_stage_days: string;

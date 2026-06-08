@@ -13,11 +13,12 @@ from datetime import timedelta
 from .models import (
     Village, Farmer, CropEntry,
     District, Block, CropMaster,
-    FarmerVisit,
+    FarmerVisit, VillageMaster,
 )
 from .serializers import (
     VillageSerializer, FarmerSerializer, CropEntrySerializer,
     DistrictSerializer, BlockSerializer, CropMasterSerializer,
+    VillageMasterSerializer,
     FarmerVisitCreateSerializer, FarmerVisitListSerializer,
     FarmerVisitDetailSerializer,
 )
@@ -157,6 +158,22 @@ class BlockViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return Block.objects.filter(is_active=True).select_related('district')
+
+
+class VillageMasterViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    GET /api/village-master/                      → all active villages
+    GET /api/village-master/?block=<id>           → villages for a given block ID
+    GET /api/village-master/?search=<name>        → search by village name
+    """
+    serializer_class = VillageMasterSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['block']
+    search_fields = ['name', 'block__name', 'block__district__name']
+
+    def get_queryset(self):
+        return VillageMaster.objects.filter(is_active=True).select_related('block', 'block__district')
 
 
 class CropMasterViewSet(viewsets.ReadOnlyModelViewSet):

@@ -16,6 +16,7 @@ import { getMandis, getYoYComparison } from '../api/mandi';
 import { colors } from '../utils/colors';
 import Card from '../components/Card';
 import LoadingScreen from '../components/LoadingScreen';
+import ScreenHeader from '../components/ScreenHeader';
 import type { DashboardSummary, Mandi, YoYComparison } from '../types';
 
 const ReportsScreen = () => {
@@ -67,10 +68,7 @@ const ReportsScreen = () => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
       }
     >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Reports</Text>
-        <Text style={styles.headerSub}>Analytics & Insights</Text>
-      </View>
+      <ScreenHeader title="Reports" subtitle="Analytics & Insights" />
 
       {/* ── Crop Summary ── */}
       <Card style={styles.card}>
@@ -176,11 +174,11 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.primary,
     paddingHorizontal: 16,
-    paddingTop: 52,
-    paddingBottom: 14,
+    paddingTop: 28,
+    paddingBottom: 10,
   },
-  headerTitle: { color: 'white', fontSize: 20, fontWeight: '700' },
-  headerSub: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 2 },
+  headerTitle: { color: 'white', fontSize: 18, fontWeight: '700' },
+  headerSub:   { color: 'rgba(255,255,255,0.72)', fontSize: 12, marginTop: 2 },
   card: { margin: 12, marginBottom: 0 },
   cardTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 },
   subTitle: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 8, marginTop: 12 },

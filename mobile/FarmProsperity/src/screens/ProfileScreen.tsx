@@ -20,10 +20,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
+import { useNavigation } from '@react-navigation/native';
 
 import { useAuth }                       from '../store/authStore';
 import { colors }                        from '../utils/colors';
 import Card                              from '../components/Card';
+import ScreenHeader                      from '../components/ScreenHeader';
 import { syncPendingRecords, getPendingCount, getLastSyncTime } from '../sync/syncService';
 import type { SyncStats }                from '../sync/syncTypes';
 import AppIcon                           from '../components/AppIcon';
@@ -37,6 +39,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
+  const navigation = useNavigation();
 
   // ── Sync state ──
   const [pendingStats, setPendingStats]   = useState<SyncStats>({ pendingVisits: 0, pendingCropEntries: 0, pendingMandiArrivals: 0, total: 0 });
@@ -129,7 +132,14 @@ const ProfileScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <View style={styles.root}>
+      {/* ── Compact header (sticky) ── */}
+      <ScreenHeader
+        title="Profile"
+        subtitle={user?.username ? `@${user.username}` : undefined}
+        onBack={() => navigation.goBack()}
+      />
+      <ScrollView contentContainerStyle={styles.content}>
       {/* ── Avatar section ── */}
       <View style={styles.avatarSection}>
         <View style={styles.avatar}>
@@ -244,7 +254,8 @@ const ProfileScreen = () => {
       </TouchableOpacity>
 
       <View style={{ height: 40 }} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -272,7 +283,7 @@ const styles = StyleSheet.create({
   root:    { flex: 1, backgroundColor: colors.background },
   content: { padding: 14 },
 
-  avatarSection: { alignItems: 'center', paddingVertical: 24 },
+  avatarSection: { alignItems: 'center', paddingVertical: 16 },
   avatar: {
     width:        80,
     height:       80,

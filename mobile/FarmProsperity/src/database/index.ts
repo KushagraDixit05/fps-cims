@@ -18,6 +18,7 @@ import { BlockModel }        from './models/BlockModel';
 import { CropMasterModel }   from './models/CropMasterModel';
 import { MandiModel }        from './models/MandiModel';
 import { ProductDemoModel }  from './models/ProductDemoModel';
+import { VillageModel }      from './models/VillageModel';
 
 const adapter = new SQLiteAdapter({
   schema,
@@ -38,6 +39,7 @@ const database = new Database({
     CropMasterModel,
     MandiModel,
     ProductDemoModel,
+    VillageModel,
   ],
 });
 

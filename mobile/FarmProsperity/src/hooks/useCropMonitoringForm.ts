@@ -12,6 +12,7 @@ import type {
   LocationDraft,
 } from '../types/cropMonitoring';
 import { saveVisitLocally } from '../database/operations';
+import { OTHERS_VALUE } from '../components/SmartDropdown';
 
 // ─── Action types ─────────────────────────────────────────────────────────────
 
@@ -33,6 +34,7 @@ const makeBlankCrop = (index: number = 0): CropRecordDraft => ({
   localKey: `crop_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
   crop_name: '',
   variety: '',
+  custom_variety: '',
   date_of_sowing: '',
   current_area_acre: '',
   last_year_area_acre: '',
@@ -50,6 +52,8 @@ const INITIAL_STATE: CropMonitoringFormState = {
     farmer_name: '',
     mobile_number: '',
     village_name: '',
+    village_id: null,
+    custom_village_name: '',
     block_name: '',
     district_name: '',
     total_land_acre: '',
@@ -133,7 +137,11 @@ const buildFormData = (state: CropMonitoringFormState): FormData => {
   // Farmer fields
   fd.append('farmer_name', farmerDetails.farmer_name.trim());
   fd.append('mobile_number', farmerDetails.mobile_number.trim());
-  fd.append('village_name', farmerDetails.village_name.trim());
+  // Resolve Others sentinel for village_name
+  const resolvedVillage = farmerDetails.village_name === OTHERS_VALUE
+    ? (farmerDetails.custom_village_name?.trim() || 'Custom')
+    : farmerDetails.village_name.trim();
+  fd.append('village_name', resolvedVillage);
   fd.append('block_name', farmerDetails.block_name.trim());
   fd.append('district_name', farmerDetails.district_name.trim());
   fd.append('total_land_acre', farmerDetails.total_land_acre.trim());
@@ -150,9 +158,10 @@ const buildFormData = (state: CropMonitoringFormState): FormData => {
   fd.append('remark', remark.trim());
 
   // Crops: serialized as JSON string (multipart can't send nested arrays)
+  // If variety is 'Others', use the custom_variety text as the actual variety value.
   const cropsPayload = crops.map((c, i) => ({
     crop_name: c.crop_name,
-    variety: c.variety,
+    variety: c.variety === OTHERS_VALUE ? (c.custom_variety.trim() || 'Others') : c.variety,
     date_of_sowing: c.date_of_sowing,
     current_area_acre: c.current_area_acre,
     last_year_area_acre: c.last_year_area_acre || null,
