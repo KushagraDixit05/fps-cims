@@ -14,7 +14,7 @@ import { Platform } from 'react-native';
 // ─── Base URL ────────────────────────────────────────────────────────────────
 // Production builds (__DEV__ === false) always hit the deployed backend.
 // Development builds use local detection so `adb reverse` / emulator alias works.
-const PRODUCTION_API_URL = 'https://YOUR-APP.onrender.com/api'; // ← replace before release build
+const PRODUCTION_API_URL = 'https://fps-cims-backend.onrender.com/api';
 
 const getBaseUrl = (): string => {
   if (!__DEV__) {
