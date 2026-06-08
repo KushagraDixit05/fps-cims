@@ -213,34 +213,43 @@ fps/
 | **Product Demo Module** | ✅ **Done** | Full 4-step wizard (backend + mobile) — new `product_demo` Django app, schema v3 |
 | **Phase 3 — Offline Sync** | ✅ **Done** | WatermelonDB v3 schema, 5 write operations, background auto-sync, sync dashboard |
 | **Phase 4 — UI Redesign** | 🔄 **In Progress** | Design system, new auth flow (Splash/Welcome/Login/Signup), redesigned Home, drawer nav — active via AppNavigatorV2 |
+| **Cloud Deployment** | ✅ **Done** | Dockerized backend on Render, PostgreSQL+PostGIS, auto-migrate/seed, release APK distributed |
 
 ---
 
 ## How to Start the Project
 
-### Start backend
+### Local development (dev build → localhost)
 ```bash
+# Terminal 1 — Backend
 cd "/media/kushagra/crucial/FPS internship/fps/backend"
-docker compose up -d                                       # Start PostGIS DB
-./venv/bin/python manage.py runserver 0.0.0.0:8000        # Start Django
-```
+docker compose up -d
+source venv/bin/activate
+python manage.py runserver 0.0.0.0:8000
 
-### Start mobile app (Metro)
-```bash
+# Terminal 2 — Metro
 cd "/media/kushagra/crucial/FPS internship/fps/mobile/FarmProsperity"
 npm start
+
+# Terminal 3 — Deploy dev build to device
+adb reverse tcp:8000 tcp:8000
+adb reverse tcp:8081 tcp:8081
+npm run android:phone
 ```
 
-### Deploy to physical OnePlus 11R (USB)
+### Build and distribute release APK (→ cloud backend)
 ```bash
-adb reverse tcp:8000 tcp:8000   # Tunnel API port over USB
-adb reverse tcp:8081 tcp:8081   # Tunnel Metro bundler port
-npm run android:phone           # Build arm64 + install
+cd "/media/kushagra/crucial/FPS internship/fps/mobile/FarmProsperity/android"
+./gradlew assembleRelease
+# Output: app/build/outputs/apk/release/app-release.apk
+
+adb install -r "app/build/outputs/apk/release/app-release.apk"
 ```
 
 ### Deploy to emulator
 ```bash
-npm run android:emulator        # Build x86_64 + install
+cd "/media/kushagra/crucial/FPS internship/fps/mobile/FarmProsperity"
+npm run android:emulator
 ```
 
 ---
@@ -248,10 +257,13 @@ npm run android:emulator        # Build x86_64 + install
 ## Critical Configuration
 
 ### API Base URL (`src/api/client.ts`)
-Resolved **at runtime** — no env files needed:
-- **Emulator:** `http://10.0.2.2:8000/api`
-- **Physical device (USB):** `http://localhost:8000/api` via `adb reverse`
-- **Wi-Fi override:** Set `MANUAL_IP = '192.168.x.x'` on line ~23 of `client.ts`
+Controlled by `__DEV__` flag — no manual switching needed:
+- **Release APK** (`__DEV__ === false`) → `https://fps-cims-backend.onrender.com/api`
+- **Dev build** (`__DEV__ === true`) → auto-detected:
+  - Emulator: `http://10.0.2.2:8000/api`
+  - Physical device (USB): `http://localhost:8000/api` via `adb reverse`
+
+Axios timeout: **60 seconds** (handles Render's ~30s cold start on free tier).
 
 ### Active Navigator
 `App.tsx` currently imports `AppNavigatorV2` (v2 redesign active). To rollback to v1:
@@ -271,23 +283,37 @@ import AppNavigator from './src/navigation/AppNavigator';
 
 ---
 
-## Dev Credentials
+## Credentials & URLs
 
+### Local development
 | Item | Value |
 |---|---|
 | Django admin | `http://localhost:8000/admin` |
-| Username | `admin` |
-| Password | `FarmPros@2026` |
-| Role | `field_executive` (also `is_superuser=True`) |
 | DB name | `fps_db` |
 | DB user | `fps_user` |
-| DB password | `kushagra123` |
+| DB password | `kushagra123` (Docker default) |
+
+### Cloud (Render)
+| Item | Value |
+|---|---|
+| Live API | `https://fps-cims-backend.onrender.com/api` |
+| Django admin | `https://fps-cims-backend.onrender.com/admin` |
+| Superuser | Set via `DJANGO_SUPERUSER_*` env vars on Render |
+| Wake URL | `https://fps-cims-backend.onrender.com/api/auth/login/` |
+
+### Android signing (release APK)
+| Item | Location |
+|---|---|
+| Keystore file | `android/app/farm-prosperity-release.keystore` (gitignored — kept separately) |
+| Keystore credentials | `android/keystore.properties` (gitignored — kept separately) |
+| Package ID | `com.farmprosperity` |
 
 ---
 
 ## Backend API Reference
 
-**Base URL:** `http://localhost:8000`  
+**Local base URL:** `http://localhost:8000`
+**Cloud base URL:** `https://fps-cims-backend.onrender.com`
 All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 
 ### Auth
@@ -487,13 +513,16 @@ syncPendingRecords() — POST to Django, mark is_synced = true
 ## Known Gotchas & Fixes
 
 1. **`INSTALL_FAILED_NO_MATCHING_ABIS`** — Fixed by `run-android.sh` injecting correct ABI per device
-2. **API unreachable on physical device** — Fixed in `client.ts` with runtime emulator detection
-3. **`InteractionManager` deprecation warning** — Harmless, from React Navigation internals
-4. **Docker daemon not running** — Must start Docker Desktop before `docker compose up -d`
-5. **New native packages need rebuild** — `@react-native-community/geolocation`, `@react-native-community/datetimepicker`, WatermelonDB, and `react-native-gesture-handler` all require a full `npm run android` (not just Metro restart)
-6. **DateTimePicker crash on Android (OxygenOS)** — Fixed: guard `event.type === 'dismissed'`, always return a valid `Date` to native bridge, 150ms delay before Step 2→3 navigation
-7. **Manual Sync Now shows "No pending records" while offline** — Fixed: `syncPendingRecords()` sets `result.offline = true` on early return; `handleManualSync()` checks this flag first
-8. **Drawer requires GestureHandlerRootView** — `App.tsx` wraps everything in `<GestureHandlerRootView style={{ flex: 1 }}>` to enable swipe-open gesture
+2. **API unreachable on physical device (dev build)** — Run `adb reverse tcp:8000 tcp:8000`; fixed in `client.ts` with runtime emulator detection
+3. **"Can't reach server" in release APK** — Render free tier is sleeping. Open the wake URL in a browser and wait ~30s before using the app
+4. **"Package conflict" installing release APK** — Old debug build has a different signature. Run `adb uninstall com.farmprosperity` first
+5. **`InteractionManager` deprecation warning** — Harmless, from React Navigation internals
+6. **Docker daemon not running** — Must start Docker Desktop before `docker compose up -d`
+7. **New native packages need full rebuild** — `geolocation`, `datetimepicker`, WatermelonDB, `gesture-handler` all require `npm run android` (not just Metro restart)
+8. **DateTimePicker crash on Android (OxygenOS)** — Fixed: guard `event.type === 'dismissed'`, always return valid `Date` to native bridge, 150ms delay before Step 2→3 navigation
+9. **Manual Sync Now shows "No pending records" while offline** — Fixed: `syncPendingRecords()` sets `result.offline = true` on early return; `handleManualSync()` checks this flag first
+10. **Drawer requires GestureHandlerRootView** — `App.tsx` wraps everything in `<GestureHandlerRootView style={{ flex: 1 }}>` to enable swipe-open gesture
+11. **GDAL version mismatch in Docker** — `requirements.txt` omits `GDAL`; Dockerfile installs `GDAL==$(gdal-config --version)` to match system libgdal exactly
 
 ---
 

@@ -1,15 +1,35 @@
 # Farm Prosperity Solutions (FPS) — Testing Instructions
 
-> **Current scope:** Offline-First Sync (Phase 3)  
-> **Status:** Phase 3 implemented and verified on physical device.
+> **Current scope:** All modules (Crop Monitoring, Mandi Arrival, Product Demo) + Offline Sync
+> **Backend:** Live at `https://fps-cims-backend.onrender.com`
+> **APK:** Release build — connects to cloud backend via `__DEV__` flag
 
 ---
 
-## Quick Start
+## Before Testing
+
+### Wake the backend
+Render free tier sleeps after 15 min of inactivity. First request after sleep takes ~30 sec.
+
+Open this URL in a browser and wait for the JSON response:
+```
+https://fps-cims-backend.onrender.com/api/auth/login/
+```
+You'll see `{"detail": "Method \"GET\" not allowed."}` — that means the backend is awake.
+
+### Install the APK
+```bash
+adb install -r "mobile/FarmProsperity/android/app/build/outputs/apk/release/app-release.apk"
+```
+If signature conflict: `adb uninstall com.farmprosperity` first.
+
+---
+
+## Quick Start (Local Dev Backend)
 
 ### 1. Start Backend
 ```bash
-cd "/media/kushagra/crucial/FPS internship/fps/backend"
+cd backend
 docker compose up -d
 source venv/bin/activate
 python manage.py runserver 0.0.0.0:8000
@@ -17,20 +37,18 @@ python manage.py runserver 0.0.0.0:8000
 
 ### 2. Start Metro Bundler
 ```bash
-cd "/media/kushagra/crucial/FPS internship/fps/mobile/FarmProsperity"
+cd mobile/FarmProsperity
 npm start
 ```
 
-### 3. Deploy to Device
+### 3. Deploy Dev Build to Device
 ```bash
-# In a new terminal
-cd "/media/kushagra/crucial/FPS internship/fps/mobile/FarmProsperity"
 adb reverse tcp:8000 tcp:8000
 adb reverse tcp:8081 tcp:8081
 npm run android:phone
 ```
 
-### 4. Monitor Sync Logs
+### 4. Monitor Logs
 ```bash
 npx react-native log-android | grep -E "\[FPS Sync\]"
 ```
@@ -39,34 +57,29 @@ npx react-native log-android | grep -E "\[FPS Sync\]"
 
 ## Test Suite — Offline Sync
 
-### Test 1: Offline Record Creation (Critical)
+### Test 1: Offline Record Creation
 
-**Preconditions:** Device has internet. App is open and logged in.
-
-1. Turn off Wi-Fi and mobile data on the device.
-2. Open the app — it should still load normally.
-3. Tap **"New Visit"** → complete the 3-step Crop Monitoring wizard → tap **Submit**.
-4. You should see the **Success screen** immediately (no network request is made).
+1. Turn off Wi-Fi and mobile data.
+2. Open app — should load normally.
+3. Tap **New Visit** → complete Crop Monitoring wizard → Submit.
+4. Success screen appears immediately (saved locally, no network needed).
 5. Navigate to **Profile** tab.
 
-**Expected Profile screen:**
+**Expected:**
 ```
-Sync Status
 Visits: 1   Crop Entries: 0   Mandi: 0
 1 record pending sync
 ● Offline
 [Sync Now]
 ```
 
-**Bug if:** App errors, freezes, or shows "0 records pending".
-
 ---
 
 ### Test 2: Sync Now While Offline
 
-**Preconditions:** At least 1 pending record exists (from Test 1). Device is **offline**.
+**Precondition:** At least 1 pending record. Device offline.
 
-1. On Profile screen, tap **Sync Now**.
+1. Tap **Sync Now** on Profile screen.
 
 **Expected alert:**
 ```
@@ -74,173 +87,108 @@ No Internet Connection
 1 record pending. They will sync automatically when you go online.
 ```
 
-**Bug if:** Alert shows "No pending records to sync." (this was the Phase 3 bug — now fixed).
-
 ---
 
 ### Test 3: Auto-Sync on Reconnect
 
-**Preconditions:** Pending records exist. Device is offline.
+**Precondition:** Pending records exist. Device offline.
 
 1. Re-enable Wi-Fi or mobile data.
-2. Within ~5 seconds, watch the log output.
+2. Within ~5 seconds, sync fires automatically.
 
 **Expected logs:**
 ```
 [FPS Sync] ✅ Synced 1 record(s) to backend.
 ```
 
-3. Navigate to **Profile** tab.
-
-**Expected Profile screen:**
+**Expected Profile:**
 ```
 Visits: 0   Crop Entries: 0   Mandi: 0
 ● Online
-Last synced: Today, 3:45 PM
+Last synced: Today, HH:MM
 ```
 
-**Expected Django Admin:**
-- Open `http://localhost:8000/admin` → **Farmer Visits**
-- The new visit record should appear.
-
-**Bug if:** Pending count does not drop, or record is absent from Django Admin.
+**Verify in Django Admin:**
+- Local: `http://localhost:8000/admin/crops/farmervisit/`
+- Cloud: `https://fps-cims-backend.onrender.com/admin/crops/farmervisit/`
 
 ---
 
 ### Test 4: Manual Sync While Online
 
-**Preconditions:** At least 1 pending record exists. Device is **online**.
+**Precondition:** Pending records. Device online.
 
-1. On Profile screen, tap **Sync Now**.
+1. Tap **Sync Now**.
 
-**Expected alert (if records synced):**
+**Expected (records synced):**
 ```
-Sync Complete
-1 record(s) synced successfully.
-```
-
-**Expected alert (if nothing was pending):**
-```
-Up to date
-No pending records to sync.
+Sync Complete — 1 record(s) synced successfully.
 ```
 
-**Bug if:** Alert says "No pending records" when the pending count badge shows > 0.
+**Expected (nothing pending):**
+```
+Up to date — No pending records to sync.
+```
 
 ---
 
-### Test 5: Multiple Records — All Three Types
+### Test 5: All Three Record Types
 
 1. Go offline.
-2. Submit **1 Crop Monitoring visit**.
-3. Submit **1 Legacy Crop Entry** (from the Crop List screen).
-4. Submit **1 Mandi Arrival** (from the Mandi screen).
-5. Navigate to Profile.
+2. Submit 1 **Crop Monitoring visit**.
+3. Submit 1 **Mandi Arrival**.
+4. Submit 1 **Product Demo**.
+5. Profile shows: `Visits: 1  Mandi: 1  (+ product_demos pending)`
+6. Go online → auto-sync fires → counts drop to 0.
 
-**Expected:**
-```
-Visits: 1   Crop Entries: 1   Mandi: 1
-3 records pending sync
-```
+**Django Admin verification:**
 
-6. Go online.
-7. Auto-sync should trigger.
-
-**Expected after sync:**
-```
-Visits: 0   Crop Entries: 0   Mandi: 0
-Last synced: Today, HH:MM
-```
-
-**Django Admin should show** all 3 new records.
+| URL | Records |
+|---|---|
+| `/admin/crops/farmervisit/` | Crop Monitoring visits |
+| `/admin/mandi/mandiarrival/` | Mandi arrivals |
+| `/admin/product_demo/productdemo/` | Product demos |
 
 ---
 
 ### Test 6: Reference Data Available Offline
 
-1. Go offline before opening the app (or kill app, disable internet, reopen).
-2. Tap **"New Visit"** → **Step 1**.
-
-**Expected:** District and Block dropdowns still populate from locally cached data.
-
-**Bug if:** Dropdowns are empty when offline.
-
----
-
-### Test 7: Full End-to-End Workflow
-
 1. Go offline.
-2. Create **2 Crop Monitoring visits** (different farmer names).
-3. Profile shows `2 records pending sync`.
-4. Tap **Sync Now** → "No Internet Connection — 2 records pending."
-5. Go online.
-6. Auto-sync fires.
-7. Profile shows `0 records pending`.
-8. Django Admin → Farmer Visits shows the 2 new records.
+2. Tap **New Visit** → Step 1.
 
-✅ This is the complete verified workflow.
-
----
-
-## Expected Log Output
-
-### Auto-sync fires successfully
-```
-[FPS Sync] ✅ Synced 2 record(s) to backend.
-```
-
-### Auto-sync — nothing to sync
-```
-(no output — sync runs silently when result.synced === 0)
-```
-
-### Auto-sync — failure
-```
-[FPS Sync] ⚠️ 1 record(s) failed to sync.
-```
-
----
-
-## Debugging
-
-### Watch all sync activity
-```bash
-npx react-native log-android | grep -E "\[FPS Sync\]"
-```
-
-### Check WatermelonDB queries (verbose)
-```bash
-npx react-native log-android | grep -E "watermelon|sqlite"
-```
-
-### View full device logs
-```bash
-adb logcat -d > device_log.txt
-```
+**Expected:** District and Block dropdowns still populate (seeded from cloud on first login).
 
 ---
 
 ## Django Admin Verification
 
-| URL | What to check |
+| URL (Cloud) | What to check |
 |---|---|
-| `http://localhost:8000/admin/crops/farmervisit/` | New visit records appear after sync |
-| `http://localhost:8000/admin/crops/cropentry/` | Legacy crop entries appear after sync |
-| `http://localhost:8000/admin/mandi/mandiarrival/` | Mandi arrivals appear after sync |
+| `https://fps-cims-backend.onrender.com/admin/crops/farmervisit/` | Crop Monitoring submissions |
+| `https://fps-cims-backend.onrender.com/admin/mandi/mandiarrival/` | Mandi arrivals |
+| `https://fps-cims-backend.onrender.com/admin/product_demo/productdemo/` | Product demo submissions |
+| `https://fps-cims-backend.onrender.com/admin/crops/cropmaster/` | Seeded crops (8 crops) |
+| `https://fps-cims-backend.onrender.com/admin/product_demo/productmaster/` | Seeded products (20) |
 
 ---
 
-## Rollback
+## Debugging
 
-If a sync change causes issues, revert the three relevant files:
-
+### Watch sync activity
 ```bash
-cd "/media/kushagra/crucial/FPS internship/fps/mobile/FarmProsperity"
-git diff src/sync/syncService.ts
-git diff src/sync/syncTypes.ts
-git diff src/screens/ProfileScreen.tsx
-git checkout src/sync/syncService.ts src/sync/syncTypes.ts src/screens/ProfileScreen.tsx
-npm start -- --reset-cache
+npx react-native log-android | grep -E "\[FPS Sync\]"
+```
+
+### Full device logs
+```bash
+adb logcat -d > device_log.txt
+```
+
+### Test API directly (cloud)
+```bash
+curl -X POST https://fps-cims-backend.onrender.com/api/auth/login/ \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "your-password"}'
 ```
 
 ---
@@ -249,19 +197,7 @@ npm start -- --reset-cache
 
 | Bug | Fix Applied |
 |---|---|
-| **Sync Now shows "No pending records" while offline** | `syncPendingRecords()` now sets `result.offline = true`; `handleManualSync()` checks this flag before interpreting counts |
-| **Step 2 → Step 3 crash on Android (DateTimePicker)** | `isValidDate()` guard, dismiss event guard, 150ms navigation delay, double-tap prevention |
-
----
-
-## Success Criteria — Phase 3
-
-✅ Fix is complete if ALL of the following hold:
-
-1. Creating a visit while offline saves it locally (instant, no error)
-2. Profile screen shows the correct pending count immediately after saving
-3. Tapping **Sync Now** while offline shows the pending count, not "No records"
-4. Going online triggers auto-sync within ~5 seconds
-5. After auto-sync, pending count drops to 0
-6. Synced records appear in Django Admin
-7. All three record types (Farmer Visits, Crop Entries, Mandi Arrivals) sync correctly
+| Sync Now shows "No pending records" while offline | `syncPendingRecords()` sets `result.offline = true`; caller checks flag before interpreting counts |
+| Step 2→3 crash on Android (DateTimePicker, OxygenOS) | `isValidDate()` guard, dismiss event guard, 150ms navigation delay, double-tap prevention |
+| Release APK "can't reach server" | Axios timeout raised to 60s to handle Render cold start (~30s) |
+| "Package conflict" installing release APK | Old debug build has different signature — uninstall via `adb uninstall com.farmprosperity` first |
