@@ -12,23 +12,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
-// Strategy:
-//   • Android Emulator  → 10.0.2.2  (emulator's alias for the host machine)
-//   • Physical Device   → localhost  (works because we run `adb reverse tcp:8000 tcp:8000`
-//                                     which tunnels the phone's localhost:8000 → host:8000)
-//   • iOS Simulator     → localhost
-//
-// To target a physical device WITHOUT adb reverse (e.g. on Wi-Fi only), set
-// MANUAL_IP to your machine's LAN IP, e.g. '192.168.1.42'
-const MANUAL_IP = ''; // ← leave empty to use auto-detection
+// Production builds (__DEV__ === false) always hit the deployed backend.
+// Development builds use local detection so `adb reverse` / emulator alias works.
+const PRODUCTION_API_URL = 'https://YOUR-APP.onrender.com/api'; // ← replace before release build
 
 const getBaseUrl = (): string => {
-  if (MANUAL_IP) {
-    return `http://${MANUAL_IP}:8000/api`;
+  if (!__DEV__) {
+    return PRODUCTION_API_URL;
   }
   if (Platform.OS === 'android') {
-    // Platform.constants.Model is 'google_sdk' / 'sdk_gphone*' on emulators.
-    // On real devices it's the actual model name (e.g. 'CPH2487' for OnePlus 11R).
     const model: string =
       (Platform.constants as Record<string, unknown>).Model as string ?? '';
     const isEmulator =
@@ -37,15 +29,8 @@ const getBaseUrl = (): string => {
       model.toLowerCase().includes('google_sdk') ||
       model === '';
 
-    if (isEmulator) {
-      // 10.0.2.2 is the emulator's built-in alias for the host machine's localhost
-      return 'http://10.0.2.2:8000/api';
-    }
-    // Physical device: `adb reverse tcp:8000 tcp:8000` tunnels
-    // the device's localhost:8000 → host machine's :8000
-    return 'http://localhost:8000/api';
+    return isEmulator ? 'http://10.0.2.2:8000/api' : 'http://localhost:8000/api';
   }
-  // iOS simulator
   return 'http://localhost:8000/api';
 };
 

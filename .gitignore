@@ -1,11 +1,21 @@
 # Python
 backend/venv/
 backend/.env
+backend/.env.local
+backend/.env.production
 **/__pycache__/
 **/*.pyc
 
+# Django generated
+backend/media/
+backend/staticfiles/
+
 # React Native
 mobile/FarmProsperity/node_modules/
+
+# Android release signing (never commit these)
+mobile/FarmProsperity/android/keystore.properties
+mobile/FarmProsperity/android/app/farm-prosperity-release.keystore
 
 # General
 *.log
