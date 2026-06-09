@@ -31,21 +31,26 @@ export const saveVisitLocally = async (
   const { farmerDetails, crops, photos, location, remark } = state;
   const now = Date.now();
 
-  // Build the crops JSON string — same shape as cropsPayload in buildFormData()
-  // If variety is 'Others', resolve to the custom_variety text.
-  const cropsPayload = crops.map((c: CropRecordDraft, i: number) => ({
-    crop_name:            c.crop_name,
-    variety:              c.variety === 'Others' ? (c.custom_variety.trim() || 'Others') : c.variety,
-    date_of_sowing:       c.date_of_sowing,
-    current_area_acre:    c.current_area_acre,
-    last_year_area_acre:  c.last_year_area_acre || null,
-    this_year_area_acre:  c.this_year_area_acre,
-    crop_stage:           c.crop_stage,
-    crop_condition:       c.crop_condition,
-    problems:             c.problems,
-    other_problem_detail: c.other_problem_detail,
-    sort_order:           i,
-  }));
+  // Build the crops JSON string — same shape as cropsPayload in buildFormData().
+  // Resolve varieties array; also send first variety in legacy `variety` field.
+  const resolveVariety = (v: { variety: string; custom_variety: string }): string =>
+    v.variety === 'Others' ? (v.custom_variety.trim() || 'Others') : v.variety;
+
+  const cropsPayload = crops.map((c: CropRecordDraft, i: number) => {
+    const resolvedVarieties = (c.varieties ?? []).map(resolveVariety).filter(Boolean);
+    return {
+      crop_name:            c.crop_name,
+      variety:              resolvedVarieties[0] ?? '',
+      date_of_sowing:       c.date_of_sowing,
+      current_area_acre:    c.current_area_acre,
+      last_year_area_acre:  c.last_year_area_acre || null,
+      crop_stage:           c.crop_stage,
+      crop_condition:       c.crop_condition,
+      problems:             c.problems,
+      other_problem_detail: c.other_problem_detail,
+      sort_order:           i,
+    };
+  });
 
   const photosPayload = photos.map((p: PhotoDraft) => ({
     uri:  p.uri,

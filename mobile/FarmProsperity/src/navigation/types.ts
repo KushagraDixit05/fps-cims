@@ -36,6 +36,8 @@ export type RootStackParamList = {
   // ── Crop Monitoring Module (new) ───────────────────────────────────────────
   /** Entry point — starts fresh wizard (step 1). */
   CropMonitoringForm: undefined;
+  /** List of all past field visits. */
+  CropMonitoringList: undefined;
   /** Review & Confirm screen — wizard state flows via the hook. */
   CropMonitoringReview: undefined;
   /** Post-submit success screen. */

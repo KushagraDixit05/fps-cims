@@ -92,9 +92,11 @@ const Step3_PhotosLocation = ({
             placeholder="Enter remark (if any)"
             placeholderTextColor={colors.textMuted}
             multiline
-            numberOfLines={4}
+            scrollEnabled
             maxLength={510}
             textAlignVertical="top"
+            blurOnSubmit={false}
+            returnKeyType="default"
           />
           {errors.remark ? (
             <Text style={styles.errorText}>{errors.remark}</Text>
@@ -161,6 +163,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     backgroundColor: colors.surface,
     minHeight: 100,
+    maxHeight: 160,
   },
   remarkErr:      { borderColor: colors.error },
   errorText:      { marginTop: 4, fontSize: 12, color: colors.error },

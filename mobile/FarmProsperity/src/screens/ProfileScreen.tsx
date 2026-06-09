@@ -42,7 +42,7 @@ const ProfileScreen = () => {
   const navigation = useNavigation();
 
   // ── Sync state ──
-  const [pendingStats, setPendingStats]   = useState<SyncStats>({ pendingVisits: 0, pendingCropEntries: 0, pendingMandiArrivals: 0, total: 0 });
+  const [pendingStats, setPendingStats]   = useState<SyncStats>({ pendingVisits: 0, pendingCropEntries: 0, pendingMandiArrivals: 0, pendingProductDemos: 0, total: 0 });
   const [lastSyncTs, setLastSyncTs]       = useState<number | null>(null);
   const [isSyncing, setIsSyncing]         = useState(false);
   const [isOnline, setIsOnline]           = useState<boolean | null>(null);

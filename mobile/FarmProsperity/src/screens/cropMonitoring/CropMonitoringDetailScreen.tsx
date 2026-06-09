@@ -96,7 +96,7 @@ const CropMonitoringDetailScreen = () => {
             <View style={styles.cropMain}>
               <Text style={styles.cropName}>{crop.crop_name} — {crop.variety}</Text>
               <Text style={styles.cropSub}>
-                {crop.this_year_area_acre} ac · {crop.crop_stage.replace('_', ' ')}
+                {crop.current_area_acre} ac · {crop.crop_stage.replace('_', ' ')}
               </Text>
               <Text style={styles.cropSub}>
                 Sown: {crop.date_of_sowing}

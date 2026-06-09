@@ -24,6 +24,7 @@ import SmartDropdown, { OTHERS_VALUE } from './SmartDropdown';
 import type {
   CropRecordDraft,
   CropRecordErrors,
+  VarietyDraft,
   CropMaster,
   CropStage,
   CropCondition,
@@ -215,8 +216,21 @@ const CropCard = ({
   }));
 
   const handleCropChange = (cropName: string) => {
-    // Selecting a new crop must reset variety and custom variety
-    onChange({ crop_name: cropName, variety: '', custom_variety: '' });
+    onChange({ crop_name: cropName, varieties: [{ variety: '', custom_variety: '' }] });
+  };
+
+  const handleVarietyChange = (idx: number, patch: Partial<VarietyDraft>) => {
+    const updated = (data.varieties ?? []).map((v, i) => i === idx ? { ...v, ...patch } : v);
+    onChange({ varieties: updated });
+  };
+
+  const addVariety = () => {
+    onChange({ varieties: [...(data.varieties ?? []), { variety: '', custom_variety: '' }] });
+  };
+
+  const removeVariety = (idx: number) => {
+    const updated = (data.varieties ?? []).filter((_, i) => i !== idx);
+    onChange({ varieties: updated });
   };
 
   // ── Date helpers ────────────────────────────────────────────────────────────
@@ -337,20 +351,47 @@ const CropCard = ({
             error={errors.crop_name}
           />
 
-          {/* Variety — SmartDropdown handles Others + custom text field */}
-          <SmartDropdown
-            label="Variety"
-            required
-            value={data.variety}
-            customValue={data.custom_variety}
-            options={varietyOptions}
-            onSelect={v => onChange({ variety: v, custom_variety: v !== OTHERS_VALUE ? '' : data.custom_variety })}
-            onCustomChange={v => onChange({ custom_variety: v })}
-            placeholder={data.crop_name ? 'Select variety' : 'Select crop first'}
-            disabled={!data.crop_name}
-            error={errors.variety}
-            customError={errors.custom_variety}
-          />
+          {/* Varieties — multiple varieties supported per crop */}
+          <View style={styles.fieldWrapper}>
+            <Text style={styles.fieldLabel}>
+              Varieties <Text style={styles.required}>*</Text>
+            </Text>
+            {(data.varieties ?? []).map((v, idx) => {
+              const varErr = errors.varietyErrors?.[idx];
+              return (
+                <View key={idx} style={styles.varietyRow}>
+                  <View style={styles.varietyDropdown}>
+                    <SmartDropdown
+                      label=""
+                      value={v.variety}
+                      customValue={v.custom_variety}
+                      options={varietyOptions}
+                      onSelect={(val) => handleVarietyChange(idx, {
+                        variety: val,
+                        custom_variety: val !== OTHERS_VALUE ? '' : v.custom_variety,
+                      })}
+                      onCustomChange={(val) => handleVarietyChange(idx, { custom_variety: val })}
+                      placeholder={data.crop_name ? 'Select variety' : 'Select crop first'}
+                      disabled={!data.crop_name}
+                      error={varErr}
+                    />
+                  </View>
+                  {(data.varieties ?? []).length > 1 && (
+                    <TouchableOpacity
+                      style={styles.removeVarietyBtn}
+                      onPress={() => removeVariety(idx)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={styles.removeVarietyText}>✕</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+            <TouchableOpacity style={styles.addVarietyBtn} onPress={addVariety} disabled={!data.crop_name}>
+              <Text style={[styles.addVarietyText, !data.crop_name && styles.addVarietyDisabled]}>＋ Add Variety</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Date of Sowing */}
           <View style={styles.fieldWrapper}>
@@ -395,7 +436,7 @@ const CropCard = ({
             />
           )}
 
-          {/* Area fields — 3-column row matching wireframe */}
+          {/* Area fields — 2-column row */}
           <Text style={styles.fieldLabel}>
             Area Details (Acre)
           </Text>
@@ -423,20 +464,6 @@ const CropCard = ({
                 keyboardType="decimal-pad"
                 placeholder="Last year area"
                 error={errors.last_year_area_acre}
-                style={styles.areaInput}
-              />
-            </View>
-            <View style={styles.areaCol}>
-              <Text style={styles.areaColLabel}>
-                This Year Area <Text style={styles.required}>*</Text>
-              </Text>
-              <FormInput
-                label=""
-                value={data.this_year_area_acre}
-                onChangeText={(v) => onChange({ this_year_area_acre: v })}
-                keyboardType="decimal-pad"
-                placeholder="This year area"
-                error={errors.this_year_area_acre}
                 style={styles.areaInput}
               />
             </View>
@@ -574,7 +601,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.error,
   },
-  // ── 3-column area row ──
+  // ── 2-column area row ──
   areaRow: {
     flexDirection: 'row',
     gap: 8,
@@ -593,6 +620,49 @@ const styles = StyleSheet.create({
     padding: 10,
     fontSize: 13,
   },
+  // ── Multi-variety ──
+  varietyRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 4,
+  },
+  varietyDropdown: {
+    flex: 1,
+  },
+  removeVarietyBtn: {
+    marginTop: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.errorBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeVarietyText: {
+    fontSize: 13,
+    color: colors.error,
+    fontWeight: '700',
+  },
+  addVarietyBtn: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+  },
+  addVarietyText: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  addVarietyDisabled: {
+    color: colors.textMuted,
+    borderColor: colors.textMuted,
+  } as any,
 });
 
 export default CropCard;

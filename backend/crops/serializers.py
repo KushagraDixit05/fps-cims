@@ -315,7 +315,7 @@ class FarmerVisitCreateSerializer(serializers.ModelSerializer):
                 date_of_sowing=crop_dict['date_of_sowing'],
                 current_area_acre=crop_dict['current_area_acre'],
                 last_year_area_acre=crop_dict.get('last_year_area_acre') or None,
-                this_year_area_acre=crop_dict['this_year_area_acre'],
+                this_year_area_acre=crop_dict.get('this_year_area_acre', ''),
                 crop_stage=crop_dict['crop_stage'],
                 crop_condition=crop_dict['crop_condition'],
                 problems=crop_dict.get('problems', []),

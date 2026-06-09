@@ -5,10 +5,11 @@
 // mark as synced with server UUID. Failures are isolated per-record; a failed
 // record stores its error and is retried on the next sync cycle.
 //
-// Three record types are synced:
+// Four record types are synced:
 //   1. farmer_visits    → POST /api/farmer-visits/ (multipart/form-data, with photos)
 //   2. crop_entries     → POST /api/crops/ (JSON)
 //   3. mandi_arrivals   → POST /api/mandi-arrivals/ (JSON)
+//   4. product_demos    → POST /api/product-demos/ (multipart/form-data, with photos)
 
 import { Q } from '@nozbe/watermelondb';
 import NetInfo from '@react-native-community/netinfo';
@@ -18,10 +19,12 @@ import database from '../database';
 import { FarmerVisitModel }  from '../database/models/FarmerVisitModel';
 import { CropEntryModel }    from '../database/models/CropEntryModel';
 import { MandiArrivalModel } from '../database/models/MandiArrivalModel';
+import { ProductDemoModel }  from '../database/models/ProductDemoModel';
 
 import { submitFarmerVisit } from '../api/cropMonitoring';
 import { createCropEntry }   from '../api/crops';
 import { createMandiArrival } from '../api/mandi';
+import { submitProductDemo } from '../api/productDemo';
 
 import type { SyncResult, SyncStats } from './syncTypes';
 import type { CropEntryPayload, MandiArrivalPayload } from '../types';
@@ -41,12 +44,17 @@ export const syncPendingRecords = async (): Promise<SyncResult> => {
   const netState = await NetInfo.fetch();
   if (!netState.isConnected || !netState.isInternetReachable) {
     result.offline = true;
+    console.log('[Sync] Device offline — skipping sync');
     return result;
   }
 
+  console.log('[Sync] Starting sync run...');
   await syncFarmerVisits(result);
   await syncCropEntries(result);
   await syncMandiArrivals(result);
+  await syncProductDemos(result);
+
+  console.log('[Sync] Complete:', result);
 
   // Persist last-sync timestamp regardless of partial failures
   await AsyncStorage.setItem(LAST_SYNC_KEY, String(result.timestamp));
@@ -55,11 +63,11 @@ export const syncPendingRecords = async (): Promise<SyncResult> => {
 };
 
 /**
- * Count total pending (unsynced) records across all three tables.
+ * Count total pending (unsynced) records across all four tables.
  * Used by ProfileScreen to display the pending badge.
  */
 export const getPendingCount = async (): Promise<SyncStats> => {
-  const [pendingVisits, pendingCropEntries, pendingMandiArrivals] = await Promise.all([
+  const [pendingVisits, pendingCropEntries, pendingMandiArrivals, pendingProductDemos] = await Promise.all([
     database.collections
       .get<FarmerVisitModel>('farmer_visits')
       .query(Q.where('is_synced', false))
@@ -72,13 +80,18 @@ export const getPendingCount = async (): Promise<SyncStats> => {
       .get<MandiArrivalModel>('mandi_arrivals')
       .query(Q.where('is_synced', false))
       .fetchCount(),
+    database.collections
+      .get<ProductDemoModel>('product_demos')
+      .query(Q.where('is_synced', false))
+      .fetchCount(),
   ]);
 
   return {
     pendingVisits,
     pendingCropEntries,
     pendingMandiArrivals,
-    total: pendingVisits + pendingCropEntries + pendingMandiArrivals,
+    pendingProductDemos,
+    total: pendingVisits + pendingCropEntries + pendingMandiArrivals + pendingProductDemos,
   };
 };
 
@@ -103,6 +116,8 @@ const syncFarmerVisits = async (result: SyncResult): Promise<void> => {
     .query(Q.where('is_synced', false))
     .fetch();
 
+  console.log(`[Sync] farmer_visits pending: ${unsynced.length}`);
+
   for (const visit of unsynced) {
     try {
       const fd = buildFarmerVisitFormData(visit);
@@ -117,10 +132,12 @@ const syncFarmerVisits = async (result: SyncResult): Promise<void> => {
         });
       });
       result.synced++;
+      console.log(`[Sync] farmer_visit synced: ${visit.farmerName} → server id ${response.id}`);
     } catch (err: any) {
       const msg = buildErrorMessage(err);
       result.failed++;
       result.errors.push(`Visit (${visit.farmerName}): ${msg}`);
+      console.warn(`[Sync] farmer_visit failed: ${visit.farmerName}`, msg);
 
       // Persist the error so the Profile screen can surface it
       try {
@@ -194,6 +211,8 @@ const syncCropEntries = async (result: SyncResult): Promise<void> => {
     .query(Q.where('is_synced', false))
     .fetch();
 
+  console.log(`[Sync] crop_entries pending: ${unsynced.length}`);
+
   for (const entry of unsynced) {
     try {
       const payload: CropEntryPayload = {
@@ -227,10 +246,12 @@ const syncCropEntries = async (result: SyncResult): Promise<void> => {
         });
       });
       result.synced++;
+      console.log(`[Sync] crop_entry synced: ${entry.cropName}`);
     } catch (err: any) {
       const msg = buildErrorMessage(err);
       result.failed++;
       result.errors.push(`Crop entry (${entry.cropName}): ${msg}`);
+      console.warn(`[Sync] crop_entry failed: ${entry.cropName}`, msg);
       try {
         await database.write(async () => {
           await entry.update((e) => {
@@ -251,6 +272,8 @@ const syncMandiArrivals = async (result: SyncResult): Promise<void> => {
     .get<MandiArrivalModel>('mandi_arrivals')
     .query(Q.where('is_synced', false))
     .fetch();
+
+  console.log(`[Sync] mandi_arrivals pending: ${unsynced.length}`);
 
   for (const arrival of unsynced) {
     try {
@@ -277,10 +300,12 @@ const syncMandiArrivals = async (result: SyncResult): Promise<void> => {
         });
       });
       result.synced++;
+      console.log(`[Sync] mandi_arrival synced: ${arrival.commodity}`);
     } catch (err: any) {
       const msg = buildErrorMessage(err);
       result.failed++;
       result.errors.push(`Mandi arrival (${arrival.commodity}): ${msg}`);
+      console.warn(`[Sync] mandi_arrival failed: ${arrival.commodity}`, msg);
       try {
         await database.write(async () => {
           await arrival.update((a) => {
@@ -291,6 +316,127 @@ const syncMandiArrivals = async (result: SyncResult): Promise<void> => {
       } catch { /* best-effort */ }
     }
   }
+};
+
+/**
+ * Sync ProductDemo records (Product Demo wizard).
+ * Reconstructs a multipart FormData matching the online submission path.
+ */
+const syncProductDemos = async (result: SyncResult): Promise<void> => {
+  const unsynced = await database.collections
+    .get<ProductDemoModel>('product_demos')
+    .query(Q.where('is_synced', false))
+    .fetch();
+
+  console.log(`[Sync] product_demos pending: ${unsynced.length}`);
+
+  for (const demo of unsynced) {
+    try {
+      const fd = buildProductDemoFormData(demo);
+      const response = await submitProductDemo(fd);
+
+      await database.write(async () => {
+        await demo.update((d) => {
+          d.isSynced       = true;
+          d.serverId       = response.id;
+          d.syncError      = null;
+          d.updatedAtLocal = Date.now();
+        });
+      });
+      result.synced++;
+      console.log(`[Sync] product_demo synced: ${demo.farmerName} → server id ${response.id}`);
+    } catch (err: any) {
+      const msg = buildErrorMessage(err);
+      result.failed++;
+      result.errors.push(`Product demo (${demo.farmerName} · ${demo.productName}): ${msg}`);
+      console.warn(`[Sync] product_demo failed: ${demo.farmerName}`, msg);
+
+      try {
+        await database.write(async () => {
+          await demo.update((d) => {
+            d.syncError      = msg;
+            d.updatedAtLocal = Date.now();
+          });
+        });
+      } catch { /* best-effort */ }
+    }
+  }
+};
+
+/**
+ * Build a multipart FormData from a ProductDemoModel.
+ */
+const buildProductDemoFormData = (demo: ProductDemoModel): FormData => {
+  const fd = new FormData();
+
+  // Farmer details
+  fd.append('farmer_name',     demo.farmerName);
+  fd.append('mobile_number',   demo.mobileNumber  ?? '');
+  fd.append('village_name',    demo.villageName);
+  fd.append('block_name',      demo.blockName);
+  fd.append('district_name',   demo.districtName);
+  fd.append('total_land_acre', demo.totalLandAcre ?? '');
+
+  // Crop & stage
+  fd.append('crop_name',       demo.cropName);
+  fd.append('variety',         demo.variety);
+  fd.append('crop_stage',      demo.cropStage);
+  fd.append('crop_stage_days', demo.cropStageDays);
+  fd.append('demo_date',       demo.demoDate);
+
+  // Product & dose
+  fd.append('product_name',    demo.productName);
+  fd.append('dose',            demo.dose);
+  fd.append('dose_unit',       demo.doseUnit);
+
+  // Result
+  fd.append('demo_result',     demo.demoResult);
+  if (demo.additionalObservations) {
+    fd.append('additional_observations', demo.additionalObservations);
+  }
+  fd.append('remark', demo.remark ?? '');
+
+  // GPS
+  if (demo.latitude  !== null && demo.latitude  !== undefined) {
+    fd.append('latitude',  String(demo.latitude));
+  }
+  if (demo.longitude !== null && demo.longitude !== undefined) {
+    fd.append('longitude', String(demo.longitude));
+  }
+
+  // Before photos
+  if (demo.beforePhotosJson) {
+    try {
+      const photos: { uri: string; name: string; type: string }[] = JSON.parse(demo.beforePhotosJson);
+      photos.forEach((photo, i) => {
+        if (photo.uri) {
+          fd.append('photos_before', {
+            uri:  photo.uri,
+            name: photo.name || `before_${i}.jpg`,
+            type: photo.type || 'image/jpeg',
+          } as any);
+        }
+      });
+    } catch { /* malformed — skip photos */ }
+  }
+
+  // After photos
+  if (demo.afterPhotosJson) {
+    try {
+      const photos: { uri: string; name: string; type: string }[] = JSON.parse(demo.afterPhotosJson);
+      photos.forEach((photo, i) => {
+        if (photo.uri) {
+          fd.append('photos_after', {
+            uri:  photo.uri,
+            name: photo.name || `after_${i}.jpg`,
+            type: photo.type || 'image/jpeg',
+          } as any);
+        }
+      });
+    } catch { /* malformed — skip photos */ }
+  }
+
+  return fd;
 };
 
 // ─── Utility ──────────────────────────────────────────────────────────────────

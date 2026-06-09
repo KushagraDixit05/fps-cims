@@ -99,7 +99,7 @@ const MandiListScreen = () => {
   return (
     <View style={styles.root}>
       {/* ── Header ── */}
-      <ScreenHeader title="Mandi Arrivals" subtitle={`${arrivals.length} records`} />
+      <ScreenHeader title="Mandi Arrivals" subtitle={`${arrivals.length} records`} onBack={() => navigation.navigate('Home' as any)} />
 
       {/* ── Mandi Picker ── */}
       <View style={styles.pickerSection}>

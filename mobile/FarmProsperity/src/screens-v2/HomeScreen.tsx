@@ -43,10 +43,10 @@ type ActionTile = {
 };
 
 const ACTION_TILES: ActionTile[] = [
-  { bg: '#E1F2E8', icon: Leaf,      iconColor: '#1A4A2E', title: 'New Visit',     sub: 'Log a field visit',  screen: 'CropMonitoringForm' },
+  { bg: '#E1F2E8', icon: Leaf,      iconColor: '#1A4A2E', title: 'New Visit',     sub: 'My visits · New entry', screen: 'CropMonitoringList' },
   { bg: '#FEF3DA', icon: Store,     iconColor: '#C8900A', title: 'Mandi',         sub: 'Prices · Trends',    screen: 'MandiArrivalForm', badge: 'Live' },
   { bg: '#E8F4FD', icon: Package,   iconColor: '#0277BD', title: 'Product Demo',  sub: 'Demo · Result',      screen: 'ProductDemoList' },
-  { bg: '#F3E8FF', icon: BarChart2, iconColor: '#7C3AED', title: 'Reports',       sub: 'Analytics · YoY',    screen: 'Main' },
+  { bg: '#F3E8FF', icon: BarChart2, iconColor: '#7C3AED', title: 'Reports',       sub: 'Analytics · YoY',    screen: 'Reports' },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -256,7 +256,12 @@ const HomeScreen = () => {
       </View>
 
       {/* ── Recent Visits ── */}
-      <Text style={styles.sectionTitle}>RECENT VISITS</Text>
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>RECENT VISITS</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('CropMonitoringList')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.seeAll}>See All</Text>
+        </TouchableOpacity>
+      </View>
       {loadingVisits ? (
         <View style={styles.loader}><ActivityIndicator size="small" color="#1A4A2E" /></View>
       ) : recentVisits.length === 0 ? (
@@ -350,6 +355,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11, fontWeight: '700', color: '#6A7A6A',
     letterSpacing: 0.8, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6,
+  },
+  sectionRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 14,
+  },
+  seeAll: {
+    fontSize: 12, fontWeight: '700', color: '#1A4A2E', paddingTop: 12, paddingBottom: 6,
   },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 14, gap: 10 },

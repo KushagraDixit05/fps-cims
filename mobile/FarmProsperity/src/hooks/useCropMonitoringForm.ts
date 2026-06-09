@@ -33,12 +33,10 @@ type FormAction =
 const makeBlankCrop = (index: number = 0): CropRecordDraft => ({
   localKey: `crop_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
   crop_name: '',
-  variety: '',
-  custom_variety: '',
+  varieties: [{ variety: '', custom_variety: '' }],
   date_of_sowing: '',
   current_area_acre: '',
   last_year_area_acre: '',
-  this_year_area_acre: '',
   crop_stage: '',
   crop_condition: '',
   problems: [],
@@ -157,21 +155,26 @@ const buildFormData = (state: CropMonitoringFormState): FormData => {
   // Remark
   fd.append('remark', remark.trim());
 
-  // Crops: serialized as JSON string (multipart can't send nested arrays)
-  // If variety is 'Others', use the custom_variety text as the actual variety value.
-  const cropsPayload = crops.map((c, i) => ({
-    crop_name: c.crop_name,
-    variety: c.variety === OTHERS_VALUE ? (c.custom_variety.trim() || 'Others') : c.variety,
-    date_of_sowing: c.date_of_sowing,
-    current_area_acre: c.current_area_acre,
-    last_year_area_acre: c.last_year_area_acre || null,
-    this_year_area_acre: c.this_year_area_acre,
-    crop_stage: c.crop_stage,
-    crop_condition: c.crop_condition,
-    problems: c.problems,
-    other_problem_detail: c.other_problem_detail,
-    sort_order: i,
-  }));
+  // Crops: serialized as JSON string (multipart can't send nested arrays).
+  // First variety sent in `variety` field (what the backend uses).
+  const resolveVariety = (v: { variety: string; custom_variety: string }): string =>
+    v.variety === OTHERS_VALUE ? (v.custom_variety.trim() || 'Others') : v.variety;
+
+  const cropsPayload = crops.map((c, i) => {
+    const resolvedVarieties = (c.varieties ?? []).map(resolveVariety).filter(Boolean);
+    return {
+      crop_name: c.crop_name,
+      variety: resolvedVarieties[0] ?? '',
+      date_of_sowing: c.date_of_sowing,
+      current_area_acre: c.current_area_acre,
+      last_year_area_acre: c.last_year_area_acre || null,
+      crop_stage: c.crop_stage,
+      crop_condition: c.crop_condition,
+      problems: c.problems,
+      other_problem_detail: c.other_problem_detail,
+      sort_order: i,
+    };
+  });
   fd.append('crops', JSON.stringify(cropsPayload));
 
   // Photos as file objects

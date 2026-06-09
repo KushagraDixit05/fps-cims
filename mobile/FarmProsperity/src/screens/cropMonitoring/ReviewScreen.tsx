@@ -14,6 +14,7 @@ import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import type { CropMonitoringFormState } from '../../types/cropMonitoring';
+import { OTHERS_VALUE } from '../../components/SmartDropdown';
 
 interface ReviewScreenProps {
   state: CropMonitoringFormState;
@@ -99,40 +100,46 @@ const ReviewScreen = ({
         {/* Table header */}
         <View style={[styles.tableRow, styles.tableHeader]}>
           <Text style={[styles.tableCell, styles.tableHeadText, { flex: 2 }]}>Crop</Text>
-          <Text style={[styles.tableCell, styles.tableHeadText, { flex: 2 }]}>Variety</Text>
+          <Text style={[styles.tableCell, styles.tableHeadText, { flex: 2 }]}>Varieties</Text>
           <Text style={[styles.tableCell, styles.tableHeadText]}>Area</Text>
           <Text style={[styles.tableCell, styles.tableHeadText]}>Condition</Text>
         </View>
-        {crops.map((crop, i) => (
-          <View key={crop.localKey} style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>
-              {i + 1}. {crop.crop_name}
-            </Text>
-            <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>
-              {crop.variety}
-            </Text>
-            <Text style={styles.tableCell} numberOfLines={1}>
-              {crop.this_year_area_acre} ac
-            </Text>
-            <View style={styles.tableCell}>
-              <View
-                style={[
-                  styles.condBadge,
-                  { backgroundColor: conditionBg(crop.crop_condition) },
-                ]}
-              >
-                <Text
+        {crops.map((crop, i) => {
+          const varietyDisplay = (crop.varieties ?? [])
+            .map((v) => v.variety === OTHERS_VALUE ? (v.custom_variety || 'Others') : v.variety)
+            .filter(Boolean)
+            .join(', ') || '—';
+          return (
+            <View key={crop.localKey} style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>
+                {i + 1}. {crop.crop_name}
+              </Text>
+              <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={2}>
+                {varietyDisplay}
+              </Text>
+              <Text style={styles.tableCell} numberOfLines={1}>
+                {crop.current_area_acre} ac
+              </Text>
+              <View style={styles.tableCell}>
+                <View
                   style={[
-                    styles.condBadgeText,
-                    { color: conditionColor(crop.crop_condition) },
+                    styles.condBadge,
+                    { backgroundColor: conditionBg(crop.crop_condition) },
                   ]}
                 >
-                  {crop.crop_condition || '—'}
-                </Text>
+                  <Text
+                    style={[
+                      styles.condBadgeText,
+                      { color: conditionColor(crop.crop_condition) },
+                    ]}
+                  >
+                    {crop.crop_condition || '—'}
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </Card>
 
       {/* ── Photos / Location / Remark ── */}

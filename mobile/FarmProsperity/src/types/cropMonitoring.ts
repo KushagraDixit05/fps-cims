@@ -56,19 +56,23 @@ export type ProblemType =
   | 'labour'
   | 'other';
 
+/** A single variety entry within a crop card. */
+export interface VarietyDraft {
+  variety: string;
+  custom_variety: string;
+}
+
 /** In-progress crop card data held in wizard state. Not sent to server as-is. */
 export interface CropRecordDraft {
   /** Client-side UUID used as React key — never sent to the server. */
   localKey: string;
   crop_name: string;
-  variety: string;
-  /** When variety === 'Others', user types free text here. Stored as variety on submit. */
-  custom_variety: string;
+  /** One or more varieties for this crop. Always has at least one entry. */
+  varieties: VarietyDraft[];
   /** ISO date string: YYYY-MM-DD */
   date_of_sowing: string;
   current_area_acre: string;
   last_year_area_acre: string;
-  this_year_area_acre: string;
   crop_stage: CropStage | '';
   crop_condition: CropCondition | '';
   problems: ProblemType[];
@@ -76,8 +80,10 @@ export interface CropRecordDraft {
   sort_order: number;
 }
 
-/** Validation errors keyed by CropRecordDraft field name. */
-export type CropRecordErrors = Partial<Record<keyof CropRecordDraft, string>>;
+/** Validation errors keyed by CropRecordDraft field name. varietyErrors is per-variety. */
+export type CropRecordErrors = Partial<Record<keyof CropRecordDraft, string>> & {
+  varietyErrors?: string[];
+};
 
 export interface FarmerDetailsDraft {
   farmer_name: string;
@@ -144,10 +150,10 @@ export interface CropRecordResponse {
   id: string;
   crop_name: string;
   variety: string;
+  varieties?: { variety: string }[];
   date_of_sowing: string;
   current_area_acre: string;
   last_year_area_acre: string | null;
-  this_year_area_acre: string;
   crop_stage: CropStage;
   crop_condition: CropCondition;
   problems: ProblemType[];

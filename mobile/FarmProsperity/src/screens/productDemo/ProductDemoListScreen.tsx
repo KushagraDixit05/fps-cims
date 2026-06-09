@@ -16,7 +16,7 @@ import EmptyState from '../../components/EmptyState';
 import LoadingScreen from '../../components/LoadingScreen';
 import ScreenHeader from '../../components/ScreenHeader';
 import AppIcon from '../../components/AppIcon';
-import { Package, Plus, ChevronRight, ChevronLeft } from '../../utils/icons';
+import { Package, Plus, ChevronRight } from '../../utils/icons';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = StackNavigationProp<RootStackParamList>;
@@ -117,15 +117,6 @@ const ProductDemoListScreen = () => {
         )}
       />
 
-      {/* ── Top Back Button ── */}
-      <TouchableOpacity
-        style={styles.backBtnAbsolute}
-        onPress={() => navigation.goBack()}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-         <AppIcon icon={ChevronLeft} size={24} color="white" strokeWidth={2.5} />
-      </TouchableOpacity>
-
       {/* ── FAB ── */}
       <TouchableOpacity
         style={styles.fab}
@@ -200,18 +191,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 8,
   },
-  backBtnAbsolute: {
-    position: 'absolute',
-    top: 50,
-    left: 12,
-    zIndex: 10,
-    padding: 8
-  },
-  backBtnText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600'
-  }
 });
 
 export default ProductDemoListScreen;

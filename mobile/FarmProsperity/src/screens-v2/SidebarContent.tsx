@@ -30,7 +30,7 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { icon: Home,      label: 'Home',      screen: 'Home' },
-  { icon: Leaf,      label: 'New Visit', screen: 'CropMonitoringForm' },
+  { icon: Leaf,      label: 'New Visit', screen: 'CropMonitoringList' },
   { icon: Store,     label: 'Mandi',     screen: 'Mandi' },
   { icon: Map,       label: 'My Visits', screen: 'Crops' },
   { icon: BarChart2, label: 'Reports',   screen: 'Reports' },
@@ -43,9 +43,17 @@ const SidebarContent = (props: DrawerContentComponentProps) => {
   const activeRouteName = state.routes[state.index]?.name ?? 'Home';
   const displayName = user ? user.first_name || user.username : 'User';
 
+  const TAB_SCREENS = new Set(['Home', 'Crops', 'Mandi', 'Reports']);
+
   const navigateTo = (screen: string) => {
     navigation.closeDrawer();
-    setTimeout(() => navigation.navigate(screen as any), 150);
+    setTimeout(() => {
+      if (TAB_SCREENS.has(screen)) {
+        navigation.navigate('DrawerHome' as any, { screen } as any);
+      } else {
+        navigation.getParent()?.navigate(screen as any);
+      }
+    }, 150);
   };
 
   return (
@@ -99,7 +107,7 @@ const SidebarContent = (props: DrawerContentComponentProps) => {
         {/* Profile */}
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => { navigation.closeDrawer(); setTimeout(() => navigation.navigate('Profile' as any), 150); }}
+          onPress={() => { navigation.closeDrawer(); setTimeout(() => navigation.getParent()?.navigate('Profile' as any), 150); }}
           activeOpacity={0.75}
         >
           <AppIcon icon={User} size={20} color="#6A7A6A" strokeWidth={IconStroke} />

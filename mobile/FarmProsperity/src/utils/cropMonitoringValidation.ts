@@ -71,15 +71,22 @@ export const validateCropRecord = (crop: CropRecordDraft): CropRecordErrors => {
     errors.crop_name = 'Please select a crop.';
   }
 
-  if (!crop.variety.trim() || crop.variety === OTHERS_VALUE) {
-    if (!crop.variety.trim()) {
-      errors.variety = 'Please select a variety.';
-    } else if (crop.variety === OTHERS_VALUE) {
-      // Others selected — custom text required
-      if (!crop.custom_variety || crop.custom_variety.trim().length < 2) {
-        errors.custom_variety = 'Please enter the variety name (at least 2 characters).';
+  // Validate each variety entry
+  const varietyErrors: string[] = (crop.varieties ?? []).map((v) => {
+    if (!v.variety.trim()) {
+      return 'Please select a variety.';
+    }
+    if (v.variety === OTHERS_VALUE) {
+      if (!v.custom_variety || v.custom_variety.trim().length < 2) {
+        return 'Please enter the variety name (at least 2 characters).';
       }
     }
+    return '';
+  });
+
+  if (varietyErrors.some(Boolean)) {
+    errors.varietyErrors = varietyErrors;
+    errors.varieties = 'Please complete all variety entries.';
   }
 
   if (!crop.date_of_sowing || !crop.date_of_sowing.trim()) {
@@ -108,13 +115,6 @@ export const validateCropRecord = (crop: CropRecordDraft): CropRecordErrors => {
     errors.current_area_acre = 'Current area is required.';
   } else if (isNaN(currentArea) || currentArea <= 0) {
     errors.current_area_acre = 'Current area must be greater than 0.';
-  }
-
-  const thisYearArea = parseFloat(crop.this_year_area_acre);
-  if (!crop.this_year_area_acre.trim()) {
-    errors.this_year_area_acre = 'This year area is required.';
-  } else if (isNaN(thisYearArea) || thisYearArea <= 0) {
-    errors.this_year_area_acre = 'This year area must be greater than 0.';
   }
 
   if (!crop.crop_stage) {

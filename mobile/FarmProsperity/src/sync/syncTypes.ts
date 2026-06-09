@@ -21,5 +21,6 @@ export interface SyncStats {
   pendingVisits: number;
   pendingCropEntries: number;
   pendingMandiArrivals: number;
+  pendingProductDemos: number;
   total: number;
 }

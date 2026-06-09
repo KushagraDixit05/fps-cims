@@ -10,9 +10,12 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
 
 import { getDashboardSummary } from '../api/crops';
 import { getMandis, getYoYComparison } from '../api/mandi';
+import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../utils/colors';
 import Card from '../components/Card';
 import LoadingScreen from '../components/LoadingScreen';
@@ -20,6 +23,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import type { DashboardSummary, Mandi, YoYComparison } from '../types';
 
 const ReportsScreen = () => {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [mandis, setMandis] = useState<Mandi[]>([]);
   const [yoy, setYoY] = useState<YoYComparison | null>(null);
@@ -68,7 +72,7 @@ const ReportsScreen = () => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
       }
     >
-      <ScreenHeader title="Reports" subtitle="Analytics & Insights" />
+      <ScreenHeader title="Reports" subtitle="Analytics & Insights" onBack={() => navigation.navigate('Home' as any)} />
 
       {/* ── Crop Summary ── */}
       <Card style={styles.card}>

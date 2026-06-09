@@ -50,6 +50,7 @@ import ReportsScreen from '../screens/ReportsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CropMonitoringFormScreen from '../screens/cropMonitoring/CropMonitoringFormScreen';
 import CropMonitoringDetailScreen from '../screens/cropMonitoring/CropMonitoringDetailScreen';
+import CropMonitoringListScreen from '../screens/cropMonitoring/CropMonitoringListScreen';
 import MandiArrivalFormScreen from '../screens/mandiArrival/MandiArrivalFormScreen';
 import ProductDemoListScreen from '../screens/productDemo/ProductDemoListScreen';
 import ProductDemoFormScreen from '../screens/productDemo/ProductDemoFormScreen';
@@ -166,6 +167,7 @@ const AppNavigatorV2 = () => {
 
             {/* ── Crop Monitoring Module ── */}
             <RootStack.Screen name="CropMonitoringForm" component={CropMonitoringFormScreen} options={{ headerShown: false }} />
+            <RootStack.Screen name="CropMonitoringList" component={CropMonitoringListScreen} options={{ headerShown: false }} />
             <RootStack.Screen name="CropMonitoringDetail" component={CropMonitoringDetailScreen} options={{ ...headerOptions, title: 'Visit Details' }} />
 
             {/* ── Mandi Arrival Module ── */}

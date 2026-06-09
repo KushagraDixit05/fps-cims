@@ -3,7 +3,7 @@
 // LocationManager, no GMS/FusedLocation dependency — avoids IncompatibleClassChangeError).
 // Shows spinner while fetching, formatted coords on success, error + retry on failure.
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   PermissionsAndroid,
   Platform,
   StyleSheet,
+  Linking,
 } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import { colors } from '../utils/colors';
@@ -54,45 +55,73 @@ const LocationCapture = ({ location, onCapture, error }: LocationCaptureProps) =
     location.captured ? 'success' : 'idle',
   );
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const retryCountRef = useRef(0);
 
-  const capture = useCallback(async () => {
+  const doGeoRequest = useCallback((onSuccess: (pos: any) => void, onFail: (err: any) => void) => {
+    Geolocation.getCurrentPosition(
+      onSuccess,
+      onFail,
+      { enableHighAccuracy: true, timeout: 45000, maximumAge: 30000 },
+    );
+  }, []);
+
+  const capture = useCallback(async (isRetry = false) => {
+    if (!isRetry) retryCountRef.current = 0;
     setCaptureState('requesting');
     setErrorMessage('');
 
     const permitted = await requestLocationPermission();
     if (!permitted) {
       setCaptureState('denied');
-      setErrorMessage(
-        'Location permission denied. Please enable it in device Settings.',
-      );
+      setErrorMessage('Location permission denied. Please enable it in device Settings.');
       onCapture({ latitude: null, longitude: null, captured: false });
       return;
     }
 
-    Geolocation.getCurrentPosition(
+    doGeoRequest(
       (position) => {
+        retryCountRef.current = 0;
         const { latitude, longitude } = position.coords;
         setCaptureState('success');
         onCapture({ latitude, longitude, captured: true });
       },
       (geoError) => {
-        setCaptureState('error');
+        if (geoError.code === 3 && retryCountRef.current < 1) {
+          // Silent retry on first timeout
+          retryCountRef.current += 1;
+          doGeoRequest(
+            (position) => {
+              retryCountRef.current = 0;
+              const { latitude, longitude } = position.coords;
+              setCaptureState('success');
+              onCapture({ latitude, longitude, captured: true });
+            },
+            (retryErr) => {
+              setCaptureState('error');
+              const msg =
+                retryErr.code === 1
+                  ? 'Location access denied. Enable in Settings.'
+                  : retryErr.code === 2
+                  ? 'GPS signal not found. Step outside and retry.'
+                  : 'Could not get location. Move to open sky and retry.';
+              setErrorMessage(msg);
+              onCapture({ latitude: null, longitude: null, captured: false });
+            },
+          );
+          return;
+        }
+        setCaptureState(geoError.code === 1 ? 'denied' : 'error');
         const msg =
           geoError.code === 1
             ? 'Location access denied. Enable in Settings.'
             : geoError.code === 2
             ? 'GPS signal not found. Step outside and retry.'
-            : 'Could not get location (timeout). Please retry.';
+            : 'Could not get location. Move to open sky and retry.';
         setErrorMessage(msg);
         onCapture({ latitude: null, longitude: null, captured: false });
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 60000,
-      },
     );
-  }, [onCapture]);
+  }, [onCapture, doGeoRequest]);
 
   // Auto-capture on first mount
   useEffect(() => {
@@ -123,7 +152,7 @@ const LocationCapture = ({ location, onCapture, error }: LocationCaptureProps) =
           {captureState === 'requesting' ? (
             <>
               <ActivityIndicator size="small" color={colors.primary} style={styles.spinner} />
-              <Text style={styles.statusText}>Capturing GPS...</Text>
+              <Text style={styles.statusText}>Acquiring GPS… (up to 45s)</Text>
             </>
           ) : captureState === 'success' &&
             location.latitude !== null &&
@@ -139,7 +168,17 @@ const LocationCapture = ({ location, onCapture, error }: LocationCaptureProps) =
                 <Text style={styles.capturedLabel}>Captured</Text>
               </View>
             </>
-          ) : captureState === 'denied' || captureState === 'error' ? (
+          ) : captureState === 'denied' ? (
+            <View style={styles.deniedRow}>
+              <Text style={styles.warnIcon}>!</Text>
+              <View style={styles.deniedTextCol}>
+                <Text style={styles.errorInlineText} numberOfLines={2}>{errorMessage}</Text>
+                <TouchableOpacity onPress={() => Linking.openSettings()}>
+                  <Text style={styles.openSettingsLink}>Open Settings</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : captureState === 'error' ? (
             <>
               <Text style={styles.warnIcon}>!</Text>
               <Text style={styles.errorInlineText} numberOfLines={2}>
@@ -157,10 +196,10 @@ const LocationCapture = ({ location, onCapture, error }: LocationCaptureProps) =
         </View>
 
         {/* Right: refresh / retry button */}
-        {captureState !== 'requesting' && (
+        {captureState !== 'requesting' && captureState !== 'denied' && (
           <TouchableOpacity
             style={styles.refreshBtn}
-            onPress={capture}
+            onPress={() => capture(true)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={styles.refreshIcon}>↻</Text>
@@ -282,6 +321,22 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontSize: 12,
     color: colors.error,
+  },
+  deniedRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    flex: 1,
+    gap: 10,
+  },
+  deniedTextCol: {
+    flex: 1,
+  },
+  openSettingsLink: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '600',
+    marginTop: 4,
+    textDecorationLine: 'underline',
   },
 });
 
