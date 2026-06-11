@@ -20,6 +20,12 @@ urlpatterns = [
     path('api/', include('crops.urls')),
     path('api/', include('mandi.urls')),
     path('api/', include('product_demo.urls')),
+
+    # --- RBAC / Approval ---
+    path('api/approvals/', include('workflow.urls')),
+
+    # --- Admin Portal APIs ---
+    path('api/admin/', include('admin_portal.urls')),
 ]
 
 

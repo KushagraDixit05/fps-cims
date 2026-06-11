@@ -24,9 +24,10 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { Home, Leaf, Store, BarChart2, IconSize, IconStroke } from '../utils/icons';
+import { Home, Leaf, Store, BarChart2, ClipboardList, IconSize, IconStroke } from '../utils/icons';
 
 import { useAuth } from '../store/authStore';
+import { usePermissions } from '../hooks/usePermissions';
 import { colors } from '../utils/colors';
 
 // ── v2 Auth Screens ───────────────────────────────────────────────────────────
@@ -54,6 +55,7 @@ import CropMonitoringListScreen from '../screens/cropMonitoring/CropMonitoringLi
 import MandiArrivalFormScreen from '../screens/mandiArrival/MandiArrivalFormScreen';
 import ProductDemoListScreen from '../screens/productDemo/ProductDemoListScreen';
 import ProductDemoFormScreen from '../screens/productDemo/ProductDemoFormScreen';
+import ApprovalQueueScreen from '../screens/ApprovalQueueScreen';
 
 // Type imports
 import type { RootStackParamList, MainTabParamList, AuthStackParamList } from './types';
@@ -74,40 +76,50 @@ const headerOptions = {
 
 
 // ── Bottom Tabs ───────────────────────────────────────────────────────────────
-const MainTabs = () => (
-  <Tab.Navigator
-    screenOptions={({ route }) => ({
-      tabBarActiveTintColor: colors.primary,
-      tabBarInactiveTintColor: colors.textMuted,
-      tabBarStyle: {
-        backgroundColor: colors.surface,
-        borderTopColor: colors.border,
-        height: 62,
-        paddingBottom: 6,
-      },
-      tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
-      headerShown: false,
-      tabBarIcon: ({ color }) => {
-        const iconMap: Record<string, React.ComponentType<any>> = {
-          Home: Home,
-          Crops: Leaf,
-          Mandi: Store,
-          Reports: BarChart2,
-        };
-        const Icon = iconMap[route.name];
-        return Icon ? (
-          <Icon size={IconSize.tab} color={color} strokeWidth={IconStroke} />
-        ) : null;
-      },
-    })}
-  >
-    {/* Home tab now uses the v2 HomeScreen */}
-    <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Home' }} />
-    <Tab.Screen name="Crops" component={CropListScreen} options={{ tabBarLabel: 'Crops' }} />
-    <Tab.Screen name="Mandi" component={MandiListScreen} options={{ tabBarLabel: 'Mandi' }} />
-    <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Reports' }} />
-  </Tab.Navigator>
-);
+const MainTabs = () => {
+  const { isApprover } = usePermissions();
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          height: 62,
+          paddingBottom: 6,
+        },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+        headerShown: false,
+        tabBarIcon: ({ color }) => {
+          const iconMap: Record<string, React.ComponentType<any>> = {
+            Home: Home,
+            Crops: Leaf,
+            Mandi: Store,
+            Reports: BarChart2,
+            Approvals: ClipboardList,
+          };
+          const Icon = iconMap[route.name];
+          return Icon ? (
+            <Icon size={IconSize.tab} color={color} strokeWidth={IconStroke} />
+          ) : null;
+        },
+      })}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Home' }} />
+      <Tab.Screen name="Crops" component={CropListScreen} options={{ tabBarLabel: 'Crops' }} />
+      <Tab.Screen name="Mandi" component={MandiListScreen} options={{ tabBarLabel: 'Mandi' }} />
+      <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Reports' }} />
+      {isApprover && (
+        <Tab.Screen
+          name="Approvals"
+          component={ApprovalQueueScreen}
+          options={{ tabBarLabel: 'Approvals' }}
+        />
+      )}
+    </Tab.Navigator>
+  );
+};
 
 // ── Drawer (wraps tabs + gives access to sidebar) ─────────────────────────────
 const DrawerNavigator = () => (

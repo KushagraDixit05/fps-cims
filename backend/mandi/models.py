@@ -70,6 +70,20 @@ class MandiArrival(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     local_id = models.CharField(max_length=100, blank=True)  # WatermelonDB offline ID
 
+    # RBAC Phase 3 — approval workflow
+    APPROVAL_STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+        ('under_review', 'Under Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('revision_requested', 'Revision Requested'),
+        ('resubmitted', 'Resubmitted'),
+    ]
+    approval_status = models.CharField(
+        max_length=30, choices=APPROVAL_STATUS_CHOICES, default='draft', db_index=True
+    )
+
     class Meta:
         ordering = ['-date']
         unique_together = ['mandi', 'date', 'commodity']  # one entry per mandi per day per commodity

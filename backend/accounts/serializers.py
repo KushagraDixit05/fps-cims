@@ -50,11 +50,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        from .models import Role
         full_name = validated_data.pop('full_name', '')
         parts = full_name.strip().split(' ', 1)
         first_name = parts[0] if parts else ''
         last_name  = parts[1] if len(parts) > 1 else ''
 
+        role_code = validated_data.get('role', 'field_executive')
         user = User.objects.create_user(
             username=validated_data['username'],
             password=validated_data['password'],
@@ -62,9 +64,14 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=last_name,
             email=validated_data.get('email') or None,
             phone_number=validated_data.get('phone_number') or None,
-            role=validated_data.get('role', 'field_executive'),
+            role=role_code,
             region=validated_data.get('region', ''),
         )
+        try:
+            user.primary_role = Role.objects.get(code=role_code)
+            user.save(update_fields=['primary_role'])
+        except Role.DoesNotExist:
+            pass
         return user
 
 
@@ -77,11 +84,23 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    primary_role_code = serializers.SerializerMethodField()
+    perms = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'full_name', 'role', 'region', 'phone_number']
+        fields = [
+            'id', 'username', 'email', 'full_name', 'role', 'primary_role_code',
+            'region', 'state', 'districts', 'phone_number', 'perms',
+        ]
         read_only_fields = fields
 
     def get_full_name(self, obj):
         return obj.get_full_name() or obj.username
+
+    def get_primary_role_code(self, obj):
+        return obj.primary_role.code if obj.primary_role_id else obj.role
+
+    def get_perms(self, obj):
+        from .services import PermissionService
+        return sorted(PermissionService.get_user_permissions(obj))

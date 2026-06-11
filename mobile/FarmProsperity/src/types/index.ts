@@ -12,6 +12,10 @@ export interface User {
   first_name: string;
   last_name: string;
   role: 'field_executive' | 'admin' | 'viewer';
+  primary_role_code?: string;
+  perms?: string[];
+  state?: string;
+  districts?: string[];
   region: string;
   phone_number?: string;
 }

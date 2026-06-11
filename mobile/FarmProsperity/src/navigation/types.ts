@@ -68,4 +68,5 @@ export type MainTabParamList = {
   Crops: undefined;
   Mandi: undefined;
   Reports: undefined;
+  Approvals: undefined;
 };

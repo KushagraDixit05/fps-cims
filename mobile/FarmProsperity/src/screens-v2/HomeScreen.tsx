@@ -23,8 +23,10 @@ import { FarmerVisitModel } from '../database/models/FarmerVisitModel';
 import type { FarmerVisitSummary, RecentVisit } from '../types/cropMonitoring';
 import type { RootStackParamList } from '../navigation/types';
 import AppIcon from '../components/AppIcon';
+import { PermissionGate } from '../components/PermissionGate';
+import { usePermissions } from '../hooks/usePermissions';
 import {
-  Menu, MapPin, Leaf, Store, Map, BarChart2,
+  Menu, MapPin, Leaf, Store, Map, BarChart2, ClipboardList,
   Sprout, ArrowRight, ChevronRight, Package, IconStroke,
 } from '../utils/icons';
 
@@ -84,6 +86,7 @@ const localSummary = (records: FarmerVisitModel[]): FarmerVisitSummary => {
 const HomeScreen = () => {
   const navigation = useNavigation<Nav>();
   const { user } = useAuth();
+  const { isApprover } = usePermissions();
 
   const [summary, setSummary]           = useState<FarmerVisitSummary | null>(null);
   const [recentVisits, setRecentVisits] = useState<RecentVisit[]>([]);
@@ -234,25 +237,72 @@ const HomeScreen = () => {
       {/* ── Quick Actions ── */}
       <Text style={styles.sectionTitle}>QUICK ACTIONS</Text>
       <View style={styles.grid}>
-        {ACTION_TILES.map(({ bg, icon, iconColor, title, sub, screen, badge }) => (
+        <PermissionGate permission="can_access_crop_module">
           <TouchableOpacity
-            key={title}
-            style={[styles.card, { backgroundColor: bg }]}
-            onPress={() => navigation.navigate(screen as any)}
+            style={[styles.card, { backgroundColor: '#E1F2E8' }]}
+            onPress={() => navigation.navigate('CropMonitoringList' as any)}
             activeOpacity={0.85}
           >
-            {badge ? (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{badge}</Text>
-              </View>
-            ) : null}
             <View style={styles.cardIconWrap}>
-              <AppIcon icon={icon} size={24} color={iconColor} strokeWidth={IconStroke} />
+              <AppIcon icon={Leaf} size={24} color="#1A4A2E" strokeWidth={IconStroke} />
             </View>
-            <Text style={styles.cardTitle}>{title}</Text>
-            <Text style={styles.cardSub}>{sub}</Text>
+            <Text style={styles.cardTitle}>New Visit</Text>
+            <Text style={styles.cardSub}>My visits · New entry</Text>
           </TouchableOpacity>
-        ))}
+        </PermissionGate>
+        <PermissionGate permission="can_access_mandi_module">
+          <TouchableOpacity
+            style={[styles.card, { backgroundColor: '#FEF3DA' }]}
+            onPress={() => navigation.navigate('MandiArrivalForm' as any)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>Live</Text>
+            </View>
+            <View style={styles.cardIconWrap}>
+              <AppIcon icon={Store} size={24} color="#C8900A" strokeWidth={IconStroke} />
+            </View>
+            <Text style={styles.cardTitle}>Mandi</Text>
+            <Text style={styles.cardSub}>Prices · Trends</Text>
+          </TouchableOpacity>
+        </PermissionGate>
+        <PermissionGate permission="can_access_product_demo_module">
+          <TouchableOpacity
+            style={[styles.card, { backgroundColor: '#E8F4FD' }]}
+            onPress={() => navigation.navigate('ProductDemoList' as any)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.cardIconWrap}>
+              <AppIcon icon={Package} size={24} color="#0277BD" strokeWidth={IconStroke} />
+            </View>
+            <Text style={styles.cardTitle}>Product Demo</Text>
+            <Text style={styles.cardSub}>Demo · Result</Text>
+          </TouchableOpacity>
+        </PermissionGate>
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor: '#F3E8FF' }]}
+          onPress={() => navigation.navigate('Reports' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.cardIconWrap}>
+            <AppIcon icon={BarChart2} size={24} color="#7C3AED" strokeWidth={IconStroke} />
+          </View>
+          <Text style={styles.cardTitle}>Reports</Text>
+          <Text style={styles.cardSub}>Analytics · YoY</Text>
+        </TouchableOpacity>
+        {isApprover && (
+          <TouchableOpacity
+            style={[styles.card, { backgroundColor: '#FFF0F0' }]}
+            onPress={() => navigation.navigate('Approvals' as any)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.cardIconWrap}>
+              <AppIcon icon={ClipboardList} size={24} color="#DC2626" strokeWidth={IconStroke} />
+            </View>
+            <Text style={styles.cardTitle}>Approvals</Text>
+            <Text style={styles.cardSub}>Pending · Review</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Recent Visits ── */}

@@ -8,6 +8,7 @@ from datetime import date
 
 from .models import Mandi, MandiArrival
 from .serializers import MandiSerializer, MandiArrivalSerializer
+from accounts.permissions import HasFPSPermission
 
 
 class MandiViewSet(viewsets.ReadOnlyModelViewSet):
@@ -20,7 +21,8 @@ class MandiViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = Mandi.objects.filter(is_active=True)
     serializer_class = MandiSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasFPSPermission]
+    required_permission = 'can_access_mandi_module'
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     filterset_fields = ['state', 'district']
     search_fields = ['name', 'district']
@@ -39,7 +41,8 @@ class MandiArrivalViewSet(viewsets.ModelViewSet):
     GET    /api/mandi-arrivals/yoy_comparison/?mandi_id=1   → year-on-year comparison
     """
     serializer_class = MandiArrivalSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasFPSPermission]
+    required_permission = 'can_access_mandi_module'
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['mandi', 'date', 'commodity', 'source']
     ordering_fields = ['date', 'arrival_quantity', 'avg_rate']

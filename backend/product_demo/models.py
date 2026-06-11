@@ -91,6 +91,20 @@ class ProductDemo(models.Model):
     submitted_at = models.DateTimeField(auto_now_add=True)
     updated_at   = models.DateTimeField(auto_now=True)
 
+    # RBAC Phase 3 — approval workflow
+    APPROVAL_STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+        ('under_review', 'Under Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('revision_requested', 'Revision Requested'),
+        ('resubmitted', 'Resubmitted'),
+    ]
+    approval_status = models.CharField(
+        max_length=30, choices=APPROVAL_STATUS_CHOICES, default='draft', db_index=True
+    )
+
     class Meta:
         ordering = ['-submitted_at']
         verbose_name = 'Product Demo'

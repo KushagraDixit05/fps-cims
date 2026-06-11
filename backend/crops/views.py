@@ -10,6 +10,9 @@ from django.db.models import Sum, Count
 from django.utils import timezone
 from datetime import timedelta
 
+from accounts.permissions import HasFPSPermission
+from accounts.mixins import RegionScopedQuerysetMixin
+
 from .models import (
     Village, Farmer, CropEntry,
     District, Block, CropMaster,
@@ -198,7 +201,14 @@ class FarmerVisitViewSet(viewsets.ModelViewSet):
     PATCH  /api/farmer-visits/{uuid}/    → partial update (for EDIT from Review screen)
     GET    /api/farmer-visits/summary/   → dashboard counts (today/week/month/team)
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasFPSPermission]
+    required_permission = 'can_access_crop_module'
+    own_perm = 'can_edit_own_crop_visit'
+    any_perm = 'can_edit_any_crop_visit'
+    own_read_perm = 'can_view_own_crop_entries'
+    region_read_perm = 'can_view_region_crop_entries'
+    all_read_perm = 'can_view_all_crop_entries'
+    region_field = 'district_name'
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['submitted_at']
@@ -206,11 +216,20 @@ class FarmerVisitViewSet(viewsets.ModelViewSet):
     search_fields = ['farmer_name', 'village_name', 'block_name', 'district_name']
 
     def get_queryset(self):
+        qs = FarmerVisit.objects.prefetch_related('crops', 'photos')
         user = self.request.user
-        base_qs = FarmerVisit.objects.prefetch_related('crops', 'photos')
-        if user.is_superuser or getattr(user, 'role', '') == 'admin':
-            return base_qs.all()
-        return base_qs.filter(executive=user)
+
+        if not self.request.auth or not hasattr(self.request.auth, 'payload'):
+            return qs.filter(executive=user)
+
+        perms = self.request.auth.payload.get('perms', [])
+        if 'can_view_all_crop_entries' in perms:
+            return qs
+        if 'can_view_region_crop_entries' in perms:
+            districts = self.request.auth.payload.get('districts', [])
+            if districts:
+                return qs.filter(district_name__in=districts)
+        return qs.filter(executive=user)
 
     def get_serializer_class(self):
         if self.action == 'create':

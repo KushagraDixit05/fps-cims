@@ -279,6 +279,20 @@ class FarmerVisit(models.Model):
     local_id = models.CharField(max_length=100, blank=True)
     is_synced = models.BooleanField(default=True)
 
+    # RBAC Phase 3 — approval workflow
+    APPROVAL_STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+        ('under_review', 'Under Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('revision_requested', 'Revision Requested'),
+        ('resubmitted', 'Resubmitted'),
+    ]
+    approval_status = models.CharField(
+        max_length=30, choices=APPROVAL_STATUS_CHOICES, default='draft', db_index=True
+    )
+
     class Meta:
         ordering = ['-submitted_at']
         verbose_name = 'Farmer Visit'
