@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  /* FPS Brand Colors */
+  --color-fps-primary: #1a4a2e;
+  --color-fps-primary-mid: #2a6a44;
+  --color-fps-primary-light: #e1f2e8;
+  --color-fps-canvas: #f8f6f1;
+  --color-fps-surface: #ffffff;
+  --color-fps-border: #e0ddd5;
+  --color-fps-divider: #f0ede6;
+  --color-fps-ink: #1a3a25;
+  --color-fps-secondary: #6a7a6a;
+  --color-fps-muted: #8a8a7a;
+
+  /* Status Colors */
+  --color-status-good-text: #1a8a3a;
+  --color-status-good-bg: #e1f2e8;
+  --color-status-warn-text: #c8900a;
+  --color-status-warn-bg: #fef3da;
+  --color-status-error-text: #d63333;
+  --color-status-error-bg: #fcebeb;
+  --color-status-info-text: #185fa5;
+  --color-status-info-bg: #e6f1fb;
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Radii */
+  --radius-card: 16px;
+  --radius-button: 10px;
+  --radius-badge: 8px;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    height: 100%;
+    background-color: var(--color-fps-canvas);
+    color: var(--color-fps-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d0cfc8;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #b0afa8;
+  }
+}
