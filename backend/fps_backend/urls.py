@@ -20,6 +20,9 @@ urlpatterns = [
     path('api/', include('crops.urls')),
     path('api/', include('mandi.urls')),
     path('api/', include('product_demo.urls')),
+
+    # --- Admin portal (field data viewing + CSV export) ---
+    path('api/admin/', include('admin_portal.urls')),
 ]
 
 

@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'crops',
     'mandi',
     'product_demo',
+    'admin_portal',
 ]
 
 MIDDLEWARE = [
