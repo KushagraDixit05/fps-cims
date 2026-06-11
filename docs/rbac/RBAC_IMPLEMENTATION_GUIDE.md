@@ -1,7 +1,7 @@
 # RBAC Implementation Guide — FPS Project
 
 **Branch:** `feature/rbac-implementation`  
-**Status:** Phases 0–6 + 8 complete. Phase 7 (Next.js admin portal UI) deferred.
+**Status:** All phases complete — Phases 0–8 including the Next.js admin portal (Phase 7).
 
 ---
 
@@ -74,6 +74,33 @@ User → primary_role → RolePermission[] → Permission codenames
 | `crops/signals.py` | Auto-creates `ApprovalInstance` when `approval_status` → `submitted` |
 | `mandi/signals.py` | Same for MandiArrival |
 | `product_demo/signals.py` | Same for ProductDemo |
+
+### Admin Portal — `admin-portal/`
+
+Next.js 16 (App Router), TypeScript, Tailwind CSS v4, Framer Motion, TanStack Table, Recharts, Zustand, React Query.
+
+| File / Directory | What it does |
+|---|---|
+| `src/app/login/page.tsx` | FPS-branded login form, POSTs to `/api/auth/login/`, stores JWT in Zustand |
+| `src/app/(dashboard)/page.tsx` | Dashboard — KPI strip, productivity bar chart, SLA chart, recent approvals |
+| `src/app/(dashboard)/users/` | User table with search/filter, create/edit drawer, deactivate / reactivate / force-logout |
+| `src/app/(dashboard)/users/[id]/` | User profile detail + per-user permission overrides panel |
+| `src/app/(dashboard)/roles/` | Color-coded role card grid, create custom role dialog |
+| `src/app/(dashboard)/roles/[id]/` | Permission matrix grouped by module — toggle to grant/revoke per role |
+| `src/app/(dashboard)/permissions/` | Full permission catalogue + per-user override management (grant/deny with optional expiry) |
+| `src/app/(dashboard)/approvals/` | Approval queue table, force-approve and reassign with comment dialogs |
+| `src/app/(dashboard)/approvals/[id]/` | Animated timeline, data snapshot, inline force-approve |
+| `src/app/(dashboard)/analytics/` | Full-page Recharts dashboards with 7/14/30/60/90 day selector |
+| `src/app/(dashboard)/audit/` | Expandable audit log table, row diff view, CSV export (super_admin only) |
+| `src/store/authStore.ts` | Zustand store, persisted to `localStorage` key `fps-auth` |
+| `src/lib/api.ts` | Axios instance pointing to `localhost:8000`, auto-refreshes JWT on 401 |
+| `src/hooks/` | `useUsers`, `useRoles`, `usePermissions`, `useApprovals`, `useAnalytics`, `useAuditLog` |
+| `src/components/layout/` | `Sidebar` (forest green, mirrors mobile header), `TopBar`, `AppShell`, `AuthGuard` |
+| `src/components/common/` | `KPICard`, `DataTable` (TanStack), `StatusBadge`, `PageHeader`, `SkeletonTable` |
+
+**Run:** `cd admin-portal && npm run dev` → http://localhost:3000. Backend must be running.
+
+---
 
 ### Mobile — `mobile/FarmProsperity/src/`
 
@@ -156,9 +183,32 @@ Ran 5 tests in ~2.5s — OK
 
 ---
 
+## Using the Admin Portal
+
+**Start:** `cd admin-portal && npm run dev` → http://localhost:3000
+
+**Login:** Use any user with `role = admin` or `role = super_admin`. All other roles are rejected at the API level.
+
+**Access matrix for the two portal roles:**
+
+| Feature | `admin` | `super_admin` |
+|---|---|---|
+| User CRUD, deactivate, reactivate, force-logout | ✅ | ✅ |
+| Role management + permission matrix | ✅ | ✅ |
+| Per-user permission overrides | ✅ | ✅ |
+| Approval queue — view, force-approve, reassign | ✅ | ✅ |
+| Analytics dashboards | ✅ | ✅ |
+| Audit log — read/search/filter | ✅ | ✅ |
+| **Audit log — Export CSV** | ❌ | ✅ |
+| Delete preset roles | ❌ | ✅ |
+
+The Export CSV button is conditionally rendered only when `user.role === "super_admin"` in the frontend, and the backing endpoint (`GET /api/admin/audit/export/`) is gated by `IsSuperAdmin` on the backend.
+
+---
+
 ## Using RBAC Without the Admin Portal (Django Admin + Shell)
 
-The Next.js admin portal UI is deferred. Everything below works right now via Django Admin (`/admin/`) or the shell.
+Everything below also works via Django Admin (`/admin/`) or the shell.
 
 ### Django Admin
 
@@ -348,11 +398,10 @@ Mobile app reads this offline — no extra API call needed to check permissions.
 
 ## What's Still Pending
 
-| Phase | What | Effort |
-|-------|------|--------|
-| Phase 7 | Next.js admin portal frontend | 7–10 days standalone |
-| — | Pending migrations unapplied on production | Run `python manage.py migrate` |
-| — | `SECRET_KEY` in production is short (< 32 bytes) — causes JWT warning | Set a longer key in `.env` |
+| Item | Action needed |
+|------|--------------|
+| Pending migrations on production | Run `python manage.py migrate` |
+| `SECRET_KEY` in production is short (< 32 bytes) — causes JWT warning | Set a longer key in `.env` |
 
 ---
 
