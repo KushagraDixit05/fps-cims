@@ -108,5 +108,38 @@ export default schemaMigrations({
         }),
       ],
     },
+
+    // ── v5 → v6: Product Demo Before/After split ──────────────────────────────────
+    // Adds lifecycle + deferred-after-sync tracking columns to product_demos.
+    // Additive only. Existing rows backfill: demo_phase='', after_pending_sync=false
+    // (read logic derives 'completed' from a present demo_result).
+    {
+      toVersion: 6,
+      steps: [
+        addColumns({
+          table: 'product_demos',
+          columns: [
+            { name: 'demo_phase',         type: 'string' },
+            { name: 'after_pending_sync', type: 'boolean' },
+            { name: 'after_sync_error',   type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
+
+    // ── v6 → v7: Product Demo multi-variety ───────────────────────────────────────
+    // Adds varieties_json (JSON list of variety names) to product_demos.
+    // Additive only; existing rows keep their single `variety`.
+    {
+      toVersion: 7,
+      steps: [
+        addColumns({
+          table: 'product_demos',
+          columns: [
+            { name: 'varieties_json', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

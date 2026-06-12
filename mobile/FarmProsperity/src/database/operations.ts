@@ -276,9 +276,6 @@ export const saveProductDemoLocally = async (
   const beforePhotosPayload = result.before_photos.map((p: PhotoDraft) => ({
     uri: p.uri, name: p.name, type: p.type,
   }));
-  const afterPhotosPayload = result.after_photos.map((p: PhotoDraft) => ({
-    uri: p.uri, name: p.name, type: p.type,
-  }));
 
   let localId = '';
 
@@ -299,12 +296,20 @@ export const saveProductDemoLocally = async (
         d.blockName      = farmerDetails.block_name.trim();
         d.districtName   = farmerDetails.district_name.trim();
         d.totalLandAcre  = farmerDetails.total_land_acre.trim() || null;
-        // Step 2
+        // Step 2 — resolve each variety (Others → custom text), dedupe, keep order
+        const resolvedVarieties = cropStage.varieties
+          .map((v) =>
+            v.variety === OTHERS_VALUE
+              ? (v.custom_variety.trim() || 'Others')
+              : v.variety.trim(),
+          )
+          .filter((name) => name.length > 0)
+          .filter((name, i, arr) => arr.indexOf(name) === i);
         d.cropName       = cropStage.crop_name.trim();
-        // Resolve Others variety sentinel
-        d.variety        = cropStage.variety === OTHERS_VALUE
-          ? (cropStage.custom_variety.trim() || 'Others')
-          : cropStage.variety.trim();
+        d.variety        = resolvedVarieties[0] ?? '';
+        d.varietiesJson  = resolvedVarieties.length > 0
+          ? JSON.stringify(resolvedVarieties)
+          : null;
         d.cropStage      = cropStage.crop_stage as string;
         d.cropStageDays  = cropStage.crop_stage_days.trim();
         d.demoDate       = cropStage.demo_date.trim();
@@ -312,16 +317,18 @@ export const saveProductDemoLocally = async (
         d.productName    = productDose.product_name.trim();
         d.dose           = productDose.dose.trim();
         d.doseUnit       = productDose.dose_unit as string;
-        // Step 4
-        d.demoResult     = result.demo_result as string;
-        d.additionalObservations = result.additional_observations.trim() || null;
-        d.remark         = result.remark.trim() || null;
+        // Step 4 — 'Before' submission only. Result/after-photos/observations are
+        // captured later via the deferred After update.
+        d.demoResult     = null;
+        d.additionalObservations = null;
+        d.remark         = null;
+        d.demoPhase      = 'before';
+        d.afterPendingSync = false;
+        d.afterSyncError = null;
         d.beforePhotosJson = beforePhotosPayload.length > 0
           ? JSON.stringify(beforePhotosPayload)
           : null;
-        d.afterPhotosJson  = afterPhotosPayload.length > 0
-          ? JSON.stringify(afterPhotosPayload)
-          : null;
+        d.afterPhotosJson  = null;
         // GPS
         d.latitude       = location.latitude;
         d.longitude      = location.longitude;
@@ -340,4 +347,49 @@ export const saveProductDemoLocally = async (
     farmer_name:  farmerDetails.farmer_name.trim(),
     product_name: productDose.product_name.trim(),
   };
+};
+
+/**
+ * Queue the deferred 'After' update on an existing, already-synced Product Demo.
+ *
+ * Stores result + after-photos + observations/remark locally and flags the
+ * record for the after-update sync pass. Offline-safe — the actual
+ * complete-after API call happens in syncService.
+ *
+ * @param localId  WatermelonDB record id (NOT the server id).
+ */
+export const saveProductDemoAfterUpdateLocally = async (
+  localId: string,
+  payload: {
+    demo_result: string;
+    after_photos: PhotoDraft[];
+    additional_observations: string;
+    remark: string;
+  },
+): Promise<void> => {
+  const record = await database.collections
+    .get<ProductDemoModel>('product_demos')
+    .find(localId);
+
+  if (!record.serverId) {
+    throw new Error('Record must be synced before adding the after-demo update.');
+  }
+
+  const afterPhotosPayload = payload.after_photos.map((p) => ({
+    uri: p.uri, name: p.name, type: p.type,
+  }));
+
+  await database.write(async () => {
+    await record.update((d) => {
+      d.demoResult              = payload.demo_result;
+      d.additionalObservations  = payload.additional_observations.trim() || null;
+      d.remark                  = payload.remark.trim() || null;
+      d.afterPhotosJson         = afterPhotosPayload.length > 0
+        ? JSON.stringify(afterPhotosPayload)
+        : null;
+      d.afterPendingSync = true;
+      d.afterSyncError   = null;
+      d.updatedAtLocal   = Date.now();
+    });
+  });
 };

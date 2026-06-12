@@ -284,6 +284,14 @@ class FarmerVisit(models.Model):
         ordering = ['-submitted_at']
         verbose_name = 'Farmer Visit'
         verbose_name_plural = 'Farmer Visits'
+        constraints = [
+            # Offline idempotency: one record per (executive, client local_id).
+            models.UniqueConstraint(
+                fields=['executive', 'local_id'],
+                condition=~models.Q(local_id=''),
+                name='uniq_farmervisit_executive_local_id',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.farmer_name} — {self.block_name} — {self.submitted_at:%Y-%m-%d}"

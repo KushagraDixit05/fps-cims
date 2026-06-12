@@ -145,7 +145,6 @@ const ProductDemoFormScreen = () => {
           data={state.result}
           onAddBeforePhoto={form.addBeforePhoto}
           onRemoveBeforePhoto={form.removeBeforePhoto}
-          onUpdateResult={form.updateResult}
           onSubmit={() => form.setStep('review')}
           onBack={() => form.setStep(3)}
         />

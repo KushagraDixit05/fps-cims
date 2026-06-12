@@ -46,8 +46,7 @@ const INITIAL_STATE: ProductDemoFormState = {
   },
   cropStage: {
     crop_name: '',
-    variety: '',
-    custom_variety: '',
+    varieties: [{ variety: '', custom_variety: '' }],
     crop_stage: '',
     crop_stage_days: '',
     demo_date: '',

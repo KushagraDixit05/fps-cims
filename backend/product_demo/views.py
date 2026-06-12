@@ -5,6 +5,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.utils import timezone
 from django.db.models import Count
 
+from fps_backend.pagination import MobilePagination
 from .models import ProductMaster, ProductDemo, DemoPhoto
 from .serializers import (
     ProductMasterSerializer,
@@ -12,6 +13,7 @@ from .serializers import (
     ProductDemoListSerializer,
     ProductDemoDetailSerializer,
     AfterPhotoUploadSerializer,
+    ProductDemoAfterUpdateSerializer,
 )
 
 
@@ -26,6 +28,7 @@ class ProductDemoViewSet(viewsets.ModelViewSet):
     """CRUD for product demo entries. Field executives see only their own records."""
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = MobilePagination
 
     def get_queryset(self):
         user = self.request.user
@@ -42,15 +45,56 @@ class ProductDemoViewSet(viewsets.ModelViewSet):
         return ProductDemoListSerializer
 
     def create(self, request, *args, **kwargs):
+        # Idempotency: a retried offline sync (same client local_id) returns the
+        # already-stored record instead of creating a duplicate.
+        local_id = request.data.get('local_id')
+        if local_id:
+            existing = ProductDemo.objects.filter(
+                executive=request.user, local_id=local_id
+            ).first()
+            if existing:
+                return Response({'id': str(existing.id)}, status=status.HTTP_200_OK)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         demo = serializer.save()
         return Response({'id': str(demo.id)}, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['post'], url_path='complete-after',
+            parser_classes=[MultiPartParser, FormParser])
+    def complete_after(self, request, pk=None):
+        """
+        POST /api/product-demos/{id}/complete-after/ — deferred After update.
+
+        Records the demo result + after-photos + observations/remark and marks
+        the demo completed. Only these fields are writable (immutability guard).
+        """
+        demo = self.get_object()
+        serializer = ProductDemoAfterUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        for img in data['photos_after']:
+            DemoPhoto.objects.create(demo=demo, image=img, photo_type='after')
+
+        demo.demo_result             = data['demo_result']
+        demo.additional_observations = data.get('additional_observations', '')
+        demo.remark                  = data.get('remark', '')
+        demo.demo_phase              = 'completed'
+        demo.save(update_fields=[
+            'demo_result', 'additional_observations', 'remark',
+            'demo_phase', 'updated_at',
+        ])
+
+        return Response({
+            'demo_phase':        demo.demo_phase,
+            'after_photo_count': demo.photos.filter(photo_type='after').count(),
+        })
+
     @action(detail=True, methods=['post'], url_path='after-photos',
             parser_classes=[MultiPartParser, FormParser])
     def upload_after_photos(self, request, pk=None):
-        """POST /api/product-demos/{id}/after-photos/ — add after-demo photos."""
+        """POST /api/product-demos/{id}/after-photos/ — legacy after-photo append (kept for compat)."""
         demo = self.get_object()
         serializer = AfterPhotoUploadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

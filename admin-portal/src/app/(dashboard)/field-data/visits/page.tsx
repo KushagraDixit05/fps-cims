@@ -101,6 +101,8 @@ export default function FarmerVisitsPage() {
         </div>
         <Input placeholder="Crop name…" className="w-36"
           onChange={(e) => setFilter({ crop: e.target.value || undefined })} />
+        <Input placeholder="Variety…" className="w-32"
+          onChange={(e) => setFilter({ variety: e.target.value || undefined })} />
         <Input placeholder="Executive ID…" className="w-36"
           onChange={(e) => setFilter({ executive: e.target.value || undefined })} />
         <Select onValueChange={(v) => setFilter({ condition: v === "all" ? undefined : v })}>

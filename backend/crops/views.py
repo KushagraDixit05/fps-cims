@@ -7,6 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum, Count
+
+from fps_backend.pagination import MobilePagination
 from django.utils import timezone
 from datetime import timedelta
 
@@ -200,6 +202,7 @@ class FarmerVisitViewSet(viewsets.ModelViewSet):
     """
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    pagination_class = MobilePagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ['submitted_at']
     ordering = ['-submitted_at']
@@ -225,6 +228,25 @@ class FarmerVisitViewSet(viewsets.ModelViewSet):
         return context
 
     def create(self, request, *args, **kwargs):
+        # Idempotency: a retried offline sync (same client local_id) returns the
+        # already-stored visit instead of creating a duplicate.
+        local_id = request.data.get('local_id')
+        if local_id:
+            existing = FarmerVisit.objects.filter(
+                executive=request.user, local_id=local_id
+            ).first()
+            if existing:
+                return Response(
+                    {
+                        'id': str(existing.id),
+                        'submitted_at': existing.submitted_at.isoformat(),
+                        'farmer_name': existing.farmer_name,
+                        'crop_count': existing.crop_count,
+                        'location': {'lat': existing.latitude, 'lng': existing.longitude},
+                    },
+                    status=status.HTTP_200_OK,
+                )
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         visit = serializer.save()

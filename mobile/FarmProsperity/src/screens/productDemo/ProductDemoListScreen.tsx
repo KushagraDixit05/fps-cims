@@ -112,9 +112,17 @@ const ProductDemoListScreen = () => {
                    <View style={styles.pendingBadge}>
                      <Text style={styles.pendingText}>Pending Sync</Text>
                    </View>
+                 ) : item.afterPendingSync ? (
+                   <View style={styles.pendingBadge}>
+                     <Text style={styles.pendingText}>After Update Pending</Text>
+                   </View>
+                 ) : (item.demoPhase || (item.demoResult ? 'completed' : 'before')) === 'before' ? (
+                   <View style={styles.awaitingBadge}>
+                     <Text style={styles.awaitingText}>Awaiting Result</Text>
+                   </View>
                  ) : (
                    <View style={styles.syncedBadge}>
-                     <Text style={styles.syncedText}>Synced</Text>
+                     <Text style={styles.syncedText}>Completed</Text>
                    </View>
                  )}
               </View>
@@ -182,6 +190,8 @@ const styles = StyleSheet.create({
   pendingText: { fontSize: 10, fontWeight: '700', color: '#C8900A' },
   syncedBadge: { backgroundColor: '#E1F2E8', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
   syncedText: { fontSize: 10, fontWeight: '700', color: '#1A8A3A' },
+  awaitingBadge: { backgroundColor: '#E8F0FE', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+  awaitingText: { fontSize: 10, fontWeight: '700', color: '#1B5E9B' },
   fab: {
     position: 'absolute',
     bottom: 24,

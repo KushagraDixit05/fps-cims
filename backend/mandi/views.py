@@ -1,4 +1,4 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -46,7 +46,24 @@ class MandiArrivalViewSet(viewsets.ModelViewSet):
     ordering = ['-date']
 
     def get_queryset(self):
-        return MandiArrival.objects.select_related('mandi', 'submitted_by').all()
+        user = self.request.user
+        qs = MandiArrival.objects.select_related('mandi', 'submitted_by')
+        if user.is_superuser or user.is_staff or getattr(user, 'role', '') == 'admin':
+            return qs.all()
+        return qs.filter(submitted_by=user)
+
+    def create(self, request, *args, **kwargs):
+        # Idempotency: a retried offline sync (same client local_id) must not
+        # create a duplicate. Return the already-stored record instead.
+        local_id = request.data.get('local_id')
+        if local_id:
+            existing = MandiArrival.objects.filter(
+                submitted_by=request.user, local_id=local_id
+            ).first()
+            if existing:
+                serializer = self.get_serializer(existing)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(submitted_by=self.request.user)

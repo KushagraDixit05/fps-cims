@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django_filters',
+    'cloudinary_storage',  # durable media (photo) storage — see MEDIA config below
+    'cloudinary',
 
     # FPS apps — order matters: accounts first (custom user model)
     'accounts',
@@ -94,7 +96,9 @@ WSGI_APPLICATION = 'fps_backend.wsgi.application'
 
 _db_url = os.getenv('DATABASE_URL')
 if _db_url:
-    DATABASES = {'default': dj_database_url.parse(_db_url)}
+    # conn_max_age keeps connections alive across requests (avoids reopening a
+    # Postgres connection on every request — important on managed DBs like Neon).
+    DATABASES = {'default': dj_database_url.parse(_db_url, conn_max_age=600)}
     # Override engine — dj_database_url sets postgresql; we need postgis for GeoDjango
     DATABASES['default']['ENGINE'] = 'django.contrib.gis.db.backends.postgis'
 else:
@@ -159,13 +163,41 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Media files (uploaded crop photos)
+# Media files (uploaded crop / demo / visit photos)
+# ---------------------------------------------------------------------------
+# Render's container disk is EPHEMERAL — anything written to the local
+# filesystem is deleted on every redeploy/restart. So in production we store
+# uploaded photos in Cloudinary (durable, free tier): when CLOUDINARY_URL is
+# set, Django routes all ImageField/FileField writes there automatically.
+# Without it (local dev), uploads fall back to the local filesystem.
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-CORS_ALLOW_ALL_ORIGINS = True
+_media_backend = (
+    'cloudinary_storage.storage.MediaCloudinaryStorage'
+    if os.getenv('CLOUDINARY_URL')
+    else 'django.core.files.storage.FileSystemStorage'
+)
+STORAGES = {
+    'default': {'BACKEND': _media_backend},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
+
+# CORS — allow any origin only in local dev. In production, restrict to the
+# explicit origins listed in CORS_ALLOWED_ORIGINS (comma-separated env var),
+# e.g. the admin-portal domain. The mobile app is native (no browser Origin),
+# so it is unaffected by CORS.
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        o.strip()
+        for o in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+        if o.strip()
+    ]
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom user model — must be set before first migration

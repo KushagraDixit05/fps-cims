@@ -1,10 +1,10 @@
 // src/types/productDemo.ts
 // All TypeScript interfaces for the Product Demo module.
 
-import type { PhotoDraft, LocationDraft } from './cropMonitoring';
+import type { PhotoDraft, LocationDraft, VarietyDraft } from './cropMonitoring';
 
 // Re-export shared draft types so callers only need one import
-export type { PhotoDraft, LocationDraft };
+export type { PhotoDraft, LocationDraft, VarietyDraft };
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
@@ -50,9 +50,8 @@ export type DemoFarmerDetailsErrors = Partial<Record<keyof DemoFarmerDetailsDraf
 
 export interface CropStageDraft {
   crop_name: string;
-  variety: string;
-  /** When variety === 'Others', user types free text here. Stored as variety on submit. */
-  custom_variety: string;
+  /** One crop, one or more varieties of it. Always has at least one entry. */
+  varieties: VarietyDraft[];
   crop_stage: CropStage | '';
   /** Stored as a string for controlled input; parsed to int on submit */
   crop_stage_days: string;
@@ -60,7 +59,10 @@ export interface CropStageDraft {
   demo_date: string;
 }
 
-export type CropStageErrors = Partial<Record<keyof CropStageDraft, string>>;
+export type CropStageErrors = Partial<Record<keyof CropStageDraft, string>> & {
+  /** Per-variety error messages, indexed alongside the varieties array. */
+  varietyErrors?: string[];
+};
 
 export interface ProductDoseDraft {
   product_name: string;

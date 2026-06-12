@@ -46,9 +46,17 @@ class _EchoBuffer:
 def _stream_csv(rows_iter, filename):
     pseudo_buffer = _EchoBuffer()
     writer = csv.writer(pseudo_buffer)
+
+    def row_generator():
+        # Leading UTF-8 BOM so Excel detects the encoding and renders ₹ /
+        # Devanagari text correctly instead of mojibake.
+        yield '\ufeff'
+        for row in rows_iter:
+            yield writer.writerow(row)
+
     response = StreamingHttpResponse(
-        (writer.writerow(row) for row in rows_iter),
-        content_type='text/csv',
+        row_generator(),
+        content_type='text/csv; charset=utf-8',
     )
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
@@ -74,6 +82,8 @@ def _visits_queryset(params):
         qs = qs.filter(district_name__icontains=params['district'])
     if params.get('crop'):
         qs = qs.filter(crops__crop_name__icontains=params['crop']).distinct()
+    if params.get('variety'):
+        qs = qs.filter(crops__variety__icontains=params['variety']).distinct()
     if params.get('condition'):
         qs = qs.filter(crops__crop_condition=params['condition']).distinct()
     return qs
@@ -221,6 +231,8 @@ def _demos_queryset(params):
         qs = qs.filter(district_name__icontains=params['district'])
     if params.get('crop'):
         qs = qs.filter(crop_name__icontains=params['crop'])
+    if params.get('variety'):
+        qs = qs.filter(variety__icontains=params['variety'])
     if params.get('product'):
         qs = qs.filter(product_name__icontains=params['product'])
     if params.get('result'):
@@ -252,7 +264,7 @@ class ProductDemoExportView(APIView):
                 'Total Land (Acre)',
                 'Crop', 'Variety', 'Crop Stage', 'Stage Days',
                 'Product', 'Dose', 'Dose Unit',
-                'Result', 'Observations', 'Remark',
+                'Phase', 'Result', 'Observations', 'Remark',
                 'Latitude', 'Longitude',
                 'Before Photos', 'After Photos',
             ]
@@ -264,9 +276,11 @@ class ProductDemoExportView(APIView):
                     demo.farmer_name, demo.mobile_number,
                     demo.village_name, demo.block_name, demo.district_name,
                     demo.total_land_acre or '',
-                    demo.crop_name, demo.variety, demo.crop_stage, demo.crop_stage_days,
+                    demo.crop_name,
+                    ', '.join(demo.varieties) if demo.varieties else demo.variety,
+                    demo.crop_stage, demo.crop_stage_days,
                     demo.product_name, demo.dose, demo.dose_unit,
-                    demo.demo_result, demo.additional_observations, demo.remark,
+                    demo.demo_phase, demo.demo_result or '', demo.additional_observations, demo.remark,
                     demo.latitude or '', demo.longitude or '',
                     demo.before_photo_count, demo.after_photo_count,
                 ]

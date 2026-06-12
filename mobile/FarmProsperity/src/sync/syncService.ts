@@ -24,7 +24,7 @@ import { ProductDemoModel }  from '../database/models/ProductDemoModel';
 import { submitFarmerVisit } from '../api/cropMonitoring';
 import { createCropEntry }   from '../api/crops';
 import { createMandiArrival } from '../api/mandi';
-import { submitProductDemo } from '../api/productDemo';
+import { submitProductDemo, completeProductDemoAfter } from '../api/productDemo';
 
 import type { SyncResult, SyncStats } from './syncTypes';
 import type { CropEntryPayload, MandiArrivalPayload } from '../types';
@@ -53,6 +53,7 @@ export const syncPendingRecords = async (): Promise<SyncResult> => {
   await syncCropEntries(result);
   await syncMandiArrivals(result);
   await syncProductDemos(result);
+  await syncProductDemoAfterUpdates(result);
 
   console.log('[Sync] Complete:', result);
 
@@ -82,7 +83,7 @@ export const getPendingCount = async (): Promise<SyncStats> => {
       .fetchCount(),
     database.collections
       .get<ProductDemoModel>('product_demos')
-      .query(Q.where('is_synced', false))
+      .query(Q.or(Q.where('is_synced', false), Q.where('after_pending_sync', true)))
       .fetchCount(),
   ]);
 
@@ -170,6 +171,8 @@ const buildFarmerVisitFormData = (visit: FarmerVisitModel): FormData => {
   fd.append('district_name',   visit.districtName);
   fd.append('total_land_acre', visit.totalLandAcre   ?? '');
   fd.append('remark',          visit.remark          ?? '');
+  // Stable client id → backend idempotency (no duplicate on retried sync)
+  fd.append('local_id',        visit.id);
 
   if (visit.latitude  !== null && visit.latitude  !== undefined) {
     fd.append('latitude',  String(visit.latitude));
@@ -287,6 +290,8 @@ const syncMandiArrivals = async (result: SyncResult): Promise<void> => {
         max_rate:         arrival.maxRate    ?? undefined,
         source:           arrival.source     as any,
         remark:           arrival.remark     ?? '',
+        // Stable client id → backend idempotency (no duplicate on retried sync)
+        local_id:         arrival.id,
       };
 
       const serverRecord = await createMandiArrival(payload);
@@ -380,6 +385,8 @@ const buildProductDemoFormData = (demo: ProductDemoModel): FormData => {
   // Crop & stage
   fd.append('crop_name',       demo.cropName);
   fd.append('variety',         demo.variety);
+  // Multi-variety: send the full list as JSON (backend keeps `variety` = first)
+  fd.append('varieties',       demo.varietiesJson ?? JSON.stringify(demo.variety ? [demo.variety] : []));
   fd.append('crop_stage',      demo.cropStage);
   fd.append('crop_stage_days', demo.cropStageDays);
   fd.append('demo_date',       demo.demoDate);
@@ -388,13 +395,11 @@ const buildProductDemoFormData = (demo: ProductDemoModel): FormData => {
   fd.append('product_name',    demo.productName);
   fd.append('dose',            demo.dose);
   fd.append('dose_unit',       demo.doseUnit);
+  // Stable client id → backend idempotency (no duplicate on retried sync)
+  fd.append('local_id',        demo.id);
 
-  // Result
-  fd.append('demo_result',     demo.demoResult);
-  if (demo.additionalObservations) {
-    fd.append('additional_observations', demo.additionalObservations);
-  }
-  fd.append('remark', demo.remark ?? '');
+  // Result/observations/remark are NOT sent on the create path — the demo is
+  // submitted in the 'before' phase and completed later via complete-after.
 
   // GPS
   if (demo.latitude  !== null && demo.latitude  !== undefined) {
@@ -420,23 +425,65 @@ const buildProductDemoFormData = (demo: ProductDemoModel): FormData => {
     } catch { /* malformed — skip photos */ }
   }
 
-  // After photos
-  if (demo.afterPhotosJson) {
-    try {
-      const photos: { uri: string; name: string; type: string }[] = JSON.parse(demo.afterPhotosJson);
-      photos.forEach((photo, i) => {
-        if (photo.uri) {
-          fd.append('photos_after', {
-            uri:  photo.uri,
-            name: photo.name || `after_${i}.jpg`,
-            type: photo.type || 'image/jpeg',
-          } as any);
-        }
-      });
-    } catch { /* malformed — skip photos */ }
-  }
-
   return fd;
+};
+
+/**
+ * Sync deferred 'After' updates for Product Demos.
+ * Picks records that already synced their create (have server_id) and have
+ * after-data queued (after_pending_sync), then POSTs to complete-after.
+ */
+const syncProductDemoAfterUpdates = async (result: SyncResult): Promise<void> => {
+  const pending = await database.collections
+    .get<ProductDemoModel>('product_demos')
+    .query(Q.and(Q.where('after_pending_sync', true), Q.where('server_id', Q.notEq(null))))
+    .fetch();
+
+  console.log(`[Sync] product_demo after-updates pending: ${pending.length}`);
+
+  for (const demo of pending) {
+    try {
+      const afterPhotos: { uri: string; name: string; type: string }[] = demo.afterPhotosJson
+        ? JSON.parse(demo.afterPhotosJson)
+        : [];
+
+      await completeProductDemoAfter(demo.serverId as string, {
+        demo_result:             demo.demoResult ?? '',
+        additional_observations: demo.additionalObservations ?? '',
+        remark:                  demo.remark ?? '',
+        after_photos:            afterPhotos.map((p, i) => ({
+          uri:  p.uri,
+          name: p.name || `after_${i}.jpg`,
+          type: p.type || 'image/jpeg',
+        })),
+      });
+
+      await database.write(async () => {
+        await demo.update((d) => {
+          d.afterPendingSync = false;
+          d.demoPhase        = 'completed';
+          d.afterSyncError   = null;
+          d.updatedAtLocal   = Date.now();
+        });
+      });
+      result.synced++;
+      console.log(`[Sync] product_demo after-update synced: ${demo.farmerName}`);
+    } catch (err: any) {
+      const msg = buildErrorMessage(err);
+      result.failed++;
+      result.errors.push(`Product demo after-update (${demo.farmerName}): ${msg}`);
+      console.warn(`[Sync] product_demo after-update failed: ${demo.farmerName}`, msg);
+
+      try {
+        await database.write(async () => {
+          await demo.update((d) => {
+            d.afterSyncError = msg;
+            d.updatedAtLocal = Date.now();
+          });
+        });
+      } catch { /* best-effort */ }
+    }
+  }
 };
 
 // ─── Utility ──────────────────────────────────────────────────────────────────

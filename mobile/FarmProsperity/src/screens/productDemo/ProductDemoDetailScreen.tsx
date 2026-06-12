@@ -1,10 +1,11 @@
 // src/screens/productDemo/ProductDemoDetailScreen.tsx
-// View submitted product demo details and upload after-demo photos.
+// View a submitted product demo and complete the deferred 'After' update.
 //
-// Read-only view of all submitted data.
-// After-photo section is editable only if after_photo_count === 0.
+// Local-first: reads the WatermelonDB record (by server id) so setup data and
+// before-photos render offline. The After update (result + after-photos +
+// observations + remark) is saved locally and synced via complete-after.
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,43 +16,25 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RouteProp } from '@react-navigation/native';
+import { Q } from '@nozbe/watermelondb';
 import type { RootStackParamList } from '../../navigation/types';
 import { colors } from '../../utils/colors';
 import ScreenHeader from '../../components/ScreenHeader';
 import Button from '../../components/Button';
 import PhotoPicker from '../../components/PhotoPicker';
-import { getProductDemoDetail, uploadAfterDemoPhotos } from '../../api/productDemo';
-import type { PhotoDraft } from '../../types/productDemo';
+import DemoResultSelector from '../../components/DemoResultSelector';
+import FormInput from '../../components/FormInput';
+import database from '../../database';
+import { ProductDemoModel } from '../../database/models/ProductDemoModel';
+import { saveProductDemoAfterUpdateLocally } from '../../database/operations';
+import { syncPendingRecords } from '../../sync/syncService';
+import { validateAfterUpdate, hasErrors } from '../../utils/productDemoValidation';
+import type { PhotoDraft, DemoResult } from '../../types/productDemo';
 
 type Nav = RouteProp<RootStackParamList, 'ProductDemoDetail'>;
-
-interface DemoDetail {
-  id: string;
-  farmer_name: string;
-  mobile_number: string;
-  village_name: string;
-  block_name: string;
-  district_name: string;
-  total_land_acre: string;
-  crop_name: string;
-  variety: string;
-  crop_stage: string;
-  crop_stage_days: string;
-  demo_date: string;
-  product_name: string;
-  dose: string;
-  dose_unit: string;
-  demo_result: string;
-  additional_observations: string;
-  remark: string;
-  latitude: number | null;
-  longitude: number | null;
-  submitted_at: string;
-  photos: Array<{ id: string; image: string; photo_type: 'before' | 'after'; uploaded_at: string }>;
-}
 
 const RESULT_LABEL: Record<string, string> = {
   excellent: 'Excellent',
@@ -59,6 +42,18 @@ const RESULT_LABEL: Record<string, string> = {
   average: 'Average',
   poor: 'Poor',
   no_effect: 'No Effect',
+};
+
+interface PhotoEntry { uri: string; name?: string; type?: string }
+
+const parsePhotos = (json: string | null): PhotoEntry[] => {
+  if (!json) return [];
+  try {
+    const arr = JSON.parse(json);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
 };
 
 const Row = ({ label, value }: { label: string; value?: string | null }) =>
@@ -72,53 +67,71 @@ const Row = ({ label, value }: { label: string; value?: string | null }) =>
 const ProductDemoDetailScreen = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const route = useRoute<Nav>();
-  const { demoId } = route.params;
+  const { demoId } = route.params; // server id
 
-  const [demo, setDemo] = useState<DemoDetail | null>(null);
+  const [demo, setDemo] = useState<ProductDemoModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [afterPhotos, setAfterPhotos] = useState<PhotoDraft[]>([]);
-  const [uploading, setUploading] = useState(false);
 
-  const fetchDemo = useCallback(async () => {
+  // After-update form state
+  const [afterPhotos, setAfterPhotos] = useState<PhotoDraft[]>([]);
+  const [demoResult, setDemoResult] = useState<DemoResult | ''>('');
+  const [observations, setObservations] = useState('');
+  const [remark, setRemark] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<{ demo_result?: string; after_photos?: string; remark?: string }>({});
+
+  const loadDemo = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getProductDemoDetail(demoId);
-      setDemo(data);
+      const records = await database.collections
+        .get<ProductDemoModel>('product_demos')
+        .query(Q.where('server_id', demoId))
+        .fetch();
+      if (records.length === 0) {
+        setError('Could not find this demo on the device.');
+      } else {
+        setDemo(records[0]);
+      }
     } catch {
-      setError('Could not load demo details. Please check your connection and try again.');
+      setError('Could not load demo details.');
     } finally {
       setLoading(false);
     }
   }, [demoId]);
 
-  useEffect(() => {
-    fetchDemo();
-  }, [fetchDemo]);
+  useFocusEffect(
+    useCallback(() => {
+      loadDemo();
+    }, [loadDemo]),
+  );
 
-  const beforePhotos = demo?.photos.filter((p) => p.photo_type === 'before') ?? [];
-  const existingAfterPhotos = demo?.photos.filter((p) => p.photo_type === 'after') ?? [];
-  const afterPhotosUploaded = existingAfterPhotos.length > 0;
+  const handleSave = async () => {
+    const errs = validateAfterUpdate({ demo_result: demoResult, after_photos: afterPhotos, remark });
+    setFormErrors(errs);
+    if (hasErrors(errs) || !demo) return;
 
-  const handleUpload = async () => {
-    if (afterPhotos.length < 2) {
-      Alert.alert('Photos Required', 'Please add at least 2 after-demo photos before uploading.');
-      return;
-    }
-    setUploading(true);
+    setSaving(true);
     try {
-      await uploadAfterDemoPhotos(demoId, afterPhotos);
+      await saveProductDemoAfterUpdateLocally(demo.id, {
+        demo_result: demoResult,
+        after_photos: afterPhotos,
+        additional_observations: observations,
+        remark,
+      });
       setAfterPhotos([]);
-      await fetchDemo();
-      Alert.alert('Success', 'After-demo photos uploaded successfully.');
+      await loadDemo();
+      // Best-effort push; safe to ignore offline result.
+      syncPendingRecords().catch(() => {});
+      Alert.alert(
+        'After Update Saved',
+        'The after-demo result has been saved and will sync when you are online.',
+      );
     } catch (e: any) {
-      const msg = e?.response?.status === 0 || !e?.response
-        ? 'Internet connection required to upload after-demo photos. Please try again when online.'
-        : 'Upload failed. Please try again.';
-      Alert.alert('Upload Failed', msg);
+      Alert.alert('Save Failed', e?.message ?? 'Could not save the after-demo update.');
     } finally {
-      setUploading(false);
+      setSaving(false);
     }
   };
 
@@ -139,7 +152,7 @@ const ProductDemoDetailScreen = () => {
         <ScreenHeader title="Demo Details" onBack={() => navigation.goBack()} />
         <View style={styles.centered}>
           <Text style={styles.errorText}>{error ?? 'No data found.'}</Text>
-          <TouchableOpacity onPress={fetchDemo} style={styles.retryBtn} activeOpacity={0.75}>
+          <TouchableOpacity onPress={loadDemo} style={styles.retryBtn} activeOpacity={0.75}>
             <Text style={styles.retryBtnText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -147,30 +160,44 @@ const ProductDemoDetailScreen = () => {
     );
   }
 
+  const beforePhotos = parsePhotos(demo.beforePhotosJson);
+  const existingAfterPhotos = parsePhotos(demo.afterPhotosJson);
+  let varietyList: string[] = [];
+  try {
+    varietyList = demo.varietiesJson ? JSON.parse(demo.varietiesJson) : [];
+  } catch { varietyList = []; }
+  if (varietyList.length === 0 && demo.variety) varietyList = [demo.variety];
+  const varietyDisplay = varietyList.join(', ');
+  const phase = demo.demoPhase || (demo.demoResult ? 'completed' : 'before');
+  const isCompleted = phase === 'completed' || !!demo.demoResult;
+  const afterPending = demo.afterPendingSync;
+
   return (
     <View style={styles.root}>
       <ScreenHeader
         title="Product Performance — Details"
-        subtitle={demo.farmer_name}
+        subtitle={demo.farmerName}
         onBack={() => navigation.goBack()}
       />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* ── Read-only banner ── */}
         <View style={styles.readOnlyBanner}>
-          <Text style={styles.readOnlyText}>All submitted fields are read-only.</Text>
+          <Text style={styles.readOnlyText}>
+            Setup details and before-photos are locked and cannot be edited.
+          </Text>
         </View>
 
         {/* ── Farmer & Location ── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Farmer & Location</Text>
           <View style={styles.card}>
-            <Row label="Farmer Name"   value={demo.farmer_name} />
-            <Row label="Mobile"        value={demo.mobile_number} />
-            <Row label="Village"       value={demo.village_name} />
-            <Row label="Block"         value={demo.block_name} />
-            <Row label="District"      value={demo.district_name} />
-            <Row label="Land (Acre)"   value={demo.total_land_acre} />
+            <Row label="Farmer Name"   value={demo.farmerName} />
+            <Row label="Mobile"        value={demo.mobileNumber} />
+            <Row label="Village"       value={demo.villageName} />
+            <Row label="Block"         value={demo.blockName} />
+            <Row label="District"      value={demo.districtName} />
+            <Row label="Land (Acre)"   value={demo.totalLandAcre} />
           </View>
         </View>
 
@@ -178,11 +205,11 @@ const ProductDemoDetailScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Crop & Stage</Text>
           <View style={styles.card}>
-            <Row label="Crop"          value={demo.crop_name} />
-            <Row label="Variety"       value={demo.variety} />
-            <Row label="Stage"         value={demo.crop_stage} />
-            <Row label="Stage (Days)"  value={demo.crop_stage_days} />
-            <Row label="Demo Date"     value={demo.demo_date} />
+            <Row label="Crop"          value={demo.cropName} />
+            <Row label={varietyList.length > 1 ? 'Varieties' : 'Variety'} value={varietyDisplay} />
+            <Row label="Stage"         value={demo.cropStage} />
+            <Row label="Stage (Days)"  value={demo.cropStageDays} />
+            <Row label="Demo Date"     value={demo.demoDate} />
           </View>
         </View>
 
@@ -190,18 +217,8 @@ const ProductDemoDetailScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Product & Dose</Text>
           <View style={styles.card}>
-            <Row label="Product"       value={demo.product_name} />
-            <Row label="Dose"          value={`${demo.dose} ${demo.dose_unit}`} />
-          </View>
-        </View>
-
-        {/* ── Result & Remark ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Result & Remarks</Text>
-          <View style={styles.card}>
-            <Row label="Demo Result"   value={RESULT_LABEL[demo.demo_result] ?? demo.demo_result} />
-            <Row label="Observations"  value={demo.additional_observations} />
-            <Row label="Remark"        value={demo.remark} />
+            <Row label="Product"       value={demo.productName} />
+            <Row label="Dose"          value={`${demo.dose} ${demo.doseUnit}`} />
           </View>
         </View>
 
@@ -210,48 +227,87 @@ const ProductDemoDetailScreen = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Before Demo Photos ({beforePhotos.length})</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
-              {beforePhotos.map((p) => (
-                <Image key={p.id} source={{ uri: p.image }} style={styles.photoThumb} />
+              {beforePhotos.map((p, i) => (
+                <Image key={`${p.uri}-${i}`} source={{ uri: p.uri }} style={styles.photoThumb} />
               ))}
             </ScrollView>
           </View>
         )}
 
-        {/* ── After Demo Photos ── */}
+        {/* ── After Demo / Result ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>After Demo Photos</Text>
+          <Text style={styles.sectionTitle}>After Demo & Result</Text>
 
-          {afterPhotosUploaded ? (
-            <>
-              <Text style={styles.afterUploaded}>
-                {existingAfterPhotos.length} photo{existingAfterPhotos.length !== 1 ? 's' : ''} uploaded.
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
-                {existingAfterPhotos.map((p) => (
-                  <Image key={p.id} source={{ uri: p.image }} style={styles.photoThumb} />
-                ))}
-              </ScrollView>
-            </>
+          {isCompleted ? (
+            <View style={styles.card}>
+              <Row label="Demo Result"   value={RESULT_LABEL[demo.demoResult ?? ''] ?? demo.demoResult} />
+              <Row label="Observations"  value={demo.additionalObservations} />
+              <Row label="Remark"        value={demo.remark} />
+              {existingAfterPhotos.length > 0 && (
+                <>
+                  <Text style={styles.afterPhotoLabel}>After Demo Photos ({existingAfterPhotos.length})</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
+                    {existingAfterPhotos.map((p, i) => (
+                      <Image key={`${p.uri}-${i}`} source={{ uri: p.uri }} style={styles.photoThumb} />
+                    ))}
+                  </ScrollView>
+                </>
+              )}
+              {afterPending && (
+                <Text style={styles.pendingNote}>After update saved — pending sync.</Text>
+              )}
+              {demo.afterSyncError && (
+                <Text style={styles.syncErrorNote}>Last sync error: {demo.afterSyncError}</Text>
+              )}
+            </View>
           ) : (
             <>
               <Text style={styles.afterHint}>
-                After-demo photos not yet uploaded. Add at least 2 photos below.
+                Record the demo result and after-demo photos now.
               </Text>
+
+              <DemoResultSelector
+                value={demoResult}
+                onChange={(v: DemoResult) => setDemoResult(v)}
+                error={formErrors.demo_result}
+              />
+
+              <Text style={styles.photoGroupLabel}>
+                After Demo Photos <Text style={styles.required}>*</Text>
+              </Text>
+              <Text style={styles.photoHint}>Minimum 2 photos required</Text>
               <PhotoPicker
                 photos={afterPhotos}
                 onAdd={(photo) => setAfterPhotos((prev) => [...prev, photo])}
                 onRemove={(uri) => setAfterPhotos((prev) => prev.filter((p) => p.uri !== uri))}
                 minPhotos={2}
+                error={formErrors.after_photos}
               />
+
               <View style={{ height: 12 }} />
-              {uploading ? (
+              <FormInput
+                label="Additional Observations"
+                value={observations}
+                onChangeText={setObservations}
+                placeholder="Enter any additional observations (optional)"
+                multiline
+                numberOfLines={3}
+              />
+              <FormInput
+                label="Remark / Notes"
+                value={remark}
+                onChangeText={setRemark}
+                placeholder="Enter remark or notes (optional)"
+                multiline
+                numberOfLines={3}
+                error={formErrors.remark}
+              />
+
+              <View style={{ height: 12 }} />
+              {saving ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Button
-                  title="Upload After Demo Photos"
-                  onPress={handleUpload}
-                  disabled={afterPhotos.length < 2}
-                />
+                <Button title="Save After Update" onPress={handleSave} />
               )}
             </>
           )}
@@ -285,7 +341,6 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 0.5,
     borderColor: colors.border,
-    opacity: 0.85,
   },
   row:       { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: colors.borderLight },
   rowLabel:  { fontSize: 13, color: colors.textMuted, flex: 1 },
@@ -294,8 +349,13 @@ const styles = StyleSheet.create({
   photoScroll:    { marginTop: 8 },
   photoThumb:     { width: 96, height: 96, borderRadius: 8, marginRight: 8, backgroundColor: colors.borderLight },
 
-  afterHint:     { fontSize: 13, color: colors.textSecondary, marginBottom: 12 },
-  afterUploaded: { fontSize: 13, color: '#1A8A3A', fontWeight: '600', marginBottom: 8 },
+  afterHint:      { fontSize: 13, color: colors.textSecondary, marginBottom: 12 },
+  afterPhotoLabel:{ fontSize: 12, fontWeight: '600', color: colors.textMuted, marginTop: 10, marginBottom: 4 },
+  photoGroupLabel:{ fontSize: 13, color: colors.textSecondary, fontWeight: '600', marginTop: 8, marginBottom: 2 },
+  photoHint:      { fontSize: 11, color: colors.textMuted, marginBottom: 8 },
+  required:       { color: colors.error },
+  pendingNote:    { fontSize: 12, color: '#C8900A', fontWeight: '600', marginTop: 8 },
+  syncErrorNote:  { fontSize: 12, color: colors.error, marginTop: 6 },
 
   errorText: { fontSize: 14, color: colors.error, textAlign: 'center', marginBottom: 16 },
   retryBtn:  { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 8 },

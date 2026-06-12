@@ -72,14 +72,42 @@ export const validateStep2 = (data: CropStageDraft): CropStageErrors => {
     errors.crop_name = 'Please select a crop.';
   }
 
-  if (!data.variety.trim() || data.variety === OTHERS_VALUE) {
-    if (!data.variety.trim()) {
-      errors.variety = 'Please select a variety.';
-    } else if (data.variety === OTHERS_VALUE) {
-      if (!data.custom_variety || data.custom_variety.trim().length < 2) {
-        errors.custom_variety = 'Please enter the variety name (at least 2 characters).';
+  // Varieties — at least one, each resolved, no duplicates.
+  if (!data.varieties || data.varieties.length === 0) {
+    errors.varieties = 'Please add at least one variety.';
+  } else {
+    const varietyErrors: string[] = [];
+    const seen = new Set<string>();
+    let hasVarietyError = false;
+
+    data.varieties.forEach((v, i) => {
+      let msg = '';
+      let resolved = '';
+      if (!v.variety.trim()) {
+        msg = 'Please select a variety.';
+      } else if (v.variety === OTHERS_VALUE) {
+        if (!v.custom_variety || v.custom_variety.trim().length < 2) {
+          msg = 'Please enter the variety name (at least 2 characters).';
+        } else {
+          resolved = v.custom_variety.trim().toLowerCase();
+        }
+      } else {
+        resolved = v.variety.trim().toLowerCase();
       }
-    }
+
+      if (!msg && resolved) {
+        if (seen.has(resolved)) {
+          msg = 'Duplicate variety — please remove it.';
+        } else {
+          seen.add(resolved);
+        }
+      }
+
+      varietyErrors[i] = msg;
+      if (msg) hasVarietyError = true;
+    });
+
+    if (hasVarietyError) errors.varietyErrors = varietyErrors;
   }
 
   if (!data.crop_stage) {
@@ -138,6 +166,7 @@ export const validateStep3 = (data: ProductDoseDraft): ProductDoseErrors => {
 
 // ─── Step 4 — Photos, Result & Remark ────────────────────────────────────────
 
+// Step 4 of the create wizard now captures BEFORE-demo photos only.
 export const validateStep4 = (
   data: DemoResultDraft,
   minPhotos: number = 2,
@@ -148,8 +177,29 @@ export const validateStep4 = (
     errors.before_photos = `At least ${minPhotos} before-demo photos are required.`;
   }
 
+  return errors;
+};
+
+// ─── After update — deferred result + after-photos (detail screen) ────────────
+
+export interface AfterUpdateErrors {
+  demo_result?: string;
+  after_photos?: string;
+  remark?: string;
+}
+
+export const validateAfterUpdate = (
+  data: { demo_result: string; after_photos: PhotoDraft[]; remark: string },
+  minPhotos: number = 2,
+): AfterUpdateErrors => {
+  const errors: AfterUpdateErrors = {};
+
   if (!data.demo_result) {
     errors.demo_result = 'Please select a demo result.';
+  }
+
+  if (data.after_photos.length < minPhotos) {
+    errors.after_photos = `At least ${minPhotos} after-demo photos are required.`;
   }
 
   if (data.remark.length > 500) {

@@ -179,6 +179,7 @@ const ProfileScreen = () => {
           <StatCell label="Visits" count={pendingStats.pendingVisits} />
           <StatCell label="Crop Entries" count={pendingStats.pendingCropEntries} />
           <StatCell label="Mandi" count={pendingStats.pendingMandiArrivals} />
+          <StatCell label="Demos" count={pendingStats.pendingProductDemos} />
         </View>
 
         {pendingStats.total > 0 && (

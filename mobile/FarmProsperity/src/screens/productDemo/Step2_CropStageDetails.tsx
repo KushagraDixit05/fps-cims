@@ -1,5 +1,6 @@
 // src/screens/productDemo/Step2_CropStageDetails.tsx
 // Product Demo wizard Step 2 — Crop & Stage Details.
+// One crop, one or more varieties of that crop (Crop-Monitoring style).
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -20,7 +21,7 @@ import FormInput from '../../components/FormInput';
 import Button from '../../components/Button';
 import InlinePicker from '../../components/InlinePicker';
 import SmartDropdown, { OTHERS_VALUE } from '../../components/SmartDropdown';
-import type { CropStageDraft, CropStageErrors } from '../../types/productDemo';
+import type { CropStageDraft, CropStageErrors, VarietyDraft } from '../../types/productDemo';
 import type { CropMaster } from '../../types/cropMonitoring';
 import { validateStep2, hasErrors } from '../../utils/productDemoValidation';
 import database from '../../database';
@@ -102,7 +103,22 @@ const Step2_CropStageDetails = ({ data, onChange, onNext, onBack }: Step2Props) 
   }, []);
 
   const handleCropSelect = (cropName: string) => {
-    onChange({ crop_name: cropName, variety: '', custom_variety: '' });
+    // Reset varieties when the crop changes.
+    onChange({ crop_name: cropName, varieties: [{ variety: '', custom_variety: '' }] });
+  };
+
+  const updateVariety = (index: number, patch: Partial<VarietyDraft>) => {
+    const next = data.varieties.map((v, i) => (i === index ? { ...v, ...patch } : v));
+    onChange({ varieties: next });
+  };
+
+  const addVariety = () => {
+    onChange({ varieties: [...data.varieties, { variety: '', custom_variety: '' }] });
+  };
+
+  const removeVariety = (index: number) => {
+    if (data.varieties.length <= 1) return;
+    onChange({ varieties: data.varieties.filter((_, i) => i !== index) });
   };
 
   const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
@@ -172,20 +188,51 @@ const Step2_CropStageDetails = ({ data, onChange, onNext, onBack }: Step2Props) 
           error={errors.crop_name}
         />
 
-        {/* Variety — SmartDropdown handles Others + custom text */}
-        <SmartDropdown
-          label="Variety"
-          required
-          value={data.variety}
-          customValue={data.custom_variety}
-          options={varietyOptions}
-          onSelect={v => onChange({ variety: v, custom_variety: v !== OTHERS_VALUE ? '' : data.custom_variety })}
-          onCustomChange={v => onChange({ custom_variety: v })}
-          placeholder={data.crop_name ? 'Select variety…' : 'Select crop first…'}
+        {/* Varieties — one crop, multiple varieties */}
+        <Text style={styles.varietyGroupLabel}>
+          Varieties <Text style={styles.required}>*</Text>
+        </Text>
+        {errors.varieties ? <Text style={styles.errorText}>{errors.varieties}</Text> : null}
+
+        {data.varieties.map((v, index) => (
+          <View key={index} style={styles.varietyRow}>
+            <View style={{ flex: 1 }}>
+              <SmartDropdown
+                label={`Variety ${index + 1}`}
+                required
+                value={v.variety}
+                customValue={v.custom_variety}
+                options={varietyOptions}
+                onSelect={val => updateVariety(index, {
+                  variety: val,
+                  custom_variety: val !== OTHERS_VALUE ? '' : v.custom_variety,
+                })}
+                onCustomChange={val => updateVariety(index, { custom_variety: val })}
+                placeholder={data.crop_name ? 'Select variety…' : 'Select crop first…'}
+                disabled={!data.crop_name}
+                error={errors.varietyErrors?.[index]}
+              />
+            </View>
+            {data.varieties.length > 1 && (
+              <TouchableOpacity
+                onPress={() => removeVariety(index)}
+                style={styles.removeBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.removeBtnText}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ))}
+
+        <TouchableOpacity
+          style={[styles.addVarietyBtn, !data.crop_name && styles.addVarietyBtnDisabled]}
+          onPress={addVariety}
           disabled={!data.crop_name}
-          error={errors.variety}
-          customError={errors.custom_variety}
-        />
+          activeOpacity={0.7}
+        >
+          <Text style={styles.addVarietyText}>+ ADD ANOTHER VARIETY</Text>
+        </TouchableOpacity>
 
         <InlinePicker
           label="Crop Stage"
@@ -255,6 +302,21 @@ const styles = StyleSheet.create({
   heading:       { fontSize: 18, fontWeight: '700', color: colors.textPrimary, flex: 1 },
   masterLoader:  { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   masterLoaderText: { fontSize: 12, color: colors.textMuted },
+  varietyGroupLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: '600', marginBottom: 6 },
+  varietyRow:    { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  removeBtn:     { marginTop: 30, padding: 6 },
+  removeBtnText: { fontSize: 16, color: colors.error, fontWeight: '700' },
+  addVarietyBtn: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  addVarietyBtnDisabled: { opacity: 0.4 },
+  addVarietyText: { fontSize: 13, color: colors.primary, fontWeight: '700', letterSpacing: 0.5 },
   dateWrapper:   { marginBottom: 14 },
   dateLabel:     { fontSize: 13, color: colors.textSecondary, fontWeight: '500', marginBottom: 6 },
   required:      { color: colors.error },

@@ -16,7 +16,7 @@
 
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
-export const DB_SCHEMA_VERSION = 5;
+export const DB_SCHEMA_VERSION = 7;
 
 export default appSchema({
   version: DB_SCHEMA_VERSION,
@@ -172,7 +172,8 @@ export default appSchema({
         { name: 'total_land_acre', type: 'string', isOptional: true },
         // Step 2 — Crop & stage
         { name: 'crop_name',       type: 'string' },
-        { name: 'variety',         type: 'string' },
+        { name: 'variety',         type: 'string' },             // primary (compat)
+        { name: 'varieties_json',  type: 'string', isOptional: true }, // JSON list of variety names
         { name: 'crop_stage',      type: 'string' },
         { name: 'crop_stage_days', type: 'string' },
         { name: 'demo_date',       type: 'string' },
@@ -180,10 +181,14 @@ export default appSchema({
         { name: 'product_name',    type: 'string' },
         { name: 'dose',            type: 'string' },
         { name: 'dose_unit',       type: 'string' },
-        // Step 4 — Result
-        { name: 'demo_result',     type: 'string' },
+        // Step 4 — Result (deferred to the After update; optional until then)
+        { name: 'demo_result',     type: 'string', isOptional: true },
         { name: 'additional_observations', type: 'string', isOptional: true },
         { name: 'remark',          type: 'string', isOptional: true },
+        // Before/After lifecycle
+        { name: 'demo_phase',         type: 'string' },           // 'before' | 'completed'
+        { name: 'after_pending_sync', type: 'boolean' },          // After data entered, awaiting push
+        { name: 'after_sync_error',   type: 'string', isOptional: true },
         // Step 4 — Photos (JSON arrays)
         { name: 'before_photos_json', type: 'string', isOptional: true },
         { name: 'after_photos_json',  type: 'string', isOptional: true },

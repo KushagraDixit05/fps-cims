@@ -13,6 +13,7 @@ import {
 import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
+import { OTHERS_VALUE } from '../../components/SmartDropdown';
 import type { ProductDemoFormState, DemoResult } from '../../types/productDemo';
 
 interface ReviewScreenProps {
@@ -93,8 +94,6 @@ const ReviewScreen = ({
 }: ReviewScreenProps) => {
   const { farmerDetails, cropStage, productDose, result } = state;
 
-  const demoResult = result.demo_result as DemoResult | '';
-
   return (
     <ScrollView
       style={styles.scroll}
@@ -118,7 +117,13 @@ const ReviewScreen = ({
       <Card>
         <SectionHeader title="Crop & Stage Details" onEdit={onEditCrop} />
         <Row label="Crop"             value={cropStage.crop_name} />
-        <Row label="Variety"          value={cropStage.variety} />
+        <Row
+          label={cropStage.varieties.length > 1 ? 'Varieties' : 'Variety'}
+          value={cropStage.varieties
+            .map((v) => (v.variety === OTHERS_VALUE ? v.custom_variety.trim() : v.variety))
+            .filter((n) => n.length > 0)
+            .join(', ')}
+        />
         <Row label="Crop Stage"       value={STAGE_LABELS[cropStage.crop_stage] ?? cropStage.crop_stage} />
         <Row label="Stage (Days)"     value={cropStage.crop_stage_days} />
         <Row label="Demo Date"        value={cropStage.demo_date} />
@@ -131,11 +136,10 @@ const ReviewScreen = ({
         <Row label="Dose"             value={`${productDose.dose} ${productDose.dose_unit}`} />
       </Card>
 
-      {/* Photos & Result */}
+      {/* Before Photos */}
       <Card>
-        <SectionHeader title="Photos & Demo Result" onEdit={onEditResult} />
+        <SectionHeader title="Before Demo Photos" onEdit={onEditResult} />
 
-        <Text style={styles.photoGroupLabel}>Before Demo Photos</Text>
         <View style={styles.photoStrip}>
           {result.before_photos.slice(0, 4).map((p) => (
             <Image key={p.uri} source={{ uri: p.uri }} style={styles.photoThumb} />
@@ -150,38 +154,10 @@ const ReviewScreen = ({
           )}
         </View>
 
-        <Text style={styles.photoGroupLabel}>After Demo Photos</Text>
-        <View style={styles.photoStrip}>
-          {result.after_photos.slice(0, 4).map((p) => (
-            <Image key={p.uri} source={{ uri: p.uri }} style={styles.photoThumb} />
-          ))}
-          {result.after_photos.length > 4 && (
-            <View style={styles.photoMore}>
-              <Text style={styles.photoMoreText}>+{result.after_photos.length - 4}</Text>
-            </View>
-          )}
-          {result.after_photos.length === 0 && (
-            <Text style={styles.noneText}>No photos</Text>
-          )}
-        </View>
-
-        {demoResult ? (
-          <View style={styles.resultBadgeRow}>
-            <Text style={styles.rowLabel}>Demo Result</Text>
-            <View style={[styles.resultBadge, { backgroundColor: RESULT_BG[demoResult] }]}>
-              <Text style={[styles.resultBadgeText, { color: RESULT_COLOR[demoResult] }]}>
-                {RESULT_LABELS[demoResult]}
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <Row label="Demo Result" value="—" />
-        )}
-
-        {result.additional_observations ? (
-          <Row label="Observations" value={result.additional_observations} />
-        ) : null}
-        <Row label="Remark" value={result.remark || 'None'} />
+        <Text style={styles.afterNote}>
+          Demo result and after-demo photos will be added later from the demo
+          details, once this entry has synced.
+        </Text>
       </Card>
 
       {/* Nav buttons */}
@@ -223,6 +199,7 @@ const styles = StyleSheet.create({
   photoMore:      { width: 56, height: 56, borderRadius: 8, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' },
   photoMoreText:  { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   noneText:       { fontSize: 12, color: colors.textMuted, fontStyle: 'italic' },
+  afterNote:      { fontSize: 12, color: colors.textMuted, fontStyle: 'italic', marginTop: 4 },
   resultBadgeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: colors.borderLight },
   resultBadge:    { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
   resultBadgeText:{ fontSize: 12, fontWeight: '700', textTransform: 'capitalize' },

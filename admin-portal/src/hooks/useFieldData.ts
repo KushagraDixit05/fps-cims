@@ -9,6 +9,7 @@ export interface VisitFilters {
   executive?: string;
   district?: string;
   crop?: string;
+  variety?: string;
   condition?: string;
   page?: number;
   page_size?: number;
@@ -31,6 +32,7 @@ export interface DemoFilters {
   executive?: string;
   district?: string;
   crop?: string;
+  variety?: string;
   product?: string;
   result?: string;
   page?: number;

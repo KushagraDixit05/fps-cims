@@ -65,7 +65,10 @@ class ProductDemo(models.Model):
 
     # Step 2 — Crop & stage
     crop_name      = models.CharField(max_length=200)
+    # Primary variety (kept for backward compatibility / legacy readers).
     variety        = models.CharField(max_length=200)
+    # One crop, one or more varieties of that crop. JSON list of variety names.
+    varieties      = models.JSONField(default=list, blank=True)
     crop_stage     = models.CharField(max_length=20, choices=CROP_STAGE_CHOICES)
     crop_stage_days = models.PositiveSmallIntegerField()
     demo_date      = models.DateField()
@@ -75,10 +78,18 @@ class ProductDemo(models.Model):
     dose         = models.DecimalField(max_digits=10, decimal_places=4)
     dose_unit    = models.CharField(max_length=20, choices=DOSE_UNIT_CHOICES)
 
-    # Step 4 — Result
-    demo_result              = models.CharField(max_length=20, choices=DEMO_RESULT_CHOICES)
+    # Step 4 — Result (deferred to the "After" update; null until then)
+    demo_result              = models.CharField(max_length=20, choices=DEMO_RESULT_CHOICES, null=True, blank=True)
     additional_observations  = models.TextField(blank=True)
     remark                   = models.TextField(blank=True)
+
+    # Before/After lifecycle: 'before' = setup + before-photos submitted,
+    # awaiting the after-demo result; 'completed' = after update done.
+    DEMO_PHASE_CHOICES = [
+        ('before',    'Before — awaiting result'),
+        ('completed', 'Completed'),
+    ]
+    demo_phase = models.CharField(max_length=20, choices=DEMO_PHASE_CHOICES, default='before')
 
     # GPS
     location  = models.PointField(null=True, blank=True)
@@ -96,6 +107,14 @@ class ProductDemo(models.Model):
         ordering = ['-submitted_at']
         verbose_name = 'Product Demo'
         verbose_name_plural = 'Product Demos'
+        constraints = [
+            # Offline idempotency: one record per (executive, client local_id).
+            models.UniqueConstraint(
+                fields=['executive', 'local_id'],
+                condition=~models.Q(local_id=''),
+                name='uniq_productdemo_executive_local_id',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.farmer_name} — {self.product_name} ({self.demo_date})"

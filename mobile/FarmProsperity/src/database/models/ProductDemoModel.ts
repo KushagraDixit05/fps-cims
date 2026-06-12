@@ -18,7 +18,8 @@ export class ProductDemoModel extends Model {
 
   // Step 2 — Crop & stage
   @field('crop_name')       cropName!: string;
-  @field('variety')         variety!: string;
+  @field('variety')         variety!: string;                    // primary (compat)
+  @field('varieties_json')  varietiesJson!: string | null;       // JSON list of names
   @field('crop_stage')      cropStage!: string;
   @field('crop_stage_days') cropStageDays!: string;
   @field('demo_date')       demoDate!: string;
@@ -28,10 +29,15 @@ export class ProductDemoModel extends Model {
   @field('dose')            dose!: string;
   @field('dose_unit')       doseUnit!: string;
 
-  // Step 4 — Result
-  @field('demo_result')     demoResult!: string;
+  // Step 4 — Result (deferred to the After update; null until then)
+  @field('demo_result')     demoResult!: string | null;
   @field('additional_observations') additionalObservations!: string | null;
   @field('remark')          remark!: string | null;
+
+  // Before/After lifecycle
+  @field('demo_phase')         demoPhase!: string;            // 'before' | 'completed'
+  @field('after_pending_sync') afterPendingSync!: boolean;
+  @field('after_sync_error')   afterSyncError!: string | null;
 
   // Step 4 — Photos (JSON strings)
   @field('before_photos_json') beforePhotosJson!: string | null;

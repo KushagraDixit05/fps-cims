@@ -74,6 +74,14 @@ class MandiArrival(models.Model):
     class Meta:
         ordering = ['-date']
         unique_together = ['mandi', 'date', 'commodity']  # one entry per mandi per day per commodity
+        constraints = [
+            # Offline idempotency: one record per (submitted_by, client local_id).
+            models.UniqueConstraint(
+                fields=['submitted_by', 'local_id'],
+                condition=~models.Q(local_id=''),
+                name='uniq_mandiarrival_submittedby_local_id',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.mandi.name} · {self.date} · {self.arrival_quantity} Qt"
