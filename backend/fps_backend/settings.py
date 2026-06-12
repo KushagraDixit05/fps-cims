@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,14 +24,28 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-#SECRET_KEY = 'django-insecure-@-%zk!*rzs^1o@)p&g(o+kgh_6w_mm_ecdg24&z#(#bz8ngc=&'
-SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
-#DEBUG = True
 DEBUG = os.getenv('DEBUG') == 'True'
-_allowed = os.getenv('ALLOWED_HOSTS', '*')
-ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()]
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# Fail fast in production if SECRET_KEY is missing — never boot with a None or
+# guessable key. A throwaway key is allowed ONLY in local DEBUG runs.
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-dev-only-key-do-not-use-in-production'
+    else:
+        raise ImproperlyConfigured('SECRET_KEY environment variable must be set in production.')
+
+# ALLOWED_HOSTS: explicit in production (no wildcard). Wildcard is permitted only
+# under DEBUG for local development convenience.
+_allowed = os.getenv('ALLOWED_HOSTS', '').strip()
+if _allowed:
+    ALLOWED_HOSTS = [h.strip() for h in _allowed.split(',') if h.strip()]
+elif DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    raise ImproperlyConfigured('ALLOWED_HOSTS environment variable must be set in production.')
 
 
 # Application definition
@@ -197,6 +212,21 @@ else:
         for o in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
         if o.strip()
     ]
+
+# ---------------------------------------------------------------------------
+# Production security (proxy-aware). Render terminates TLS at its edge proxy and
+# forwards X-Forwarded-Proto, so Django must trust that header to know the
+# request was HTTPS. All hardening is gated on `not DEBUG` so local dev over
+# plain HTTP is unaffected.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

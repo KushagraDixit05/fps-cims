@@ -75,11 +75,50 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   /**
-   * On mount: try to fetch the current user using the stored access token.
-   * If it fails, mark session as absent (triggers Login screen).
+   * On mount: restore the session in an offline-first way.
+   *
+   *  1. No tokens at all → genuinely logged out → Login screen.
+   *  2. A token exists + a cached user → restore immediately (works fully
+   *     offline; never blocks the field exec on a network round-trip).
+   *  3. Refresh /auth/me/ in the background. On success, update the cache.
+   *     On failure, re-check the access token:
+   *       - still present  → transient/network error → STAY logged in.
+   *       - gone           → the API interceptor cleared it after refresh
+   *                          truly failed → real auth failure → LOGOUT.
+   *
+   * A token with no cached user (e.g. first launch after upgrade) falls back to
+   * a blocking /auth/me/: success restores, network failure stays offline-blank
+   * (SESSION_NONE) since we have nothing to show.
    */
   useEffect(() => {
     const restoreSession = async () => {
+      const hasToken = await authApi.hasAccessToken();
+      if (!hasToken) {
+        dispatch({ type: 'SESSION_NONE' });
+        return;
+      }
+
+      const cachedUser = await authApi.getCachedUser();
+
+      if (cachedUser) {
+        // Optimistic restore — usable offline straight away.
+        dispatch({ type: 'RESTORE_SESSION', user: cachedUser });
+        // Background refresh; do not block or downgrade the session on failure.
+        try {
+          const fresh = await authApi.getMe();
+          dispatch({ type: 'RESTORE_SESSION', user: fresh });
+        } catch {
+          const stillAuthed = await authApi.hasAccessToken();
+          if (!stillAuthed) {
+            // Tokens cleared by the interceptor → refresh exhausted → real logout.
+            dispatch({ type: 'LOGOUT' });
+          }
+          // else: transient/network error → keep the cached session.
+        }
+        return;
+      }
+
+      // Token but no cached user — must hit the network to know who we are.
       try {
         const user = await authApi.getMe();
         dispatch({ type: 'RESTORE_SESSION', user });
@@ -102,6 +141,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const loginWithTokens = useCallback(async (access: string, refresh: string, user: User) => {
     // Persist tokens so future API calls work
     await authApi.storeTokens(access, refresh);
+    // Cache the profile so the next launch can restore the session offline.
+    await authApi.cacheUser(user);
     dispatch({ type: 'LOGIN', user });
   }, []);
 

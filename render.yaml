@@ -1,0 +1,37 @@
+# Render Blueprint — reproducible deploy for the FPS Django backend.
+#
+# Uses the Docker runtime so GDAL/GEOS/PROJ (required by GeoDjango/PostGIS) are
+# installed from backend/Dockerfile. Container start runs migrate + collectstatic
+# + seeds before gunicorn; a failed migration now aborts the boot (see Dockerfile).
+#
+# Secrets (sync: false) are set once in the Render dashboard, not committed here:
+#   SECRET_KEY, DATABASE_URL (Neon, with ?sslmode=require), CLOUDINARY_URL,
+#   ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, and DJANGO_SUPERUSER_* for first boot.
+services:
+  - type: web
+    name: fps-cims-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    region: singapore
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: ALLOWED_HOSTS
+        sync: false           # e.g. fps-cims-backend.onrender.com
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false           # admin-portal origin(s), comma-separated
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false

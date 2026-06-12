@@ -40,6 +40,10 @@ export const BASE_URL = getBaseUrl();
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'access_token',
   REFRESH_TOKEN: 'refresh_token',
+  // Cached profile of the logged-in user. Lets the app restore a session
+  // offline (no /auth/me/ round-trip) so field execs are never kicked to the
+  // Login screen just because the device has no signal at startup.
+  CACHED_USER: 'cached_user',
 } as const;
 
 // ─── Axios Instance ───────────────────────────────────────────────────────────
