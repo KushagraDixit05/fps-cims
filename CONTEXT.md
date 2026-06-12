@@ -22,6 +22,7 @@
 | Database | PostgreSQL 15 with PostGIS (geo extension) via Docker |
 | Mobile | React Native 0.85.3, TypeScript, New Architecture enabled |
 | Auth | JWT (access: 12h, refresh: 30d, rotation enabled) |
+| Admin Portal | Next.js 16, TypeScript, Tailwind CSS, shadcn/ui, Recharts, TanStack Query |
 | Mobile navigation | React Navigation 7 (stack + bottom tabs + drawer) |
 | Mobile forms | react-hook-form + custom useReducer hook (wizard) |
 | Mobile local storage | WatermelonDB + react-native-quick-sqlite (offline-first DB) |
@@ -53,6 +54,12 @@ fps/
 │   │   └── management/commands/
 │   │       └── seed_crop_master.py ← Seeds 8 crops, 25 varieties, 46 blocks
 │   ├── mandi/                      ← Mandi master + daily arrivals
+│   ├── admin_portal/               ← Admin Portal backend (new)
+│   │   ├── views.py                ← List + streaming CSV export views for FarmerVisits,
+│   │   │                               MandiArrivals, ProductDemos (is_staff gated)
+│   │   ├── serializers.py          ← Admin-oriented serializers
+│   │   ├── permissions.py          ← IsAdminUser permission class
+│   │   └── urls.py                 ← /api/admin/field-data/* routes
 │   ├── product_demo/               ← Product Demo module (new)
 │   │   ├── models.py               ← ProductMaster, ProductDemo, DemoPhoto
 │   │   ├── serializers.py          ← create/list/detail serializers
@@ -183,6 +190,35 @@ fps/
 │   │   └── run-android.sh          ← Smart launcher (auto-detects emulator vs device)
 │   └── package.json
 │
+├── admin-portal/                   ← Next.js 16 admin portal
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── (dashboard)/
+│   │   │   │   ├── page.tsx            ← Dashboard overview
+│   │   │   │   ├── analytics/          ← Productivity + SLA charts
+│   │   │   │   ├── users/              ← User list + drawer (create/edit)
+│   │   │   │   ├── roles/              ← Role list + role detail
+│   │   │   │   ├── permissions/        ← Permission matrix
+│   │   │   │   ├── approvals/          ← Maker-checker approval queue
+│   │   │   │   ├── audit/              ← Audit log table
+│   │   │   │   └── field-data/
+│   │   │   │       ├── visits/         ← Farmer Visits table + CSV export
+│   │   │   │       ├── mandi/          ← Mandi Arrivals table + CSV export
+│   │   │   │       └── demos/          ← Product Demos table + CSV export
+│   │   │   └── login/                  ← Admin login (JWT auth)
+│   │   ├── components/
+│   │   │   ├── common/                 ← DataTable, KPICard, PageHeader, StatusBadge
+│   │   │   ├── dashboard/              ← StatsStrip, ProductivityChart, ApprovalSLAChart
+│   │   │   ├── layout/                 ← AppShell, Sidebar, TopBar, AuthGuard
+│   │   │   ├── ui/                     ← shadcn/ui primitives
+│   │   │   └── users/UserDrawer.tsx
+│   │   ├── hooks/                      ← useUsers, useRoles, useApprovals, useAuditLog,
+│   │   │                                   usePermissions, useAnalytics, useFieldData
+│   │   ├── lib/                        ← api.ts (Axios), queryClient.ts, utils.ts
+│   │   ├── store/authStore.ts          ← Zustand auth state
+│   │   └── types/models.ts             ← All TypeScript interfaces
+│   └── package.json
+│
 ├── docs/
 │   ├── PHASE-0-Foundation-Setup.md
 │   ├── PHASE-1-Backend-Models-API.md
@@ -213,6 +249,7 @@ fps/
 | **Product Demo Module** | ✅ **Done** | Full 4-step wizard (backend + mobile) — new `product_demo` Django app, schema v3 |
 | **Phase 3 — Offline Sync** | ✅ **Done** | WatermelonDB v3 schema, 5 write operations, background auto-sync, sync dashboard |
 | **Phase 4 — UI Redesign** | 🔄 **In Progress** | Design system, new auth flow (Splash/Welcome/Login/Signup), redesigned Home, drawer nav — active via AppNavigatorV2 |
+| **Admin Portal** | ✅ **Done** | Next.js 16 at `admin-portal/`; 8 pages: Dashboard, Analytics, Users, Roles, Permissions, Approvals, Audit, Field Data (Visits/Mandi/Demos) with CSV export |
 | **Cloud Deployment** | ✅ **Done** | Dockerized backend on Render, PostgreSQL+PostGIS, auto-migrate/seed, release APK distributed |
 
 ---
@@ -235,6 +272,13 @@ npm start
 adb reverse tcp:8000 tcp:8000
 adb reverse tcp:8081 tcp:8081
 npm run android:phone
+```
+
+### Admin portal (→ localhost:3000)
+```bash
+cd "/media/kushagra/crucial/FPS internship/fps/admin-portal"
+npm run dev
+# Login: use Django superuser credentials; requires backend running
 ```
 
 ### Build and distribute release APK (→ cloud backend)
@@ -356,6 +400,16 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 | GET | `/api/product-demos/<uuid>/` | Full demo detail with before/after photos |
 | GET | `/api/product-demos/summary/` | Dashboard counts (today/week/month) |
 | GET | `/api/product-master/` | Active product catalogue for dropdown |
+
+### Admin Portal (is_staff required)
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/admin/field-data/visits/` | Paginated FarmerVisits list (filters: date_from, date_to, district, crop, executive) |
+| GET | `/api/admin/field-data/visits/export/` | Streaming CSV export of FarmerVisits |
+| GET | `/api/admin/field-data/mandi/` | Paginated MandiArrivals list (filters: date_from, date_to, mandi_id) |
+| GET | `/api/admin/field-data/mandi/export/` | Streaming CSV export of MandiArrivals |
+| GET | `/api/admin/field-data/demos/` | Paginated ProductDemos list (filters: date_from, date_to, district, product) |
+| GET | `/api/admin/field-data/demos/export/` | Streaming CSV export of ProductDemos |
 
 ### Master Data
 | Method | Endpoint | Description |

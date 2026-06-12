@@ -54,6 +54,7 @@ import CropMonitoringListScreen from '../screens/cropMonitoring/CropMonitoringLi
 import MandiArrivalFormScreen from '../screens/mandiArrival/MandiArrivalFormScreen';
 import ProductDemoListScreen from '../screens/productDemo/ProductDemoListScreen';
 import ProductDemoFormScreen from '../screens/productDemo/ProductDemoFormScreen';
+import ProductDemoDetailScreen from '../screens/productDemo/ProductDemoDetailScreen';
 
 // Type imports
 import type { RootStackParamList, MainTabParamList, AuthStackParamList } from './types';
@@ -104,7 +105,7 @@ const MainTabs = () => (
     {/* Home tab now uses the v2 HomeScreen */}
     <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Home' }} />
     <Tab.Screen name="Crops" component={CropListScreen} options={{ tabBarLabel: 'Crops' }} />
-    <Tab.Screen name="Mandi" component={MandiListScreen} options={{ tabBarLabel: 'Mandi' }} />
+    <Tab.Screen name="Mandi" component={MandiListScreen} options={{ tabBarLabel: 'Market' }} />
     <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Reports' }} />
   </Tab.Navigator>
 );
@@ -176,6 +177,7 @@ const AppNavigatorV2 = () => {
             {/* ── Product Demo Module ── */}
             <RootStack.Screen name="ProductDemoList" component={ProductDemoListScreen} options={{ headerShown: false }} />
             <RootStack.Screen name="ProductDemoForm" component={ProductDemoFormScreen} options={{ headerShown: false }} />
+            <RootStack.Screen name="ProductDemoDetail" component={ProductDemoDetailScreen} options={{ headerShown: false }} />
 
             {/* ── Misc ── */}
             <RootStack.Screen name="Profile" component={ProfileScreen} options={{ ...headerOptions, title: 'My Profile' }} />

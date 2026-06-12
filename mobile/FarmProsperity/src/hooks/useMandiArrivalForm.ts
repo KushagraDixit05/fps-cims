@@ -47,6 +47,7 @@ const INITIAL_STATE: MandiArrivalFormState = {
   mandiDetails: {
     mandi_id: '',
     mandi_name: '',
+    custom_mandi_name: '',
     date: '',          // set to todayISO() in Step1 component default
     total_arrival_qt: '',
   },

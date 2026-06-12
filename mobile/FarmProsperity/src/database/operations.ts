@@ -215,12 +215,20 @@ export const saveMandiArrivalWizardLocally = async (
 
   let localId = '';
 
+  const isOthersMandi = mandiDetails.mandi_id === 'others';
+  const resolvedMandiName = isOthersMandi
+    ? (mandiDetails.custom_mandi_name?.trim() || 'Others')
+    : (mandiDetails.mandi_name || null);
+
   await database.write(async () => {
     const record = await database.collections
       .get<MandiArrivalModel>('mandi_arrivals')
       .create((a) => {
-        a.mandiId          = Number(mandiDetails.mandi_id);
-        a.mandiName        = mandiDetails.mandi_name || null;
+        a.mandiId          = isOthersMandi ? 0 : Number(mandiDetails.mandi_id);
+        a.mandiName        = resolvedMandiName;
+        (a as any).mandiCustomName = isOthersMandi
+          ? (mandiDetails.custom_mandi_name?.trim() || null)
+          : null;
         // Legacy columns — filled with first variety values for backward compat
         a.commodity        = legacyCommodity;
         a.date             = mandiDetails.date;
@@ -248,7 +256,7 @@ export const saveMandiArrivalWizardLocally = async (
 
   return {
     id:            localId,
-    mandi_name:    mandiDetails.mandi_name || `Mandi #${mandiDetails.mandi_id}`,
+    mandi_name:    resolvedMandiName || `Mandi #${mandiDetails.mandi_id}`,
     variety_count: varieties.length,
   };
 };

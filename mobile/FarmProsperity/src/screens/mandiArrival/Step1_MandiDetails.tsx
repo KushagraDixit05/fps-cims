@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { colors } from '../../utils/colors';
 import FormInput from '../../components/FormInput';
@@ -19,11 +20,12 @@ import InlinePicker from '../../components/InlinePicker';
 import type { MandiDetailsDraft, MandiDetailsErrors } from '../../types/mandiArrival';
 import { validateStep1, hasMandiDetailsErrors } from '../../utils/mandiArrivalValidation';
 import { todayISO } from '../../utils/helpers';
-import { Q } from '@nozbe/watermelondb';
 import database from '../../database';
 import { MandiModel } from '../../database/models/MandiModel';
 import { getMandis } from '../../api/mandi';
 import type { Mandi } from '../../types';
+
+const OTHERS_MANDI_ID = 'others';
 
 interface Step1Props {
   data: MandiDetailsDraft;
@@ -45,40 +47,47 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
 
   // Load mandis from local DB first (offline-first), API fallback
   useEffect(() => {
-    const load = async () => {
-      try {
-        const localMandis = await database.collections
-          .get<MandiModel>('mandis')
-          .query(Q.where('is_active', true))
-          .fetch();
-
-        if (localMandis.length > 0) {
-          setMandis(
-            localMandis.map((m) => ({
-              id:        m.serverId,
-              name:      m.name,
-              district:  m.district ?? '',
-              state:     m.state ?? '',
-              is_active: m.isActive,
-            })),
-          );
-        } else {
-          // Cache empty — try API
-          const apiMandis = await getMandis();
-          setMandis(apiMandis);
-        }
-      } catch {
-        // silently fall back to empty list
-      } finally {
-        setLoading(false);
-      }
-    };
     load();
   }, []);
 
+  const load = async () => {
+    setLoading(true);
+    try {
+      // Query all locally stored mandis (no is_active filter — show everything)
+      const localMandis = await database.collections
+        .get<MandiModel>('mandis')
+        .query()
+        .fetch();
+
+      if (localMandis.length > 0) {
+        setMandis(
+          localMandis.map((m) => ({
+            id:        m.serverId,
+            name:      m.name,
+            district:  m.district ?? '',
+            state:     m.state ?? '',
+            is_active: m.isActive,
+          })),
+        );
+      } else {
+        // Cache empty — try API
+        const apiMandis = await getMandis();
+        setMandis(apiMandis);
+      }
+    } catch {
+      // leave mandis empty — retry button will be shown
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleMandiSelect = (mandiId: string) => {
-    const mandi = mandis.find((m) => String(m.id) === mandiId);
-    onChange({ mandi_id: mandiId, mandi_name: mandi?.name ?? '' });
+    if (mandiId === OTHERS_MANDI_ID) {
+      onChange({ mandi_id: OTHERS_MANDI_ID, mandi_name: 'Others', custom_mandi_name: '' });
+    } else {
+      const mandi = mandis.find((m) => String(m.id) === mandiId);
+      onChange({ mandi_id: mandiId, mandi_name: mandi?.name ?? '', custom_mandi_name: '' });
+    }
   };
 
   const handleNext = () => {
@@ -87,10 +96,13 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
     if (!hasMandiDetailsErrors(errs)) onNext();
   };
 
-  const mandiOptions = mandis.map((m) => ({
-    value: String(m.id),
-    label: m.district ? `${m.name} (${m.district})` : m.name,
-  }));
+  const mandiOptions = [
+    ...mandis.map((m) => ({
+      value: String(m.id),
+      label: m.district ? `${m.name} (${m.district})` : m.name,
+    })),
+    { value: OTHERS_MANDI_ID, label: 'Others (Please Specify)' },
+  ];
 
   return (
     <KeyboardAvoidingView
@@ -118,6 +130,15 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
           </View>
         )}
 
+        {!loading && mandis.length === 0 && (
+          <View style={styles.retryRow}>
+            <Text style={styles.retryMsg}>Could not load mandi list.</Text>
+            <TouchableOpacity onPress={load} style={styles.retryBtn} activeOpacity={0.75}>
+              <Text style={styles.retryBtnText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <InlinePicker
           label="Mandi Name"
           required
@@ -128,6 +149,17 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
           disabled={loading}
           error={errors.mandi_id}
         />
+
+        {data.mandi_id === OTHERS_MANDI_ID && (
+          <FormInput
+            label="Mandi Name (Custom)"
+            required
+            value={data.custom_mandi_name ?? ''}
+            onChangeText={(v) => onChange({ custom_mandi_name: v })}
+            placeholder="Enter mandi name"
+            error={errors.custom_mandi_name}
+          />
+        )}
 
         <FormInput
           label="Date"
@@ -164,6 +196,10 @@ const styles = StyleSheet.create({
   heading:       { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   loader:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   loaderText:    { fontSize: 12, color: colors.textMuted },
+  retryRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, padding: 10, backgroundColor: '#FFF3CD', borderRadius: 8 },
+  retryMsg:      { fontSize: 13, color: '#856404', flex: 1 },
+  retryBtn:      { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: colors.primary, borderRadius: 6 },
+  retryBtnText:  { color: 'white', fontSize: 13, fontWeight: '600' },
 });
 
 export default Step1_MandiDetails;

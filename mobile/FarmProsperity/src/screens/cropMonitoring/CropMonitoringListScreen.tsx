@@ -74,7 +74,7 @@ const CropMonitoringListScreen = () => {
   return (
     <View style={styles.root}>
       <ScreenHeader
-        title="Field Visits"
+        title="Crop Intelligence — Visits"
         subtitle={`${visits.length} record${visits.length !== 1 ? 's' : ''}`}
         onBack={() => navigation.goBack()}
       />

@@ -1,7 +1,7 @@
 # Farm Prosperity Solutions (FPS) — Progress Report
 
-> **Last updated:** 8 June 2026
-> **Overall status:** Phases 0–4 (partial) complete · Cloud deployed on Render · Release APK distributed
+> **Last updated:** 12 June 2026
+> **Overall status:** Phases 0–4 (partial) complete · Admin Portal live · Cloud deployed on Render · Release APK distributed
 
 ---
 
@@ -16,6 +16,7 @@
 | Product Demo Module | ✅ End-to-end complete (backend + 4-step wizard) |
 | Offline Sync (Phase 3) | ✅ Complete — WatermelonDB v3 + auto-sync + sync dashboard |
 | UI Redesign (Phase 4) | 🔄 In progress — auth flow + home screen + drawer nav complete |
+| Admin Portal | ✅ Complete — Next.js 16, 8 pages, field data viewing + CSV export |
 | Cloud Deployment | ✅ Complete — Render (Docker + PostgreSQL + PostGIS) |
 | Release APK | ✅ Built and distributed to testers |
 
@@ -149,6 +150,32 @@ Sync engine: `syncPendingRecords()` finds `is_synced=false` records, POSTs to Dj
 - [ ] Map view of visit GPS locations
 - [ ] Farmer search / autocomplete
 - [ ] Export PDF / Excel reports
+
+---
+
+### ✅ Admin Portal
+
+Next.js 16 app at `admin-portal/`, dev server at `localhost:3000`.
+
+**8 pages live:**
+| Page | Feature |
+|---|---|
+| Dashboard | KPI cards + stats strip |
+| Analytics | Productivity chart + Approval SLA chart |
+| Users | Paginated user list + create/edit drawer |
+| Roles | Role list + role detail with permission matrix |
+| Permissions | Full permission matrix editor |
+| Approvals | Maker-checker approval queue + detail view |
+| Audit Log | Full audit trail table |
+| Field Data — Farmer Visits | Filterable paginated table + Export CSV |
+| Field Data — Mandi Arrivals | Filterable paginated table + Export CSV |
+| Field Data — Product Demos | Filterable paginated table + Export CSV |
+
+**Backend: `admin_portal` Django app**
+- `GET/POST /api/admin/field-data/visits/` — list + streaming CSV export
+- `GET/POST /api/admin/field-data/mandi/` — list + streaming CSV export
+- `GET/POST /api/admin/field-data/demos/` — list + streaming CSV export
+- All endpoints gated by `is_staff`; filters: date range, district, crop/product, executive
 
 ---
 

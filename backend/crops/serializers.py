@@ -175,7 +175,7 @@ class FarmerVisitListSerializer(serializers.ModelSerializer):
         model = FarmerVisit
         fields = [
             'id', 'farmer_name', 'village_name', 'block_name',
-            'district_name', 'crop_count', 'submitted_at',
+            'district_name', 'crop_count', 'submitted_at', 'approval_status',
         ]
 
 
@@ -195,7 +195,7 @@ class FarmerVisitDetailSerializer(serializers.ModelSerializer):
             'block_name', 'district_name', 'total_land_acre',
             'latitude', 'longitude', 'location_display',
             'remark', 'submitted_at', 'crop_count', 'crops', 'photos',
-            'local_id', 'is_synced',
+            'local_id', 'is_synced', 'approval_status',
         ]
 
     def get_crop_count(self, obj: FarmerVisit) -> int:
@@ -315,7 +315,10 @@ class FarmerVisitCreateSerializer(serializers.ModelSerializer):
                 date_of_sowing=crop_dict['date_of_sowing'],
                 current_area_acre=crop_dict['current_area_acre'],
                 last_year_area_acre=crop_dict.get('last_year_area_acre') or None,
-                this_year_area_acre=crop_dict.get('this_year_area_acre', ''),
+                # The mobile UI collapsed "this year" and "current" into one field, so the
+                # client only sends current_area_acre. Fall back to it (a validated, non-empty
+                # numeric string) instead of '' to avoid a DecimalField ValidationError.
+                this_year_area_acre=crop_dict.get('this_year_area_acre') or crop_dict['current_area_acre'],
                 crop_stage=crop_dict['crop_stage'],
                 crop_condition=crop_dict['crop_condition'],
                 problems=crop_dict.get('problems', []),

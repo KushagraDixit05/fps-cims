@@ -118,7 +118,7 @@ const MandiArrivalFormScreen = () => {
     <View style={styles.root}>
       {/* ── Compact header ── */}
       <ScreenHeader
-        title="Mandi Arrival Entry"
+        title="Market Intelligence — New Entry"
         subtitle={state.step !== 'review' ? `Step ${state.step} of 5` : 'Review'}
         onBack={handleBack}
       />

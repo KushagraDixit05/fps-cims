@@ -16,7 +16,7 @@
 
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
-export const DB_SCHEMA_VERSION = 4;
+export const DB_SCHEMA_VERSION = 5;
 
 export default appSchema({
   version: DB_SCHEMA_VERSION,
@@ -103,6 +103,8 @@ export default appSchema({
         { name: 'total_arrival_qt',  type: 'number', isOptional: true }, // new wizard field
         { name: 'latitude',          type: 'number', isOptional: true },
         { name: 'longitude',         type: 'number', isOptional: true },
+        // Custom mandi name (v5) — used when mandi_id = 0 (Others selected)
+        { name: 'mandi_custom_name', type: 'string', isOptional: true },
         // Sync fields
         { name: 'server_id',         type: 'string', isOptional: true },
         { name: 'is_synced',         type: 'boolean' },

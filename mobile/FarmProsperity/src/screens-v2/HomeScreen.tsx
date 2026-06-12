@@ -43,10 +43,10 @@ type ActionTile = {
 };
 
 const ACTION_TILES: ActionTile[] = [
-  { bg: '#E1F2E8', icon: Leaf,      iconColor: '#1A4A2E', title: 'New Visit',     sub: 'My visits · New entry', screen: 'CropMonitoringList' },
-  { bg: '#FEF3DA', icon: Store,     iconColor: '#C8900A', title: 'Mandi',         sub: 'Prices · Trends',    screen: 'MandiArrivalForm', badge: 'Live' },
-  { bg: '#E8F4FD', icon: Package,   iconColor: '#0277BD', title: 'Product Demo',  sub: 'Demo · Result',      screen: 'ProductDemoList' },
-  { bg: '#F3E8FF', icon: BarChart2, iconColor: '#7C3AED', title: 'Reports',       sub: 'Analytics · YoY',    screen: 'Reports' },
+  { bg: '#E1F2E8', icon: Leaf,      iconColor: '#1A4A2E', title: 'Crop Intelligence',      sub: 'Visits · New entry',   screen: 'CropMonitoringList' },
+  { bg: '#FEF3DA', icon: Store,     iconColor: '#C8900A', title: 'Market Intelligence',    sub: 'Arrivals · Trends',    screen: 'MandiArrivalForm', badge: 'Live' },
+  { bg: '#E8F4FD', icon: Package,   iconColor: '#0277BD', title: 'Product Performance',    sub: 'Demo · Results',       screen: 'ProductDemoList' },
+  { bg: '#F3E8FF', icon: BarChart2, iconColor: '#7C3AED', title: 'Reports',                sub: 'Analytics · YoY',      screen: 'Reports' },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

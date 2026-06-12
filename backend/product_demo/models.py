@@ -86,8 +86,9 @@ class ProductDemo(models.Model):
     longitude = models.FloatField(null=True, blank=True)
 
     # Sync / audit
-    local_id     = models.CharField(max_length=100, blank=True)
-    is_synced    = models.BooleanField(default=True)
+    local_id        = models.CharField(max_length=100, blank=True)
+    is_synced       = models.BooleanField(default=True)
+    approval_status = models.CharField(max_length=30, default='draft')
     submitted_at = models.DateTimeField(auto_now_add=True)
     updated_at   = models.DateTimeField(auto_now=True)
 

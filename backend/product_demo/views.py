@@ -1,16 +1,17 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.utils import timezone
 from django.db.models import Count
 
-from .models import ProductMaster, ProductDemo
+from .models import ProductMaster, ProductDemo, DemoPhoto
 from .serializers import (
     ProductMasterSerializer,
     ProductDemoCreateSerializer,
     ProductDemoListSerializer,
     ProductDemoDetailSerializer,
+    AfterPhotoUploadSerializer,
 )
 
 
@@ -40,8 +41,22 @@ class ProductDemoViewSet(viewsets.ModelViewSet):
             return ProductDemoDetailSerializer
         return ProductDemoListSerializer
 
-    def perform_create(self, serializer):
-        serializer.save(executive=self.request.user)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        demo = serializer.save()
+        return Response({'id': str(demo.id)}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='after-photos',
+            parser_classes=[MultiPartParser, FormParser])
+    def upload_after_photos(self, request, pk=None):
+        """POST /api/product-demos/{id}/after-photos/ — add after-demo photos."""
+        demo = self.get_object()
+        serializer = AfterPhotoUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        for img in serializer.validated_data['photos_after']:
+            DemoPhoto.objects.create(demo=demo, image=img, photo_type='after')
+        return Response({'after_photo_count': demo.photos.filter(photo_type='after').count()})
 
     @action(detail=False, methods=['get'], url_path='summary')
     def summary(self, request):

@@ -31,10 +31,12 @@ export type CropVarietyErrors = Partial<Record<keyof CropVarietyDraft, string>>;
 // ─── Mandi Details (Step 1) ───────────────────────────────────────────────────
 
 export interface MandiDetailsDraft {
-  /** Stringified integer — mandi selector */
+  /** Stringified integer — mandi selector; sentinel 'others' for custom entry */
   mandi_id: string;
   /** Display name — set when mandi is selected */
   mandi_name: string;
+  /** Free-text name entered by user when mandi_id === 'others' */
+  custom_mandi_name?: string;
   /** ISO date string: YYYY-MM-DD */
   date: string;
   /** Total arrival across all crops, in quintal — manual entry field */

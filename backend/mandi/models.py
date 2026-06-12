@@ -69,6 +69,7 @@ class MandiArrival(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     local_id = models.CharField(max_length=100, blank=True)  # WatermelonDB offline ID
+    approval_status = models.CharField(max_length=30, default='draft')
 
     class Meta:
         ordering = ['-date']

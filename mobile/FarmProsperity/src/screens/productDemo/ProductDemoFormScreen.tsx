@@ -107,7 +107,7 @@ const ProductDemoFormScreen = () => {
     <View style={styles.root}>
       {/* ── Compact header ── */}
       <ScreenHeader
-        title="Product Demo Entry"
+        title="Product Performance — New Entry"
         subtitle={state.step !== 'review' ? `Step ${state.step} of 4` : 'Review'}
         onBack={handleBack}
       />
@@ -145,8 +145,6 @@ const ProductDemoFormScreen = () => {
           data={state.result}
           onAddBeforePhoto={form.addBeforePhoto}
           onRemoveBeforePhoto={form.removeBeforePhoto}
-          onAddAfterPhoto={form.addAfterPhoto}
-          onRemoveAfterPhoto={form.removeAfterPhoto}
           onUpdateResult={form.updateResult}
           onSubmit={() => form.setStep('review')}
           onBack={() => form.setStep(3)}

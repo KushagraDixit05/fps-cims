@@ -278,6 +278,7 @@ class FarmerVisit(models.Model):
     # Phase 3 offline sync fields
     local_id = models.CharField(max_length=100, blank=True)
     is_synced = models.BooleanField(default=True)
+    approval_status = models.CharField(max_length=30, default='draft')
 
     class Meta:
         ordering = ['-submitted_at']

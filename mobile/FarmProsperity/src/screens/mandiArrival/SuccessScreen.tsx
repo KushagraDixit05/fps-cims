@@ -60,7 +60,7 @@ const SuccessScreen = ({
       </Animated.View>
 
       <Animated.View style={{ opacity: opacityAnim, alignItems: 'center', width: '100%' }}>
-        <Text style={styles.title}>Mandi Arrival Entry{'\n'}Submitted Successfully!</Text>
+        <Text style={styles.title}>Market Intelligence Entry{'\n'}Submitted Successfully!</Text>
         <Text style={styles.subtitle}>
           {mandiName
             ? `Data for ${mandiName} has been saved.`

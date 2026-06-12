@@ -12,10 +12,16 @@ import type { PhotoDraft, LocationDraft } from '../types/cropMonitoring';
 
 // ─── Step 1: Mandi Details ────────────────────────────────────────────────────
 
+const OTHERS_MANDI_ID = 'others';
+
 export const validateStep1 = (data: MandiDetailsDraft): MandiDetailsErrors => {
   const errors: MandiDetailsErrors = {};
 
-  if (!data.mandi_id) {
+  if (data.mandi_id === OTHERS_MANDI_ID) {
+    if (!data.custom_mandi_name?.trim() || data.custom_mandi_name.trim().length < 2) {
+      errors.custom_mandi_name = 'Please enter the mandi name (at least 2 characters).';
+    }
+  } else if (!data.mandi_id) {
     errors.mandi_id = 'Please select a mandi.';
   }
 

@@ -64,6 +64,21 @@ export default schemaMigrations({
         }),
       ],
     },
+    // ── v4 → v5: Custom mandi name column ────────────────────────────────────────
+    // Adds mandi_custom_name (optional string) to mandi_arrivals.
+    // Written when user selects "Others (Please Specify)" in Step 1.
+    {
+      toVersion: 5,
+      steps: [
+        addColumns({
+          table: 'mandi_arrivals',
+          columns: [
+            { name: 'mandi_custom_name', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
+
     // ── v3 → v4: Village hierarchy + village_id columns ───────────────────────────
     // Adds villages reference table.
     // Adds village_id (optional FK) to farmer_visits and product_demos.

@@ -148,10 +148,6 @@ export const validateStep4 = (
     errors.before_photos = `At least ${minPhotos} before-demo photos are required.`;
   }
 
-  if (data.after_photos.length < minPhotos) {
-    errors.after_photos = `At least ${minPhotos} after-demo photos are required.`;
-  }
-
   if (!data.demo_result) {
     errors.demo_result = 'Please select a demo result.';
   }

@@ -76,7 +76,7 @@ const ReportsScreen = () => {
 
       {/* ── Crop Summary ── */}
       <Card style={styles.card}>
-        <Text style={styles.cardTitle}>Crop Monitoring Summary</Text>
+        <Text style={styles.cardTitle}>Crop Intelligence Summary</Text>
         <View style={styles.statsRow}>
           <StatBox label="Total Entries" value={String(total)} />
           <StatBox

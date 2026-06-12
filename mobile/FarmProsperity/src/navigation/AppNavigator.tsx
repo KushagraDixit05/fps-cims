@@ -36,6 +36,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 // ── New: Crop Monitoring Module screens ───────────────────────────────────────
 import CropMonitoringFormScreen from '../screens/cropMonitoring/CropMonitoringFormScreen';
 import CropMonitoringDetailScreen from '../screens/cropMonitoring/CropMonitoringDetailScreen';
+import ProductDemoDetailScreen from '../screens/productDemo/ProductDemoDetailScreen';
 
 // Type imports
 import type { RootStackParamList, MainTabParamList } from './types';
@@ -81,7 +82,7 @@ const MainTabs = () => (
   >
     <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Home' }} />
     <Tab.Screen name="Crops" component={CropListScreen} options={{ tabBarLabel: 'Crops' }} />
-    <Tab.Screen name="Mandi" component={MandiListScreen} options={{ tabBarLabel: 'Mandi' }} />
+    <Tab.Screen name="Mandi" component={MandiListScreen} options={{ tabBarLabel: 'Market' }} />
     <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Reports' }} />
   </Tab.Navigator>
 );
@@ -148,6 +149,9 @@ const AppNavigator = () => {
             {/* CropMonitoringReview + CropMonitoringSuccess are rendered as
                 in-tree components inside CropMonitoringFormScreen (not separate routes)
                 to prevent the user from navigating to them directly via back-stack. */}
+
+            {/* ── Product Demo Module ── */}
+            <Stack.Screen name="ProductDemoDetail" component={ProductDemoDetailScreen} options={{ headerShown: false }} />
 
             {/* ── Misc ── */}
             <Stack.Screen

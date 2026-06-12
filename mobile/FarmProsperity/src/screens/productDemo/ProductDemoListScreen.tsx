@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import database from '../../database';
@@ -62,7 +62,7 @@ const ProductDemoListScreen = () => {
   return (
     <View style={styles.root}>
       {/* ── Header ── */}
-      <ScreenHeader title="Product Demos" subtitle={`${demos.length} records`} onBack={() => navigation.goBack()} />
+      <ScreenHeader title="Product Performance Tracker" subtitle={`${demos.length} records`} onBack={() => navigation.goBack()} />
 
       {/* ── List ── */}
       <FlatList
@@ -80,11 +80,18 @@ const ProductDemoListScreen = () => {
           />
         }
         renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={styles.row} 
+          <TouchableOpacity
+            style={styles.row}
             activeOpacity={0.8}
             onPress={() => {
-              // Detail view not implemented yet, just visual feedback for now
+              if (item.serverId) {
+                navigation.navigate('ProductDemoDetail', { demoId: item.serverId });
+              } else {
+                Alert.alert(
+                  'Pending Sync',
+                  'This entry has not been synced yet. After-demo photo upload will be available after syncing.',
+                );
+              }
             }}
           >
             <View style={styles.rowBody}>

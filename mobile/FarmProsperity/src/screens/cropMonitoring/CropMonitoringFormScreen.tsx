@@ -98,7 +98,7 @@ const CropMonitoringFormScreen = () => {
     <View style={styles.root}>
       {/* ── Compact header with step-aware back navigation ── */}
       <ScreenHeader
-        title="Crop Monitoring"
+        title="Crop Intelligence Module"
         subtitle={state.step !== 'review' ? `Step ${state.step} of 3` : 'Review'}
         onBack={() => {
           if (state.step === 1) navigation.goBack();

@@ -28,8 +28,6 @@ interface Step4Props {
   data: DemoResultDraft;
   onAddBeforePhoto: (photo: PhotoDraft) => void;
   onRemoveBeforePhoto: (uri: string) => void;
-  onAddAfterPhoto: (photo: PhotoDraft) => void;
-  onRemoveAfterPhoto: (uri: string) => void;
   onUpdateResult: (data: Partial<DemoResultDraft>) => void;
   onSubmit: () => void;
   onBack: () => void;
@@ -39,8 +37,6 @@ const Step4_PhotosResultRemark = ({
   data,
   onAddBeforePhoto,
   onRemoveBeforePhoto,
-  onAddAfterPhoto,
-  onRemoveAfterPhoto,
   onUpdateResult,
   onSubmit,
   onBack,
@@ -83,21 +79,6 @@ const Step4_PhotosResultRemark = ({
             onRemove={onRemoveBeforePhoto}
             minPhotos={2}
             error={errors.before_photos}
-          />
-        </View>
-
-        {/* After Photos */}
-        <View style={styles.photoSection}>
-          <Text style={styles.photoSectionLabel}>
-            Photos — After Demo <Text style={styles.required}>*</Text>
-          </Text>
-          <Text style={styles.photoSectionHint}>Minimum 2 photos required</Text>
-          <PhotoPicker
-            photos={data.after_photos}
-            onAdd={onAddAfterPhoto}
-            onRemove={onRemoveAfterPhoto}
-            minPhotos={2}
-            error={errors.after_photos}
           />
         </View>
 

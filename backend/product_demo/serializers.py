@@ -17,6 +17,12 @@ class DemoPhotoSerializer(serializers.ModelSerializer):
 
 # ── Create ────────────────────────────────────────────────────────────────────
 
+class AfterPhotoUploadSerializer(serializers.Serializer):
+    photos_after = serializers.ListField(
+        child=serializers.ImageField(), write_only=True, min_length=1,
+    )
+
+
 class ProductDemoCreateSerializer(serializers.ModelSerializer):
     # Photos submitted as separate multipart fields
     photos_before = serializers.ListField(

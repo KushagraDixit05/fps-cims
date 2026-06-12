@@ -29,11 +29,11 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { icon: Home,      label: 'Home',      screen: 'Home' },
-  { icon: Leaf,      label: 'New Visit', screen: 'CropMonitoringList' },
-  { icon: Store,     label: 'Mandi',     screen: 'Mandi' },
-  { icon: Map,       label: 'My Visits', screen: 'Crops' },
-  { icon: BarChart2, label: 'Reports',   screen: 'Reports' },
+  { icon: Home,      label: 'Home',                 screen: 'Home' },
+  { icon: Leaf,      label: 'Crop Intelligence',    screen: 'CropMonitoringList' },
+  { icon: Store,     label: 'Market Intelligence',  screen: 'Mandi' },
+  { icon: Map,       label: 'My Visits',            screen: 'Crops' },
+  { icon: BarChart2, label: 'Reports',              screen: 'Reports' },
 ];
 
 const SidebarContent = (props: DrawerContentComponentProps) => {
