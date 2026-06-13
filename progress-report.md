@@ -1,7 +1,33 @@
 # Farm Prosperity Solutions (FPS) — Progress Report
 
-> **Last updated:** 12 June 2026
-> **Overall status:** Phases 0–4 (partial) complete · Admin Portal live · Cloud deployed on Render · Release APK distributed
+> **Last updated:** 13 June 2026
+> **Overall status:** Phases 0–4 (partial) complete · Admin Portal live · Cloud deployed on Render · Release APK distributed · **Production-critical stabilization pass applied**
+
+---
+
+## Production Stabilization (13 June 2026)
+
+A pre-rollout reliability/security audit was run across backend, sync engine, mobile, and
+deployment. Five **critical** fixes were implemented on branch
+`stabilization/production-critical-fixes` (feature work paused; no RBAC changes). Remaining
+audit findings are deferred and tracked separately.
+
+| # | Fix | Area | Files |
+|---|---|---|---|
+| **C2** | Offline-first session restore — the app no longer logs users out on a network error at startup. Restores from a cached profile and logs out **only** on a genuine auth failure. | Mobile | `api/client.ts`, `api/auth.ts`, `store/authStore.tsx` |
+| **C3** | Multi-model creates wrapped in `transaction.atomic()` so a failed photo upload rolls back the whole record (no partial visits/demos). `complete-after` is now idempotent (replaces the after-photo set instead of appending). | Backend | `crops/serializers.py`, `product_demo/serializers.py`, `product_demo/views.py` |
+| **C1** | Self-registration no longer accepts a client `role`; all public registrations are forced to `field_executive`. Admin accounts only via Django admin / `createsuperuser`. | Backend (security) | `accounts/serializers.py` |
+| **C4** | Container boot no longer falls through to gunicorn when `migrate`/`collectstatic` fails (shell-precedence fix). Added a reproducible `render.yaml` Docker Blueprint. | Deployment | `backend/Dockerfile`, `render.yaml` |
+| **C5** | `SECRET_KEY` and `ALLOWED_HOSTS` now fail fast in production (no insecure defaults). Added proxy-aware HTTPS/HSTS/secure-cookie settings, all gated to `not DEBUG`. | Backend (security) | `fps_backend/settings.py` |
+
+**Deferred (tracked in audit, not yet done):** client-side image compression, persistent offline
+photo storage, Neon `CONN_HEALTH_CHECKS`, sync retry backoff/dead-letter, WatermelonDB migration
+reordering, global sync mutex, app error boundary, N+1 query cleanup, logging/Sentry.
+
+**Known dev-environment note:** the shared dev database carries extra `accounts_user` columns from
+a separate RBAC feature branch (schema drift). Do **not** point `main` at a database migrated by
+that branch — keep one database per schema lineage. Fresh Neon production DBs built from `main`
+are unaffected.
 
 ---
 

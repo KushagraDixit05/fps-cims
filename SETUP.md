@@ -174,8 +174,32 @@ adb install -r "/path/to/app-release.apk"
 | Django Admin | `https://fps-cims-backend.onrender.com/admin` |
 | Wake URL | `https://fps-cims-backend.onrender.com/api/auth/login/` |
 | Superuser | Set via `DJANGO_SUPERUSER_*` env vars on Render |
+| Deploy config | `render.yaml` (Docker Blueprint) + `backend/Dockerfile` |
 
 **Auto-deploy:** Every push to `main` triggers a Render redeploy (~3–5 min). Migrations and seeds run automatically on startup.
+
+> **Boot safety:** the container now **aborts** if `migrate` or `collectstatic` fails — gunicorn no longer starts against an un-migrated database. Check the Render deploy logs if a release doesn't come up.
+
+### Required production environment variables (Render)
+
+Set these in the Render dashboard (or as `render.yaml` `sync: false` secrets). The backend **fails fast at startup** if `SECRET_KEY` or `ALLOWED_HOSTS` is missing when `DEBUG` is not `True` — this is intentional, never deploy without them.
+
+| Variable | Required | Notes |
+|---|---|---|
+| `SECRET_KEY` | ✅ | Long random string. Boot aborts if unset in production. |
+| `ALLOWED_HOSTS` | ✅ | Comma-separated hosts, e.g. `fps-cims-backend.onrender.com`. No wildcard in production. |
+| `DATABASE_URL` | ✅ | Neon Postgres URL with `?sslmode=require`. |
+| `CLOUDINARY_URL` | ✅ | Durable media storage (Render disk is ephemeral). |
+| `DEBUG` | ✅ | `False` in production. |
+| `CORS_ALLOWED_ORIGINS` | ⬜ | Comma-separated admin-portal origins (browser clients only). |
+| `CORS_ALLOWED_ORIGIN_REGEXES` | ⬜ | Optional regex origins, e.g. Vercel preview deploys. |
+| `DJANGO_SUPERUSER_USERNAME` / `_PASSWORD` / `_EMAIL` | ⬜ | First-boot superuser. |
+
+When `DEBUG=False`, HTTPS hardening turns on automatically (SSL redirect, HSTS, secure session/CSRF cookies) using the Render proxy's `X-Forwarded-Proto` header. Local `DEBUG=True` runs over plain HTTP are unaffected.
+
+### Account roles
+
+Public registration (`POST /api/auth/register/`) **always** creates a `field_executive` — a client-supplied `role` is ignored. Admin accounts are provisioned only via Django admin or `createsuperuser`.
 
 ---
 

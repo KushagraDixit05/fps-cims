@@ -212,6 +212,12 @@ else:
         for o in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
         if o.strip()
     ]
+    # Optional regex origins (comma-separated), e.g. Vercel preview deploys.
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r.strip()
+        for r in os.getenv('CORS_ALLOWED_ORIGIN_REGEXES', '').split(',')
+        if r.strip()
+    ]
 
 # ---------------------------------------------------------------------------
 # Production security (proxy-aware). Render terminates TLS at its edge proxy and

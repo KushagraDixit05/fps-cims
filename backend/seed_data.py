@@ -2,17 +2,12 @@ from mandi.models import Mandi
 
 # Seed Mandis for CMM Regions
 mandis_data = [
-    {"name": "Nanded Mandi", "district": "Nanded", "state": "Maharashtra"},
-    {"name": "Loha Mandi", "district": "Nanded", "state": "Maharashtra"},
-    
-    {"name": "Guntur Mirchi Yard", "district": "Guntur", "state": "Andhra Pradesh"},
-    {"name": "Narasaraopet Mandi", "district": "Guntur", "state": "Andhra Pradesh"},
-    
-    {"name": "Indore Choithram Mandi", "district": "Indore", "state": "Madhya Pradesh"},
-    {"name": "Mhow Mandi", "district": "Indore", "state": "Madhya Pradesh"},
-    
-    {"name": "Kalamna Market", "district": "Nagpur", "state": "Maharashtra"},
-    {"name": "Katol Mandi", "district": "Nagpur", "state": "Maharashtra"}
+    {"name": "Bediya",   "district": "Khargone", "state": "Madhya Pradesh"},
+    {"name": "Khammam",  "district": "Khammam",  "state": "Telangana"},
+    {"name": "Guntur",   "district": "Guntur",   "state": "Andhra Pradesh"},
+    {"name": "Warangal", "district": "Warangal", "state": "Telangana"},
+    {"name": "Indore",   "district": "Indore",   "state": "Madhya Pradesh"},
+    {"name": "Dhamnod",  "district": "Dhar",     "state": "Madhya Pradesh"},
 ]
 
 for m in mandis_data:

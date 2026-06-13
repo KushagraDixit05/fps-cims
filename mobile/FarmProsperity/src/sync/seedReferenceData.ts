@@ -195,6 +195,20 @@ const seedMandis = async (): Promise<void> => {
           });
         }
       }
+
+      // Reconcile: /api/mandis/ only returns active mandis, so any locally
+      // cached mandi missing from this set has been retired server-side.
+      // Flip it inactive so it drops out of the picker (which filters
+      // is_active = true).
+      const activeServerIds = new Set(apiMandis.map((m) => m.id));
+      const allLocal = await collection.query().fetch();
+      for (const rec of allLocal) {
+        if (rec.isActive && !activeServerIds.has(rec.serverId)) {
+          await rec.update((r) => {
+            r.isActive = false;
+          });
+        }
+      }
     });
   } catch (err: any) {
     console.warn('[FPS Seed] Mandis seed failed:', err?.message);
