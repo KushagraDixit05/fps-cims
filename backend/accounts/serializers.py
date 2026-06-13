@@ -15,9 +15,14 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
+        # NOTE: `role` is deliberately NOT writable here. Public self-registration
+        # must never let a client choose its own role (a client sending
+        # role='admin' would otherwise gain admin-wide read access to all field
+        # data). All registrations are forced to 'field_executive' in create();
+        # privileged accounts are provisioned only via Django admin / createsuperuser.
         fields = [
             'username', 'password', 'password2',
-            'full_name', 'email', 'phone_number', 'role', 'region',
+            'full_name', 'email', 'phone_number', 'region',
         ]
         extra_kwargs = {
             'phone_number': {
@@ -62,7 +67,8 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=last_name,
             email=validated_data.get('email') or None,
             phone_number=validated_data.get('phone_number') or None,
-            role=validated_data.get('role', 'field_executive'),
+            # Hardcoded — never trust a client-supplied role on public registration.
+            role='field_executive',
             region=validated_data.get('region', ''),
         )
         return user

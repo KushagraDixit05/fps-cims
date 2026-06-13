@@ -3,6 +3,7 @@
 import json
 from rest_framework import serializers
 from django.contrib.gis.geos import Point
+from django.db import transaction
 from .models import (
     Village, Farmer, CropEntry, CropPhoto,
     District, Block, CropMaster, CropVariety,
@@ -304,31 +305,36 @@ class FarmerVisitCreateSerializer(serializers.ModelSerializer):
         # Assign executive from request context
         validated_data['executive'] = self.context['request'].user
 
-        visit = FarmerVisit.objects.create(**validated_data)
+        # Atomic: the visit, all crop records, and all photo uploads commit
+        # together or not at all. If a Cloudinary upload fails mid-loop, the
+        # whole record rolls back — so a retried offline sync never finds a
+        # partial visit and re-creates a complete one (see create() idempotency).
+        with transaction.atomic():
+            visit = FarmerVisit.objects.create(**validated_data)
 
-        # Create child crop records
-        for i, crop_dict in enumerate(crops_data):
-            CropRecord.objects.create(
-                visit=visit,
-                crop_name=crop_dict['crop_name'],
-                variety=crop_dict['variety'],
-                date_of_sowing=crop_dict['date_of_sowing'],
-                current_area_acre=crop_dict['current_area_acre'],
-                last_year_area_acre=crop_dict.get('last_year_area_acre') or None,
-                # The mobile UI collapsed "this year" and "current" into one field, so the
-                # client only sends current_area_acre. Fall back to it (a validated, non-empty
-                # numeric string) instead of '' to avoid a DecimalField ValidationError.
-                this_year_area_acre=crop_dict.get('this_year_area_acre') or crop_dict['current_area_acre'],
-                crop_stage=crop_dict['crop_stage'],
-                crop_condition=crop_dict['crop_condition'],
-                problems=crop_dict.get('problems', []),
-                other_problem_detail=crop_dict.get('other_problem_detail', ''),
-                sort_order=crop_dict.get('sort_order', i),
-            )
+            # Create child crop records
+            for i, crop_dict in enumerate(crops_data):
+                CropRecord.objects.create(
+                    visit=visit,
+                    crop_name=crop_dict['crop_name'],
+                    variety=crop_dict['variety'],
+                    date_of_sowing=crop_dict['date_of_sowing'],
+                    current_area_acre=crop_dict['current_area_acre'],
+                    last_year_area_acre=crop_dict.get('last_year_area_acre') or None,
+                    # The mobile UI collapsed "this year" and "current" into one field, so the
+                    # client only sends current_area_acre. Fall back to it (a validated, non-empty
+                    # numeric string) instead of '' to avoid a DecimalField ValidationError.
+                    this_year_area_acre=crop_dict.get('this_year_area_acre') or crop_dict['current_area_acre'],
+                    crop_stage=crop_dict['crop_stage'],
+                    crop_condition=crop_dict['crop_condition'],
+                    problems=crop_dict.get('problems', []),
+                    other_problem_detail=crop_dict.get('other_problem_detail', ''),
+                    sort_order=crop_dict.get('sort_order', i),
+                )
 
-        # Create child photos
-        for photo_file in photos_data:
-            VisitPhoto.objects.create(visit=visit, image=photo_file)
+            # Create child photos
+            for photo_file in photos_data:
+                VisitPhoto.objects.create(visit=visit, image=photo_file)
 
         return visit
 

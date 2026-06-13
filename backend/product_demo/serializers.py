@@ -1,6 +1,7 @@
 import json
 from rest_framework import serializers
 from django.contrib.gis.geos import Point
+from django.db import transaction
 from .models import ProductMaster, ProductDemo, DemoPhoto
 
 
@@ -101,10 +102,14 @@ class ProductDemoCreateSerializer(serializers.ModelSerializer):
         validated_data['is_synced']  = True
         validated_data['demo_phase'] = 'before'
 
-        demo = ProductDemo.objects.create(**validated_data)
+        # Atomic: the demo and its before-photos commit together or roll back
+        # together. A failed photo upload won't leave a partial demo that a
+        # retried sync would short-circuit on via the local_id idempotency guard.
+        with transaction.atomic():
+            demo = ProductDemo.objects.create(**validated_data)
 
-        for img in photos_before:
-            DemoPhoto.objects.create(demo=demo, image=img, photo_type='before')
+            for img in photos_before:
+                DemoPhoto.objects.create(demo=demo, image=img, photo_type='before')
 
         return demo
 

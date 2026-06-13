@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django.db import transaction
 from django.utils import timezone
 from django.db.models import Count
 
@@ -74,17 +75,22 @@ class ProductDemoViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        for img in data['photos_after']:
-            DemoPhoto.objects.create(demo=demo, image=img, photo_type='after')
+        # Idempotent + atomic: a retried offline sync (client timed out after the
+        # server already completed) must not duplicate after-photos. Replace the
+        # existing 'after' set rather than appending, all within one transaction.
+        with transaction.atomic():
+            demo.photos.filter(photo_type='after').delete()
+            for img in data['photos_after']:
+                DemoPhoto.objects.create(demo=demo, image=img, photo_type='after')
 
-        demo.demo_result             = data['demo_result']
-        demo.additional_observations = data.get('additional_observations', '')
-        demo.remark                  = data.get('remark', '')
-        demo.demo_phase              = 'completed'
-        demo.save(update_fields=[
-            'demo_result', 'additional_observations', 'remark',
-            'demo_phase', 'updated_at',
-        ])
+            demo.demo_result             = data['demo_result']
+            demo.additional_observations = data.get('additional_observations', '')
+            demo.remark                  = data.get('remark', '')
+            demo.demo_phase              = 'completed'
+            demo.save(update_fields=[
+                'demo_result', 'additional_observations', 'remark',
+                'demo_phase', 'updated_at',
+            ])
 
         return Response({
             'demo_phase':        demo.demo_phase,
