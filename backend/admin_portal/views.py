@@ -1,6 +1,8 @@
 import csv
 from datetime import date, datetime, timedelta
 
+from django.contrib.auth import get_user_model
+from django.db.models import Count, Q
 from django.http import StreamingHttpResponse
 from django.utils import timezone
 from rest_framework.views import APIView
@@ -287,3 +289,61 @@ class ProductDemoExportView(APIView):
 
         filename = f"fps-product-demos-{date.today().isoformat()}.csv"
         return _stream_csv(rows(), filename)
+
+
+# ── Analytics ─────────────────────────────────────────────────────────────────
+
+class ProductivityView(APIView):
+    """Per-executive submission counts across all three modules within a date window."""
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def get(self, request):
+        days = max(1, int(request.query_params.get('days', 30)))
+        since = timezone.now() - timedelta(days=days)
+
+        User = get_user_model()
+        users = (
+            User.objects
+            .filter(
+                Q(farmer_visits__submitted_at__gte=since) |
+                Q(mandi_submissions__created_at__gte=since) |
+                Q(product_demos__submitted_at__gte=since)
+            )
+            .distinct()
+            .annotate(
+                farmer_visits=Count(
+                    'farmer_visits',
+                    filter=Q(farmer_visits__submitted_at__gte=since),
+                ),
+                mandi_arrivals=Count(
+                    'mandi_submissions',
+                    filter=Q(mandi_submissions__created_at__gte=since),
+                ),
+                product_demos=Count(
+                    'product_demos',
+                    filter=Q(product_demos__submitted_at__gte=since),
+                ),
+            )
+            .order_by('-farmer_visits')
+        )
+
+        executives = [
+            {
+                'username': u.username,
+                'full_name': u.get_full_name() or u.username,
+                'farmer_visits': u.farmer_visits,
+                'mandi_arrivals': u.mandi_arrivals,
+                'product_demos': u.product_demos,
+            }
+            for u in users
+        ]
+        return Response({'days': days, 'executives': executives})
+
+
+class ApprovalSLAView(APIView):
+    """Approval turnaround stats by module. Returns empty until approved_at is tracked."""
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def get(self, request):
+        days = max(1, int(request.query_params.get('days', 30)))
+        return Response({'days': days, 'by_module': {}})

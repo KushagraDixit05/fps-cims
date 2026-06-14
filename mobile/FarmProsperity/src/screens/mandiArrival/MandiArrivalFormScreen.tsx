@@ -149,8 +149,10 @@ const MandiArrivalFormScreen = () => {
       {state.step === 3 && (
         <Step3_SourceRemark
           source={state.source}
+          customSource={state.custom_source}
           remark={state.remark}
           onSetSource={form.setSource}
+          onSetCustomSource={form.setCustomSource}
           onSetRemark={form.setRemark}
           onNext={() => form.setStep(4)}
           onBack={() => form.setStep(2)}

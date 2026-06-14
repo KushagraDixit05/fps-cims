@@ -7,6 +7,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from accounts.token_serializers import CustomTokenObtainPairSerializer
 
 
 def health(request):
@@ -20,7 +21,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # --- Authentication ---
-    path('api/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/login/', TokenObtainPairView.as_view(serializer_class=CustomTokenObtainPairSerializer), name='token_obtain_pair'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/', include('accounts.urls')),   # /api/auth/me/ + /api/auth/register/
 

@@ -14,28 +14,30 @@ import {
 } from 'react-native';
 import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
-import InlinePicker from '../../components/InlinePicker';
+import SmartDropdown from '../../components/SmartDropdown';
 import { MANDI_SOURCES, type MandiArrivalSource } from '../../types/mandiArrival';
 import { validateStep3, type Step3Errors } from '../../utils/mandiArrivalValidation';
 
 interface Step3Props {
   source: MandiArrivalSource | '';
+  customSource: string;
   remark: string;
   onSetSource: (source: MandiArrivalSource) => void;
+  onSetCustomSource: (text: string) => void;
   onSetRemark: (text: string) => void;
   onNext: () => void;
   onBack: () => void;
 }
 
 const Step3_SourceRemark = ({
-  source, remark,
-  onSetSource, onSetRemark,
+  source, customSource, remark,
+  onSetSource, onSetCustomSource, onSetRemark,
   onNext, onBack,
 }: Step3Props) => {
   const [errors, setErrors] = useState<Step3Errors>({});
 
   const handleNext = () => {
-    const errs = validateStep3(source, remark);
+    const errs = validateStep3(source, customSource, remark);
     setErrors(errs);
     const hasErrors = Object.values(errs).some(Boolean);
     if (!hasErrors) onNext();
@@ -62,14 +64,19 @@ const Step3_SourceRemark = ({
           <Text style={styles.heading}>Source of Information</Text>
         </View>
 
-        <InlinePicker
+        {/* Source — SmartDropdown allows custom source when not in the list */}
+        <SmartDropdown
           label="Source"
           required
           value={source}
+          customValue={customSource}
           options={sourceOptions}
           onSelect={(v) => onSetSource(v as MandiArrivalSource)}
+          onCustomChange={onSetCustomSource}
           placeholder="Select Source"
+          customMaxLength={100}
           error={errors.source}
+          customError={errors.custom_source}
         />
 
         {/* Remark */}

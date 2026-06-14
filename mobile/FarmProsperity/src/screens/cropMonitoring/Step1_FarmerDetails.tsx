@@ -12,7 +12,9 @@ import { colors } from '../../utils/colors';
 import FormInput from '../../components/FormInput';
 import Button from '../../components/Button';
 import InlinePicker from '../../components/InlinePicker';
-import SmartDropdown, { OTHERS_VALUE } from '../../components/SmartDropdown';
+import SmartDropdown from '../../components/SmartDropdown';
+// InlinePicker is still used for District (cascade root — always has data, no Others needed)
+import { OTHERS_VALUE } from '../../utils/othersValidation';
 import type { FarmerDetailsDraft, FarmerDetailsErrors } from '../../types/cropMonitoring';
 import { validateStep1, hasErrors } from '../../utils/cropMonitoringValidation';
 import { useLocationHierarchy } from '../../hooks/useLocationHierarchy';
@@ -41,6 +43,21 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
   const districtOptions = districts.map(d => ({ value: d.name, label: d.name }));
   const blockOptions    = blocks.map(b => ({ value: b.name, label: b.name }));
   const villageOptions  = villages.map(v => ({ value: v.name, label: v.name }));
+
+  // ── Block SmartDropdown handlers ───────────────────────────────────────────
+  const handleBlockSmartSelect = (val: string) => {
+    if (val === OTHERS_VALUE) {
+      // Others selected — clear village cascade, don't fetch villages
+      onChange({ block_name: OTHERS_VALUE, custom_block_name: '', village_name: '', village_id: null, custom_village_name: '' });
+    } else {
+      onChange({ block_name: val, custom_block_name: '' });
+      handleBlockSelect(val, onChange);
+    }
+  };
+
+  const handleBlockCustomChange = (text: string) => {
+    onChange({ custom_block_name: text });
+  };
 
   // ── Village SmartDropdown handlers ─────────────────────────────────────────
   const handleVillageSmartSelect = (val: string) => {
@@ -116,22 +133,28 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
           error={errors.district_name}
         />
 
-        <InlinePicker
+        {/* Block — SmartDropdown allows custom entry when block not in master list */}
+        <SmartDropdown
           label="Block / Taluka"
           required
           value={data.block_name}
+          customValue={data.custom_block_name ?? ''}
           options={blockOptions}
-          onSelect={name => handleBlockSelect(name, onChange)}
+          onSelect={handleBlockSmartSelect}
+          onCustomChange={handleBlockCustomChange}
           placeholder={
             !data.district_name ? 'Select district first…'
             : loadingBlocks ? 'Loading blocks…'
             : 'Select block…'
           }
-          disabled={!data.district_name || loadingBlocks}
+          loading={loadingBlocks}
+          disabled={!data.district_name}
           error={errors.block_name}
+          customError={errors.custom_block_name}
         />
 
         {/* Village — SmartDropdown handles empty list (Others auto-select) */}
+        {/* Disabled when block is Others — no real block ID to cascade from */}
         <SmartDropdown
           label="Village"
           required
@@ -141,11 +164,11 @@ const Step1_FarmerDetails = ({ data, onChange, onNext }: Step1Props) => {
           onSelect={handleVillageSmartSelect}
           onCustomChange={handleVillageCustomChange}
           placeholder={
-            !data.block_name ? 'Select block first…'
+            !data.block_name || data.block_name === OTHERS_VALUE ? 'Select block first…'
             : 'Select village…'
           }
           loading={loadingVillages}
-          disabled={!data.block_name}
+          disabled={!data.block_name || data.block_name === OTHERS_VALUE}
           error={errors.village_name}
           customError={errors.custom_village_name}
         />

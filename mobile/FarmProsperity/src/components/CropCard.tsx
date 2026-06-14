@@ -19,7 +19,8 @@ import Card from './Card';
 import FormInput from './FormInput';
 import ConditionSelector from './ConditionSelector';
 import ProblemCheckboxGroup from './ProblemCheckboxGroup';
-import SmartDropdown, { OTHERS_VALUE } from './SmartDropdown';
+import SmartDropdown from './SmartDropdown';
+import { OTHERS_VALUE } from '../utils/othersValidation';
 
 import type {
   CropRecordDraft,
@@ -208,7 +209,9 @@ const CropCard = ({
   // Build crop options from master data
   const cropOptions = cropMaster.map((c) => ({ value: c.crop_name, label: c.crop_name }));
 
-  // Build variety options filtered by the selected crop — SmartDropdown appends 'Others' automatically
+  // Build variety options filtered by the selected crop — SmartDropdown appends 'Others' automatically.
+  // When crop is Others (or not yet selected), selectedCropMaster is undefined → varietyOptions is empty
+  // → SmartDropdown's Case B auto-select triggers → variety becomes OTHERS_VALUE automatically.
   const selectedCropMaster = cropMaster.find((c) => c.crop_name === data.crop_name);
   const varietyOptions = (selectedCropMaster?.varieties ?? []).map((v) => ({
     value: v.variety_name,
@@ -216,7 +219,12 @@ const CropCard = ({
   }));
 
   const handleCropChange = (cropName: string) => {
-    onChange({ crop_name: cropName, varieties: [{ variety: '', custom_variety: '' }] });
+    // When Others selected: keep varieties so SmartDropdown auto-selects Others for variety
+    onChange({ crop_name: cropName, custom_crop_name: '', varieties: [{ variety: '', custom_variety: '' }] });
+  };
+
+  const handleCropCustomChange = (text: string) => {
+    onChange({ custom_crop_name: text });
   };
 
   const handleVarietyChange = (idx: number, patch: Partial<VarietyDraft>) => {
@@ -340,15 +348,18 @@ const CropCard = ({
       {/* ── Body (collapsible) ── */}
       {!collapsed && (
         <View style={styles.body}>
-          {/* Crop dropdown */}
-          <SimpleSelect
+          {/* Crop dropdown — SmartDropdown allows "Others" for unlisted crops */}
+          <SmartDropdown
             label="Crop"
             value={data.crop_name}
+            customValue={data.custom_crop_name ?? ''}
             options={cropOptions}
             onSelect={handleCropChange}
+            onCustomChange={handleCropCustomChange}
             placeholder="Select crop"
             required
             error={errors.crop_name}
+            customError={errors.custom_crop_name}
           />
 
           {/* Varieties — multiple varieties supported per crop */}

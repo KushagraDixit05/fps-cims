@@ -1,9 +1,12 @@
 # /media/kushagra/crucial/FPS internship/fps/backend/crops/serializers.py
 
 import json
+import logging
 from rest_framework import serializers
 from django.contrib.gis.geos import Point
 from django.db import transaction
+
+logger = logging.getLogger('fps.custom_values')
 from .models import (
     Village, Farmer, CropEntry, CropPhoto,
     District, Block, CropMaster, CropVariety,
@@ -263,9 +266,11 @@ class FarmerVisitCreateSerializer(serializers.ModelSerializer):
 
         for i, crop in enumerate(crops_data):
             label = f"crops[{i}]"
-            if not crop.get('crop_name', '').strip():
+            crop['crop_name'] = crop.get('crop_name', '').strip()[:100]
+            crop['variety'] = crop.get('variety', '').strip()[:100]
+            if not crop['crop_name']:
                 raise serializers.ValidationError(f"{label}: crop_name is required.")
-            if not crop.get('variety', '').strip():
+            if not crop['variety']:
                 raise serializers.ValidationError(f"{label}: variety is required.")
             if not crop.get('date_of_sowing', '').strip():
                 raise serializers.ValidationError(f"{label}: date_of_sowing is required.")
@@ -296,6 +301,10 @@ class FarmerVisitCreateSerializer(serializers.ModelSerializer):
         crops_data: list = validated_data.pop('crops')
         photos_data: list = validated_data.pop('photos', [])
 
+        # Sanitize free-text location fields that may carry custom Others values
+        validated_data['block_name'] = validated_data.get('block_name', '').strip()[:200]
+        validated_data['village_name'] = validated_data.get('village_name', '').strip()[:200]
+
         # Build PostGIS Point from lat/lng
         latitude = validated_data.get('latitude')
         longitude = validated_data.get('longitude')
@@ -303,7 +312,8 @@ class FarmerVisitCreateSerializer(serializers.ModelSerializer):
             validated_data['location'] = Point(longitude, latitude)
 
         # Assign executive from request context
-        validated_data['executive'] = self.context['request'].user
+        user = self.context['request'].user
+        validated_data['executive'] = user
 
         # Atomic: the visit, all crop records, and all photo uploads commit
         # together or not at all. If a Cloudinary upload fails mid-loop, the
@@ -311,6 +321,15 @@ class FarmerVisitCreateSerializer(serializers.ModelSerializer):
         # partial visit and re-creates a complete one (see create() idempotency).
         with transaction.atomic():
             visit = FarmerVisit.objects.create(**validated_data)
+
+            # Audit log for any custom location values (block/village not from master)
+            for field in ('block_name', 'village_name'):
+                val = validated_data.get(field, '')
+                if val:
+                    logger.info(
+                        'custom_value_submitted',
+                        extra={'user_id': user.id, 'module': 'crop_monitoring', 'field': field, 'value': val},
+                    )
 
             # Create child crop records
             for i, crop_dict in enumerate(crops_data):

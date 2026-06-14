@@ -18,7 +18,7 @@ import {
 import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
 import FormInput from '../../components/FormInput';
-import InlinePicker from '../../components/InlinePicker';
+import SmartDropdown from '../../components/SmartDropdown';
 import type { CropVarietyDraft, CropVarietyErrors } from '../../types/mandiArrival';
 import type { CropMaster } from '../../types/cropMonitoring';
 import { validateStep2, hasVarietyErrors } from '../../utils/mandiArrivalValidation';
@@ -63,14 +63,18 @@ const VarietyCard = ({
         )}
       </View>
 
-      <InlinePicker
+      {/* Variety — SmartDropdown allows custom entry for unlisted varieties */}
+      <SmartDropdown
         label="Crop Variety Name"
         required
         value={data.crop_variety_name}
+        customValue={data.custom_crop_variety_name ?? ''}
         options={varietyOptions}
-        onSelect={(v) => onChange({ crop_variety_name: v })}
+        onSelect={(v) => onChange({ crop_variety_name: v, custom_crop_variety_name: '' })}
+        onCustomChange={(v) => onChange({ custom_crop_variety_name: v })}
         placeholder="Select crop variety"
         error={errors.crop_variety_name}
+        customError={errors.custom_crop_variety_name}
       />
 
       <FormInput

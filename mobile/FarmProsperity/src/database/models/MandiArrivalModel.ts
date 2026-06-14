@@ -23,6 +23,9 @@ export class MandiArrivalModel extends Model {
   // Custom mandi name (v5) — set when user selects "Others"
   @field('mandi_custom_name') mandiCustomName!: string | null;
 
+  // Custom source (v8) — free-text when source = '__others__'
+  @field('custom_source')     customSource!: string | null;
+
   // New wizard columns (v2)
   @field('varieties_json')    varietiesJson!: string | null;
   @field('photos_json')       photosJson!: string | null;

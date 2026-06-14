@@ -14,32 +14,34 @@ import { colors } from '../../utils/colors';
 import FormInput from '../../components/FormInput';
 import Button from '../../components/Button';
 import InlinePicker from '../../components/InlinePicker';
+import SmartDropdown from '../../components/SmartDropdown';
 import type { ProductDoseDraft, ProductDoseErrors, DoseUnit } from '../../types/productDemo';
 import { validateStep3, hasErrors } from '../../utils/productDemoValidation';
 
 // ── Static product list (seeded in backend; used offline until sync) ──────────
 
 const PRODUCT_OPTIONS = [
-  'Acephate 75% SP',
-  'Chlorpyrifos 20% EC',
-  'Cypermethrin 10% EC',
-  'Emamectin Benzoate 5% SG',
-  'Imidacloprid 17.8% SL',
-  'Lambda Cyhalothrin 5% EC',
-  'Mancozeb 75% WP',
-  'Metalaxyl 8% + Mancozeb 64% WP',
-  'Profenofos 50% EC',
-  'Propiconazole 25% EC',
-  'Tebuconazole 25.9% EC',
-  'Thiamethoxam 25% WG',
-  'Thiram 75% WP',
-  'Tricyclazole 75% WP',
-  'Azoxystrobin 23% SC',
-  'Carbendazim 50% WP',
-  'Hexaconazole 5% SC',
-  'Dimethoate 30% EC',
-  'Monocrotophos 36% SL',
-  'Spinosad 45% SC',
+  'Armet',
+  'Aster',
+  'Avenger',
+  'FPS 11:11:08',
+  'FPS Boron',
+  'FPS Quat',
+  'FPS Tara',
+  'FPS Zinc',
+  'Guardian Gold',
+  'Mania',
+  'Narvi',
+  'Neo Super',
+  'Omega',
+  'Plutus 58',
+  'Proton',
+  'Reaper',
+  'Samurai',
+  'Stinger',
+  'Torpedo',
+  'TOTAL',
+  'Trident',
 ].map(p => ({ value: p, label: p }));
 
 // ── Dose unit options ─────────────────────────────────────────────────────────
@@ -88,14 +90,19 @@ const Step3_ProductDoseDetails = ({ data, onChange, onNext, onBack }: Step3Props
           <Text style={styles.heading}>Product & Dose Details</Text>
         </View>
 
-        <InlinePicker
+        {/* Product Name — SmartDropdown allows custom entry for unlisted products */}
+        <SmartDropdown
           label="Product Name"
           required
           value={data.product_name}
+          customValue={data.custom_product_name ?? ''}
           options={PRODUCT_OPTIONS}
-          onSelect={v => onChange({ product_name: v })}
+          onSelect={v => onChange({ product_name: v, custom_product_name: '' })}
+          onCustomChange={v => onChange({ custom_product_name: v })}
           placeholder="Select product…"
+          customMaxLength={200}
           error={errors.product_name}
+          customError={errors.custom_product_name}
         />
 
         <View style={styles.doseRow}>

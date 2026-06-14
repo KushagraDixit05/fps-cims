@@ -24,6 +24,7 @@ type FormAction =
   | { type: 'UPDATE_VARIETY'; payload: { localKey: string; data: Partial<CropVarietyDraft> } }
   | { type: 'REMOVE_VARIETY'; payload: { localKey: string } }
   | { type: 'SET_SOURCE'; payload: MandiArrivalSource }
+  | { type: 'SET_CUSTOM_SOURCE'; payload: string }
   | { type: 'SET_REMARK'; payload: string }
   | { type: 'ADD_PHOTO'; payload: PhotoDraft }
   | { type: 'REMOVE_PHOTO'; payload: { uri: string } }
@@ -35,6 +36,7 @@ type FormAction =
 const makeBlankVariety = (index: number = 0): CropVarietyDraft => ({
   localKey: `variety_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
   crop_variety_name: '',
+  custom_crop_variety_name: '',
   quantity_qt: '',
   top_rate: '',
   mostly_sales_rate: '',
@@ -53,6 +55,7 @@ const INITIAL_STATE: MandiArrivalFormState = {
   },
   varieties: [makeBlankVariety(0)],
   source: '',
+  custom_source: '',
   remark: '',
   photos: [],
   location: { latitude: null, longitude: null, captured: false },
@@ -100,7 +103,11 @@ function formReducer(
       };
 
     case 'SET_SOURCE':
-      return { ...state, source: action.payload };
+      // When switching away from Others, clear the custom text
+      return { ...state, source: action.payload, custom_source: '' };
+
+    case 'SET_CUSTOM_SOURCE':
+      return { ...state, custom_source: action.payload };
 
     case 'SET_REMARK':
       return { ...state, remark: action.payload };
@@ -143,6 +150,7 @@ export interface UseMandiArrivalFormReturn {
 
   // Step 3
   setSource: (source: MandiArrivalSource) => void;
+  setCustomSource: (text: string) => void;
   setRemark: (text: string) => void;
 
   // Step 4
@@ -194,6 +202,11 @@ export const useMandiArrivalForm = (): UseMandiArrivalFormReturn => {
     [],
   );
 
+  const setCustomSource = useCallback(
+    (text: string) => dispatch({ type: 'SET_CUSTOM_SOURCE', payload: text }),
+    [],
+  );
+
   const setRemark = useCallback(
     (text: string) => dispatch({ type: 'SET_REMARK', payload: text }),
     [],
@@ -229,6 +242,7 @@ export const useMandiArrivalForm = (): UseMandiArrivalFormReturn => {
     updateVariety,
     removeVariety,
     setSource,
+    setCustomSource,
     setRemark,
     addPhoto,
     removePhoto,

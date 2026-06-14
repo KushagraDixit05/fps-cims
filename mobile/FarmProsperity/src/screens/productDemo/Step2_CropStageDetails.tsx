@@ -20,7 +20,8 @@ import { colors } from '../../utils/colors';
 import FormInput from '../../components/FormInput';
 import Button from '../../components/Button';
 import InlinePicker from '../../components/InlinePicker';
-import SmartDropdown, { OTHERS_VALUE } from '../../components/SmartDropdown';
+import SmartDropdown from '../../components/SmartDropdown';
+import { OTHERS_VALUE } from '../../utils/othersValidation';
 import type { CropStageDraft, CropStageErrors, VarietyDraft } from '../../types/productDemo';
 import type { CropMaster } from '../../types/cropMonitoring';
 import { validateStep2, hasErrors } from '../../utils/productDemoValidation';
@@ -103,8 +104,8 @@ const Step2_CropStageDetails = ({ data, onChange, onNext, onBack }: Step2Props) 
   }, []);
 
   const handleCropSelect = (cropName: string) => {
-    // Reset varieties when the crop changes.
-    onChange({ crop_name: cropName, varieties: [{ variety: '', custom_variety: '' }] });
+    // Reset varieties when the crop changes; clear custom_crop_name if a real crop is selected
+    onChange({ crop_name: cropName, custom_crop_name: '', varieties: [{ variety: '', custom_variety: '' }] });
   };
 
   const updateVariety = (index: number, patch: Partial<VarietyDraft>) => {
@@ -138,14 +139,12 @@ const Step2_CropStageDetails = ({ data, onChange, onNext, onBack }: Step2Props) 
   };
 
   const cropOptions = cropMaster.map(c => ({ value: c.crop_name, label: c.crop_name }));
+  // SmartDropdown appends 'Others' automatically — do NOT manually add it to varietyOptions
   const selectedCropMaster = cropMaster.find(c => c.crop_name === data.crop_name);
-  const varietyOptions = [
-    ...(selectedCropMaster?.varieties ?? []).map(v => ({
-      value: v.variety_name,
-      label: v.variety_name,
-    })),
-    ...(selectedCropMaster ? [{ value: 'Others', label: 'Others (enter manually)' }] : []),
-  ];
+  const varietyOptions = (selectedCropMaster?.varieties ?? []).map(v => ({
+    value: v.variety_name,
+    label: v.variety_name,
+  }));
 
   const parsedDate = parseDate(data.demo_date);
   const displayDate = parsedDate
@@ -177,15 +176,19 @@ const Step2_CropStageDetails = ({ data, onChange, onNext, onBack }: Step2Props) 
           </View>
         )}
 
-        <InlinePicker
+        {/* Crop — SmartDropdown allows custom entry for unlisted crops */}
+        <SmartDropdown
           label="Crop"
           required
           value={data.crop_name}
+          customValue={data.custom_crop_name ?? ''}
           options={cropOptions}
           onSelect={handleCropSelect}
+          onCustomChange={text => onChange({ custom_crop_name: text })}
           placeholder={loadingMaster ? 'Loading…' : 'Select crop…'}
-          disabled={loadingMaster}
+          loading={loadingMaster}
           error={errors.crop_name}
+          customError={errors.custom_crop_name}
         />
 
         {/* Varieties — one crop, multiple varieties */}

@@ -9,6 +9,7 @@ import type {
   CropVarietyErrors,
 } from '../types/mandiArrival';
 import type { PhotoDraft, LocationDraft } from '../types/cropMonitoring';
+import { OTHERS_VALUE, validateOthersInput } from './othersValidation';
 
 // ─── Step 1: Mandi Details ────────────────────────────────────────────────────
 
@@ -48,7 +49,10 @@ export const hasMandiDetailsErrors = (errors: MandiDetailsErrors): boolean =>
 const validateVariety = (v: CropVarietyDraft): CropVarietyErrors => {
   const errors: CropVarietyErrors = {};
 
-  if (!v.crop_variety_name.trim()) {
+  if (v.crop_variety_name === OTHERS_VALUE) {
+    const err = validateOthersInput(v.custom_crop_variety_name ?? '', 'Crop variety name', 2, 100);
+    if (err) errors.custom_crop_variety_name = err;
+  } else if (!v.crop_variety_name.trim()) {
     errors.crop_variety_name = 'Crop variety name is required.';
   }
 
@@ -97,13 +101,17 @@ export const hasVarietyErrors = (errMap: Map<string, CropVarietyErrors>): boolea
 
 export interface Step3Errors {
   source?: string;
+  custom_source?: string;
   remark?: string;
 }
 
-export const validateStep3 = (source: string, remark: string): Step3Errors => {
+export const validateStep3 = (source: string, customSource: string, remark: string): Step3Errors => {
   const errors: Step3Errors = {};
 
-  if (!source) {
+  if (source === OTHERS_VALUE) {
+    const err = validateOthersInput(customSource ?? '', 'Source description', 2, 100);
+    if (err) errors.custom_source = err;
+  } else if (!source) {
     errors.source = 'Please select a source of information.';
   }
 

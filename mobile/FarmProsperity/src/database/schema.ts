@@ -16,7 +16,7 @@
 
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
-export const DB_SCHEMA_VERSION = 7;
+export const DB_SCHEMA_VERSION = 8;
 
 export default appSchema({
   version: DB_SCHEMA_VERSION,
@@ -105,6 +105,8 @@ export default appSchema({
         { name: 'longitude',         type: 'number', isOptional: true },
         // Custom mandi name (v5) — used when mandi_id = 0 (Others selected)
         { name: 'mandi_custom_name', type: 'string', isOptional: true },
+        // Custom source (v8) — free-text when source = '__others__'
+        { name: 'custom_source',     type: 'string', isOptional: true },
         // Sync fields
         { name: 'server_id',         type: 'string', isOptional: true },
         { name: 'is_synced',         type: 'boolean' },

@@ -10,7 +10,7 @@ import type {
   PhotoDraft,
   LocationDraft,
 } from '../types/cropMonitoring';
-import { OTHERS_VALUE } from '../components/SmartDropdown';
+import { OTHERS_VALUE, validateOthersInput } from './othersValidation';
 
 // ─── Step 1 — Farmer Details ──────────────────────────────────────────────────
 
@@ -35,7 +35,10 @@ export const validateStep1 = (
     errors.district_name = 'District is required.';
   }
 
-  if (!data.block_name.trim()) {
+  if (data.block_name === OTHERS_VALUE) {
+    const err = validateOthersInput(data.custom_block_name ?? '', 'Block', 2, 100);
+    if (err) errors.custom_block_name = err;
+  } else if (!data.block_name.trim()) {
     errors.block_name = 'Block is required.';
   }
 
@@ -67,7 +70,10 @@ export const validateStep1 = (
 export const validateCropRecord = (crop: CropRecordDraft): CropRecordErrors => {
   const errors: CropRecordErrors = {};
 
-  if (!crop.crop_name.trim()) {
+  if (crop.crop_name === OTHERS_VALUE) {
+    const err = validateOthersInput(crop.custom_crop_name ?? '', 'Crop name', 2, 100);
+    if (err) errors.custom_crop_name = err;
+  } else if (!crop.crop_name.trim()) {
     errors.crop_name = 'Please select a crop.';
   }
 

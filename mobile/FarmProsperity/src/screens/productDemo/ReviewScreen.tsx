@@ -13,7 +13,7 @@ import {
 import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
-import { OTHERS_VALUE } from '../../components/SmartDropdown';
+import { OTHERS_VALUE, resolveOthersValue } from '../../utils/othersValidation';
 import type { ProductDemoFormState, DemoResult } from '../../types/productDemo';
 
 interface ReviewScreenProps {
@@ -108,7 +108,7 @@ const ReviewScreen = ({
         <SectionHeader title="Farmer & Location Details" onEdit={onEditFarmer} />
         <Row label="Farmer Name"      value={farmerDetails.farmer_name} />
         <Row label="Mobile"           value={farmerDetails.mobile_number} />
-        <Row label="Village / Block"  value={`${farmerDetails.village_name} / ${farmerDetails.block_name}`} />
+        <Row label="Village / Block"  value={`${farmerDetails.village_name} / ${resolveOthersValue(farmerDetails.block_name, farmerDetails.custom_block_name ?? '')}`} />
         <Row label="District"         value={farmerDetails.district_name} />
         <Row label="Total Land (Ac)"  value={farmerDetails.total_land_acre} />
       </Card>
@@ -116,7 +116,7 @@ const ReviewScreen = ({
       {/* Crop & Stage Details */}
       <Card>
         <SectionHeader title="Crop & Stage Details" onEdit={onEditCrop} />
-        <Row label="Crop"             value={cropStage.crop_name} />
+        <Row label="Crop"             value={resolveOthersValue(cropStage.crop_name, cropStage.custom_crop_name ?? '')} />
         <Row
           label={cropStage.varieties.length > 1 ? 'Varieties' : 'Variety'}
           value={cropStage.varieties
@@ -132,7 +132,7 @@ const ReviewScreen = ({
       {/* Product & Dose Details */}
       <Card>
         <SectionHeader title="Product & Dose Details" onEdit={onEditProduct} />
-        <Row label="Product Name"     value={productDose.product_name} />
+        <Row label="Product Name"     value={resolveOthersValue(productDose.product_name, productDose.custom_product_name ?? '')} />
         <Row label="Dose"             value={`${productDose.dose} ${productDose.dose_unit}`} />
       </Card>
 

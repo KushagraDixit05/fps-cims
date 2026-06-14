@@ -67,6 +67,8 @@ export interface CropRecordDraft {
   /** Client-side UUID used as React key — never sent to the server. */
   localKey: string;
   crop_name: string;
+  /** Free-text crop name typed when Others is selected. Resolved before submission. */
+  custom_crop_name: string;
   /** One or more varieties for this crop. Always has at least one entry. */
   varieties: VarietyDraft[];
   /** ISO date string: YYYY-MM-DD */
@@ -95,6 +97,8 @@ export interface FarmerDetailsDraft {
   /** Free-text village entered when 'Others (Please specify)' is selected. */
   custom_village_name: string;
   block_name: string;
+  /** Free-text block name typed when Others is selected. Resolved before submission. */
+  custom_block_name: string;
   district_name: string;
   total_land_acre: string;
 }

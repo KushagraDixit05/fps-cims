@@ -13,7 +13,7 @@ import type {
   Step4Errors,
   PhotoDraft,
 } from '../types/productDemo';
-import { OTHERS_VALUE } from '../components/SmartDropdown';
+import { OTHERS_VALUE, validateOthersInput } from './othersValidation';
 
 // ─── Step 1 — Farmer Details ──────────────────────────────────────────────────
 
@@ -38,7 +38,10 @@ export const validateStep1 = (
     errors.district_name = 'District is required.';
   }
 
-  if (!data.block_name.trim()) {
+  if (data.block_name === OTHERS_VALUE) {
+    const err = validateOthersInput(data.custom_block_name ?? '', 'Block', 2, 100);
+    if (err) errors.custom_block_name = err;
+  } else if (!data.block_name.trim()) {
     errors.block_name = 'Block is required.';
   }
 
@@ -68,7 +71,10 @@ export const validateStep1 = (
 export const validateStep2 = (data: CropStageDraft): CropStageErrors => {
   const errors: CropStageErrors = {};
 
-  if (!data.crop_name.trim()) {
+  if (data.crop_name === OTHERS_VALUE) {
+    const err = validateOthersInput(data.custom_crop_name ?? '', 'Crop name', 2, 100);
+    if (err) errors.custom_crop_name = err;
+  } else if (!data.crop_name.trim()) {
     errors.crop_name = 'Please select a crop.';
   }
 
@@ -146,7 +152,10 @@ export const validateStep2 = (data: CropStageDraft): CropStageErrors => {
 export const validateStep3 = (data: ProductDoseDraft): ProductDoseErrors => {
   const errors: ProductDoseErrors = {};
 
-  if (!data.product_name.trim()) {
+  if (data.product_name === OTHERS_VALUE) {
+    const err = validateOthersInput(data.custom_product_name ?? '', 'Product name', 2, 200);
+    if (err) errors.custom_product_name = err;
+  } else if (!data.product_name.trim()) {
     errors.product_name = 'Please select a product.';
   }
 

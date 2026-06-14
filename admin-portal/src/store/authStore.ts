@@ -9,6 +9,7 @@ interface AuthUser {
   username: string;
   email: string;
   role: string;
+  is_staff: boolean;
   full_name?: string;
 }
 
@@ -17,6 +18,7 @@ interface JWTPayload {
   username: string;
   email: string;
   role: string;
+  is_staff: boolean;
   full_name?: string;
 }
 
@@ -54,7 +56,8 @@ export const useAuthStore = create<AuthState>()(
           id: Number(payload?.user_id ?? 0),
           username: payload?.username ?? username,
           email: payload?.email ?? "",
-          role: payload?.role ?? "admin",
+          role: payload?.role ?? "",
+          is_staff: payload?.is_staff ?? false,
           full_name: payload?.full_name ?? payload?.username ?? username,
         };
         set({

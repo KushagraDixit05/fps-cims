@@ -141,5 +141,20 @@ export default schemaMigrations({
         }),
       ],
     },
+
+    // ── v7 → v8: Mandi custom source ──────────────────────────────────────────────
+    // Adds custom_source (optional string) to mandi_arrivals.
+    // Written when user selects "Others (Please Specify)" for Source in Step 3.
+    {
+      toVersion: 8,
+      steps: [
+        addColumns({
+          table: 'mandi_arrivals',
+          columns: [
+            { name: 'custom_source', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

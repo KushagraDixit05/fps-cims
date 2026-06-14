@@ -41,11 +41,13 @@ const INITIAL_STATE: ProductDemoFormState = {
     village_id: null,
     custom_village_name: '',
     block_name: '',
+    custom_block_name: '',
     district_name: '',
     total_land_acre: '',
   },
   cropStage: {
     crop_name: '',
+    custom_crop_name: '',
     varieties: [{ variety: '', custom_variety: '' }],
     crop_stage: '',
     crop_stage_days: '',
@@ -53,6 +55,7 @@ const INITIAL_STATE: ProductDemoFormState = {
   },
   productDose: {
     product_name: '',
+    custom_product_name: '',
     dose: '',
     dose_unit: '',
   },

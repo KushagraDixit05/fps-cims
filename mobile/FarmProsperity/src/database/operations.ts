@@ -12,7 +12,7 @@ import { CropEntryModel }    from './models/CropEntryModel';
 import { MandiArrivalModel } from './models/MandiArrivalModel';
 import { FarmerVisitModel }  from './models/FarmerVisitModel';
 import { ProductDemoModel }  from './models/ProductDemoModel';
-import { OTHERS_VALUE }      from '../components/SmartDropdown';
+import { OTHERS_VALUE, resolveOthersValue, sanitizeOthersInput } from '../utils/othersValidation';
 
 // ─── Crop Monitoring Wizard ───────────────────────────────────────────────────
 
@@ -34,12 +34,12 @@ export const saveVisitLocally = async (
   // Build the crops JSON string — same shape as cropsPayload in buildFormData().
   // Resolve varieties array; also send first variety in legacy `variety` field.
   const resolveVariety = (v: { variety: string; custom_variety: string }): string =>
-    v.variety === 'Others' ? (v.custom_variety.trim() || 'Others') : v.variety;
+    resolveOthersValue(v.variety, v.custom_variety);
 
   const cropsPayload = crops.map((c: CropRecordDraft, i: number) => {
     const resolvedVarieties = (c.varieties ?? []).map(resolveVariety).filter(Boolean);
     return {
-      crop_name:            c.crop_name,
+      crop_name: resolveOthersValue(c.crop_name, c.custom_crop_name ?? ''),
       variety:              resolvedVarieties[0] ?? '',
       date_of_sowing:       c.date_of_sowing,
       current_area_acre:    c.current_area_acre,
@@ -73,7 +73,7 @@ export const saveVisitLocally = async (
         (v as any).villageId = farmerDetails.village_name === OTHERS_VALUE
           ? null
           : (farmerDetails.village_id ?? null);
-        v.blockName      = farmerDetails.block_name.trim();
+        v.blockName      = resolveOthersValue(farmerDetails.block_name, farmerDetails.custom_block_name ?? '');
         v.districtName   = farmerDetails.district_name.trim();
         v.totalLandAcre  = farmerDetails.total_land_acre.trim() || null;
         v.latitude       = location.latitude;
@@ -191,12 +191,12 @@ export const saveMandiArrivalLocally = async (
 export const saveMandiArrivalWizardLocally = async (
   state: MandiArrivalFormState,
 ): Promise<MandiArrivalSaveResult> => {
-  const { mandiDetails, varieties, photos, location, source, remark } = state;
+  const { mandiDetails, varieties, photos, location, source, custom_source, remark } = state;
   const now = Date.now();
 
-  // Build varieties JSON payload
+  // Build varieties JSON payload — resolve OTHERS_VALUE sentinel to custom text
   const varietiesPayload = varieties.map((v: CropVarietyDraft, i: number) => ({
-    crop_variety_name: v.crop_variety_name.trim(),
+    crop_variety_name: resolveOthersValue(v.crop_variety_name, v.custom_crop_variety_name ?? ''),
     quantity_qt:       parseFloat(v.quantity_qt) || 0,
     top_rate:          parseFloat(v.top_rate) || 0,
     mostly_sales_rate: parseFloat(v.mostly_sales_rate) || 0,
@@ -211,7 +211,7 @@ export const saveMandiArrivalWizardLocally = async (
   }));
 
   // First variety name used for legacy commodity column (required by schema)
-  const legacyCommodity = varieties[0]?.crop_variety_name.trim() || 'Unknown';
+  const legacyCommodity = varietiesPayload[0]?.crop_variety_name || 'Unknown';
 
   let localId = '';
 
@@ -236,7 +236,11 @@ export const saveMandiArrivalWizardLocally = async (
         a.avgRate          = null;
         a.minRate          = null;
         a.maxRate          = null;
-        a.source           = source;
+        // Resolve Others sentinel for source — store custom text when source is Others
+        a.source           = resolveOthersValue(source, custom_source ?? '');
+        (a as any).customSource = source === OTHERS_VALUE
+          ? sanitizeOthersInput(custom_source ?? '', 100)
+          : '';
         a.remark           = remark.trim() || null;
         // New v2 wizard columns
         (a as any).varietiesJson   = JSON.stringify(varietiesPayload);
@@ -293,7 +297,7 @@ export const saveProductDemoLocally = async (
         (d as any).villageId = farmerDetails.village_name === OTHERS_VALUE
           ? null
           : (farmerDetails.village_id ?? null);
-        d.blockName      = farmerDetails.block_name.trim();
+        d.blockName      = resolveOthersValue(farmerDetails.block_name, farmerDetails.custom_block_name ?? '');
         d.districtName   = farmerDetails.district_name.trim();
         d.totalLandAcre  = farmerDetails.total_land_acre.trim() || null;
         // Step 2 — resolve each variety (Others → custom text), dedupe, keep order
@@ -305,7 +309,7 @@ export const saveProductDemoLocally = async (
           )
           .filter((name) => name.length > 0)
           .filter((name, i, arr) => arr.indexOf(name) === i);
-        d.cropName       = cropStage.crop_name.trim();
+        d.cropName       = resolveOthersValue(cropStage.crop_name, cropStage.custom_crop_name ?? '');
         d.variety        = resolvedVarieties[0] ?? '';
         d.varietiesJson  = resolvedVarieties.length > 0
           ? JSON.stringify(resolvedVarieties)
@@ -314,7 +318,7 @@ export const saveProductDemoLocally = async (
         d.cropStageDays  = cropStage.crop_stage_days.trim();
         d.demoDate       = cropStage.demo_date.trim();
         // Step 3
-        d.productName    = productDose.product_name.trim();
+        d.productName    = resolveOthersValue(productDose.product_name, productDose.custom_product_name ?? '');
         d.dose           = productDose.dose.trim();
         d.doseUnit       = productDose.dose_unit as string;
         // Step 4 — 'Before' submission only. Result/after-photos/observations are
@@ -345,7 +349,7 @@ export const saveProductDemoLocally = async (
   return {
     id:           localId,
     farmer_name:  farmerDetails.farmer_name.trim(),
-    product_name: productDose.product_name.trim(),
+    product_name: resolveOthersValue(productDose.product_name, productDose.custom_product_name ?? ''),
   };
 };
 

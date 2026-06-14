@@ -3,6 +3,7 @@
 // Rendered inside MandiArrivalFormScreen.tsx when step === 1.
 
 import React, { useState, useEffect } from 'react';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import {
   View,
   Text,
@@ -37,6 +38,19 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
   const [errors, setErrors] = useState<MandiDetailsErrors>({});
   const [mandis, setMandis] = useState<Mandi[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const datePickerValue = (() => {
+    const d = new Date(data.date);
+    return isNaN(d.getTime()) ? new Date() : d;
+  })();
+
+  const handleDateChange = (_: DateTimePickerEvent, selected?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selected) {
+      onChange({ date: selected.toISOString().split('T')[0] });
+    }
+  };
 
   // Populate today's date as default if not already set
   useEffect(() => {
@@ -161,14 +175,36 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
           />
         )}
 
-        <FormInput
-          label="Date"
-          required
-          value={data.date}
-          onChangeText={(v) => onChange({ date: v })}
-          placeholder="YYYY-MM-DD"
-          error={errors.date}
-        />
+        <TouchableOpacity onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
+          <FormInput
+            label="Date"
+            required
+            value={data.date}
+            editable={false}
+            pointerEvents="none"
+            placeholder="YYYY-MM-DD"
+            error={errors.date}
+          />
+        </TouchableOpacity>
+
+        {showDatePicker && Platform.OS === 'android' && (
+          <DateTimePicker
+            value={datePickerValue}
+            mode="date"
+            display="default"
+            maximumDate={new Date()}
+            onChange={handleDateChange}
+          />
+        )}
+        {showDatePicker && Platform.OS === 'ios' && (
+          <DateTimePicker
+            value={datePickerValue}
+            mode="date"
+            display="inline"
+            maximumDate={new Date()}
+            onChange={handleDateChange}
+          />
+        )}
 
         <FormInput
           label="Total Arrival (All Crops)"

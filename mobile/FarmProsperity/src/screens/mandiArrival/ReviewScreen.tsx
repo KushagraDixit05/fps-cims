@@ -14,6 +14,7 @@ import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import type { MandiArrivalFormState } from '../../types/mandiArrival';
+import { resolveOthersValue } from '../../utils/othersValidation';
 
 interface ReviewScreenProps {
   state: MandiArrivalFormState;
@@ -61,7 +62,7 @@ const ReviewScreen = ({
   onBack,
   submitting,
 }: ReviewScreenProps) => {
-  const { mandiDetails, varieties, source, remark, photos, location } = state;
+  const { mandiDetails, varieties, source, custom_source, remark, photos, location } = state;
 
   const locationStr =
     location.captured && location.latitude !== null
@@ -104,7 +105,7 @@ const ReviewScreen = ({
         {varieties.map((v, i) => (
           <View key={v.localKey} style={styles.tableRow}>
             <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={2}>
-              {i + 1}. {v.crop_variety_name}
+              {i + 1}. {resolveOthersValue(v.crop_variety_name, v.custom_crop_variety_name ?? '')}
             </Text>
             <Text style={styles.tableCell} numberOfLines={1}>{v.quantity_qt || '—'}</Text>
             <Text style={styles.tableCell} numberOfLines={1}>{v.top_rate || '—'}</Text>
@@ -117,7 +118,7 @@ const ReviewScreen = ({
       {/* ── Source, Remark, Photos, Location ── */}
       <Card>
         <SectionHeader title="Source, Photos & Location" onEdit={onEditSource} />
-        <Row label="Source" value={source || '—'} />
+        <Row label="Source" value={resolveOthersValue(source, custom_source ?? '') || '—'} />
         <Row label="Remark" value={remark || 'None'} />
         <Row
           label="Photos"

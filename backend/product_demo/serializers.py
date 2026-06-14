@@ -1,8 +1,11 @@
 import json
+import logging
 from rest_framework import serializers
 from django.contrib.gis.geos import Point
 from django.db import transaction
 from .models import ProductMaster, ProductDemo, DemoPhoto
+
+logger = logging.getLogger('fps.custom_values')
 
 
 class ProductMasterSerializer(serializers.ModelSerializer):
@@ -67,6 +70,21 @@ class ProductDemoCreateSerializer(serializers.ModelSerializer):
             'local_id', 'photos_before',
         ]
 
+    def validate_product_name(self, value: str) -> str:
+        v = value.strip()[:200]
+        if not v:
+            raise serializers.ValidationError('Product name is required.')
+        return v
+
+    def validate_crop_name(self, value: str) -> str:
+        v = value.strip()[:100]
+        if not v:
+            raise serializers.ValidationError('Crop name is required.')
+        return v
+
+    def validate_block_name(self, value: str) -> str:
+        return value.strip()[:200]
+
     def validate_varieties(self, value):
         """Parse the JSON-encoded varieties list into a clean list of names."""
         if not value:
@@ -98,7 +116,8 @@ class ProductDemoCreateSerializer(serializers.ModelSerializer):
         elif validated_data.get('variety'):
             validated_data['varieties'] = [validated_data['variety']]
 
-        validated_data['executive']  = self.context['request'].user
+        user = self.context['request'].user
+        validated_data['executive']  = user
         validated_data['is_synced']  = True
         validated_data['demo_phase'] = 'before'
 
@@ -110,6 +129,14 @@ class ProductDemoCreateSerializer(serializers.ModelSerializer):
 
             for img in photos_before:
                 DemoPhoto.objects.create(demo=demo, image=img, photo_type='before')
+
+        for field in ('block_name', 'crop_name', 'product_name'):
+            val = validated_data.get(field, '')
+            if val:
+                logger.info(
+                    'custom_value_submitted',
+                    extra={'user_id': user.id, 'module': 'product_demo', 'field': field, 'value': val},
+                )
 
         return demo
 

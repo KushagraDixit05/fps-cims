@@ -21,11 +21,9 @@ import {
 } from 'react-native';
 import { colors } from '../utils/colors';
 import InlinePicker, { type PickerOption } from './InlinePicker';
-
-// Sentinel value used internally to represent "Others" selection.
-// Never stored to DB — parent receives it and stores custom text instead.
-export const OTHERS_VALUE = '__others__';
-export const OTHERS_LABEL = 'Others (Please specify)';
+// Re-export from shared utility — single source of truth for the entire codebase.
+export { OTHERS_VALUE, OTHERS_LABEL } from '../utils/othersValidation';
+import { OTHERS_VALUE, OTHERS_LABEL } from '../utils/othersValidation';
 
 export interface SmartDropdownProps {
   label: string;

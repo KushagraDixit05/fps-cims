@@ -11,8 +11,10 @@ import type { PhotoDraft, LocationDraft } from './cropMonitoring';
 export interface CropVarietyDraft {
   /** Client-side UUID used as React key — never sent to the server. */
   localKey: string;
-  /** e.g. "Soybean JS 9560" */
+  /** e.g. "Soybean JS 9560" — holds OTHERS_VALUE when Others is selected. */
   crop_variety_name: string;
+  /** Free-text variety name typed when Others is selected. Resolved before submission. */
+  custom_crop_variety_name: string;
   /** Arrival quantity in quintal — stored as string while user is typing */
   quantity_qt: string;
   /** Top (highest) rate ₹/Qt */
@@ -48,8 +50,8 @@ export type MandiDetailsErrors = Partial<Record<keyof MandiDetailsDraft, string>
 
 // ─── Source of Information ────────────────────────────────────────────────────
 
-/** 4 source options matching the workflow image. */
-export type MandiArrivalSource = 'Trader' | 'Farmer' | 'FPS Staff' | 'Mandi';
+/** 4 source options + sentinel for the "Others" free-text path. */
+export type MandiArrivalSource = 'Trader' | 'Farmer' | 'FPS Staff' | 'Mandi' | '__others__';
 
 export const MANDI_SOURCES: { value: MandiArrivalSource; label: string }[] = [
   { value: 'Trader',    label: 'Trader' },
@@ -65,6 +67,8 @@ export interface MandiArrivalFormState {
   mandiDetails: MandiDetailsDraft;
   varieties: CropVarietyDraft[];
   source: MandiArrivalSource | '';
+  /** Free-text source description typed when Others is selected. Resolved before submission. */
+  custom_source: string;
   remark: string;
   photos: PhotoDraft[];    // reuse from cropMonitoring types
   location: LocationDraft; // reuse from cropMonitoring types

@@ -12,7 +12,7 @@ import type {
   LocationDraft,
 } from '../types/cropMonitoring';
 import { saveVisitLocally } from '../database/operations';
-import { OTHERS_VALUE } from '../components/SmartDropdown';
+import { OTHERS_VALUE } from '../utils/othersValidation';
 
 // ─── Action types ─────────────────────────────────────────────────────────────
 
@@ -33,6 +33,7 @@ type FormAction =
 const makeBlankCrop = (index: number = 0): CropRecordDraft => ({
   localKey: `crop_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
   crop_name: '',
+  custom_crop_name: '',
   varieties: [{ variety: '', custom_variety: '' }],
   date_of_sowing: '',
   current_area_acre: '',
@@ -53,6 +54,7 @@ const INITIAL_STATE: CropMonitoringFormState = {
     village_id: null,
     custom_village_name: '',
     block_name: '',
+    custom_block_name: '',
     district_name: '',
     total_land_acre: '',
   },
@@ -135,12 +137,15 @@ const buildFormData = (state: CropMonitoringFormState): FormData => {
   // Farmer fields
   fd.append('farmer_name', farmerDetails.farmer_name.trim());
   fd.append('mobile_number', farmerDetails.mobile_number.trim());
-  // Resolve Others sentinel for village_name
+  // Resolve Others sentinels for village_name and block_name
   const resolvedVillage = farmerDetails.village_name === OTHERS_VALUE
     ? (farmerDetails.custom_village_name?.trim() || 'Custom')
     : farmerDetails.village_name.trim();
   fd.append('village_name', resolvedVillage);
-  fd.append('block_name', farmerDetails.block_name.trim());
+  const resolvedBlock = farmerDetails.block_name === OTHERS_VALUE
+    ? (farmerDetails.custom_block_name?.trim() || 'Others')
+    : farmerDetails.block_name.trim();
+  fd.append('block_name', resolvedBlock);
   fd.append('district_name', farmerDetails.district_name.trim());
   fd.append('total_land_acre', farmerDetails.total_land_acre.trim());
 
@@ -162,8 +167,11 @@ const buildFormData = (state: CropMonitoringFormState): FormData => {
 
   const cropsPayload = crops.map((c, i) => {
     const resolvedVarieties = (c.varieties ?? []).map(resolveVariety).filter(Boolean);
+    const resolvedCropName = c.crop_name === OTHERS_VALUE
+      ? (c.custom_crop_name?.trim() || 'Others')
+      : c.crop_name;
     return {
-      crop_name: c.crop_name,
+      crop_name: resolvedCropName,
       variety: resolvedVarieties[0] ?? '',
       date_of_sowing: c.date_of_sowing,
       current_area_acre: c.current_area_acre,

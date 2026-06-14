@@ -42,6 +42,8 @@ export interface DemoFarmerDetailsDraft {
   /** Free-text village entered when 'Others (Please specify)' is selected. */
   custom_village_name: string;
   block_name: string;
+  /** Free-text block name typed when Others is selected. Resolved before submission. */
+  custom_block_name: string;
   district_name: string;
   total_land_acre: string;
 }
@@ -50,6 +52,8 @@ export type DemoFarmerDetailsErrors = Partial<Record<keyof DemoFarmerDetailsDraf
 
 export interface CropStageDraft {
   crop_name: string;
+  /** Free-text crop name typed when Others is selected. Resolved before submission. */
+  custom_crop_name: string;
   /** One crop, one or more varieties of it. Always has at least one entry. */
   varieties: VarietyDraft[];
   crop_stage: CropStage | '';
@@ -66,6 +70,8 @@ export type CropStageErrors = Partial<Record<keyof CropStageDraft, string>> & {
 
 export interface ProductDoseDraft {
   product_name: string;
+  /** Free-text product name typed when Others is selected. Resolved before submission. */
+  custom_product_name: string;
   dose: string;
   dose_unit: DoseUnit | '';
 }

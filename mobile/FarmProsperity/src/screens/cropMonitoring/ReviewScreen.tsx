@@ -14,7 +14,7 @@ import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import type { CropMonitoringFormState } from '../../types/cropMonitoring';
-import { OTHERS_VALUE } from '../../components/SmartDropdown';
+import { OTHERS_VALUE, resolveOthersValue } from '../../utils/othersValidation';
 
 interface ReviewScreenProps {
   state: CropMonitoringFormState;
@@ -86,7 +86,7 @@ const ReviewScreen = ({
         <SectionHeader title="Farmer Details" onEdit={onEditFarmer} />
         <Row label="Farmer Name" value={farmerDetails.farmer_name} />
         <Row label="Mobile Number" value={farmerDetails.mobile_number} />
-        <Row label="Village / Block" value={`${farmerDetails.village_name} / ${farmerDetails.block_name}`} />
+        <Row label="Village / Block" value={`${farmerDetails.village_name} / ${resolveOthersValue(farmerDetails.block_name, farmerDetails.custom_block_name ?? '')}`} />
         <Row label="District" value={farmerDetails.district_name} />
         <Row label="Total Land (Acre)" value={farmerDetails.total_land_acre} />
       </Card>
@@ -112,7 +112,7 @@ const ReviewScreen = ({
           return (
             <View key={crop.localKey} style={styles.tableRow}>
               <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>
-                {i + 1}. {crop.crop_name}
+                {i + 1}. {resolveOthersValue(crop.crop_name, crop.custom_crop_name ?? '')}
               </Text>
               <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={2}>
                 {varietyDisplay}
