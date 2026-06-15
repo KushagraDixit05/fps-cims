@@ -102,7 +102,7 @@ export interface Mandi {
   is_active: boolean;
 }
 
-export type MandiSource = 'trader' | 'farmer' | 'official';
+export type MandiSource = 'trader' | 'farmer' | 'fps_staff' | 'mandi' | 'official' | 'other';
 
 export interface MandiArrival {
   id: string;                    // UUID
@@ -116,6 +116,7 @@ export interface MandiArrival {
   min_rate?: number;
   max_rate?: number;
   source: MandiSource;
+  custom_source?: string;
   remark: string;
   created_at?: string;
   local_id?: string;

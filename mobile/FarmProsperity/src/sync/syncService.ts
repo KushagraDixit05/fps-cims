@@ -268,6 +268,17 @@ const syncCropEntries = async (result: SyncResult): Promise<void> => {
 };
 
 /**
+ * Maps stored mandi source values to backend choice keys. Accepts both legacy
+ * capitalized labels and current lowercase keys so older unsynced records flush.
+ */
+const SOURCE_KEY: Record<string, string> = {
+  Trader: 'trader',  trader: 'trader',
+  Farmer: 'farmer',  farmer: 'farmer',
+  'FPS Staff': 'fps_staff', fps_staff: 'fps_staff',
+  Mandi: 'mandi',    mandi: 'mandi',
+};
+
+/**
  * Sync MandiArrival records.
  */
 const syncMandiArrivals = async (result: SyncResult): Promise<void> => {
@@ -280,6 +291,15 @@ const syncMandiArrivals = async (result: SyncResult): Promise<void> => {
 
   for (const arrival of unsynced) {
     try {
+      // Normalize source to backend choice keys. Handles both already-stored
+      // capitalized labels (older records) and current lowercase values. When a
+      // custom source was entered ("Others" path), operations.ts stores the free
+      // text in `source` and sets `customSource` → map to 'other'.
+      const customSrc = (arrival as any).customSource as string | null;
+      const normalizedSource = (customSrc && customSrc.trim())
+        ? 'other'
+        : (SOURCE_KEY[arrival.source] ?? 'other');
+
       const payload: MandiArrivalPayload = {
         mandi:            arrival.mandiId,
         commodity:        arrival.commodity,
@@ -288,7 +308,8 @@ const syncMandiArrivals = async (result: SyncResult): Promise<void> => {
         avg_rate:         arrival.avgRate    ?? undefined,
         min_rate:         arrival.minRate    ?? undefined,
         max_rate:         arrival.maxRate    ?? undefined,
-        source:           arrival.source     as any,
+        source:           normalizedSource   as any,
+        custom_source:    customSrc          ?? '',
         remark:           arrival.remark     ?? '',
         // Stable client id → backend idempotency (no duplicate on retried sync)
         local_id:         arrival.id,

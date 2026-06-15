@@ -51,13 +51,13 @@ export type MandiDetailsErrors = Partial<Record<keyof MandiDetailsDraft, string>
 // ─── Source of Information ────────────────────────────────────────────────────
 
 /** 4 source options + sentinel for the "Others" free-text path. */
-export type MandiArrivalSource = 'Trader' | 'Farmer' | 'FPS Staff' | 'Mandi' | '__others__';
+export type MandiArrivalSource = 'trader' | 'farmer' | 'fps_staff' | 'mandi' | '__others__';
 
 export const MANDI_SOURCES: { value: MandiArrivalSource; label: string }[] = [
-  { value: 'Trader',    label: 'Trader' },
-  { value: 'Farmer',    label: 'Farmer' },
-  { value: 'FPS Staff', label: 'FPS Staff' },
-  { value: 'Mandi',     label: 'Mandi' },
+  { value: 'trader',    label: 'Trader' },
+  { value: 'farmer',    label: 'Farmer' },
+  { value: 'fps_staff', label: 'FPS Staff' },
+  { value: 'mandi',     label: 'Mandi' },
 ];
 
 // ─── Wizard State ─────────────────────────────────────────────────────────────

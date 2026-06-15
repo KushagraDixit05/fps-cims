@@ -31,7 +31,9 @@ class MandiArrival(models.Model):
     SOURCE_CHOICES = [
         ('trader', 'Trader'),
         ('farmer', 'Farmer'),
-        ('official', 'Mandi Official'),
+        ('fps_staff', 'FPS Staff'),
+        ('mandi', 'Mandi'),
+        ('official', 'Mandi Official'),  # keep — legacy data
         ('other', 'Other'),
     ]
 
