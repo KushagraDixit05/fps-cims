@@ -2,8 +2,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Filter, ChevronDown, X } from 'lucide-react';
+import { DateRangePicker } from './DateRangePicker';
 import { useMapStore } from '@/store/mapStore';
 import { useFilterStore } from '@/store/filterStore';
+import { useTimelineStore } from '@/store/timelineStore';
 import { SPRING } from '@/lib/mapMotion';
 
 const CROPS = ['Chilli', 'Cotton', 'Soybean', 'Wheat', 'Rice', 'Maize', 'Onion', 'Tomato'];
@@ -35,8 +37,15 @@ function SectionHead({ label, open, onToggle }: { label: string; open: boolean; 
 }
 
 export function FilterRail() {
-  const revealStage = useMapStore((s) => s.revealStage);
+  const revealStage      = useMapStore((s) => s.revealStage);
   const { crops, modules, condition, dateFrom, dateTo, toggleCrop, toggleModule, setCondition, setDateFrom, setDateTo, reset } = useFilterStore();
+  const tlSetPlaying     = useTimelineStore((s) => s.setPlaying);
+  const tlSetCurrentDate = useTimelineStore((s) => s.setCurrentDate);
+
+  // Stop timeline playback whenever the user manually picks a date, so it
+  // doesn't immediately overwrite the chosen value on the next RAF tick.
+  function handleDateFrom(d: string | null) { tlSetPlaying(false); tlSetCurrentDate(null); setDateFrom(d); }
+  function handleDateTo(d: string | null)   { tlSetPlaying(false); tlSetCurrentDate(null); setDateTo(d);   }
 
   const [cropOpen,   setCropOpen]   = useState(true);
   const [advOpen,    setAdvOpen]    = useState(false);
@@ -210,26 +219,12 @@ export function FilterRail() {
                   transition={SPRING.tactile}
                   className="overflow-hidden space-y-2 pb-2"
                 >
-                  {[
-                    { label: 'From', value: dateFrom, set: setDateFrom },
-                    { label: 'To',   value: dateTo,   set: setDateTo   },
-                  ].map(({ label, value, set }) => (
-                    <div key={label}>
-                      <p className="text-[10px] mb-1" style={{ color: 'var(--text-lo)' }}>{label}</p>
-                      <input
-                        type="date"
-                        value={value ?? ''}
-                        onChange={(e) => set(e.target.value || null)}
-                        className="w-full px-2.5 py-1.5 rounded-lg text-xs outline-none"
-                        style={{
-                          background:  'rgba(255,255,255,0.07)',
-                          border:      '1px solid var(--glass-stroke)',
-                          color:       'var(--text-hi)',
-                          colorScheme: 'dark',
-                        }}
-                      />
-                    </div>
-                  ))}
+                  <DateRangePicker
+                    dateFrom={dateFrom}
+                    dateTo={dateTo}
+                    onFrom={handleDateFrom}
+                    onTo={handleDateTo}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>

@@ -113,6 +113,36 @@ many tweens → introduce GSAP for that subsystem only.
 
 ---
 
+## ADR-09 · India confinement: deck.gl inverse-polygon mask + bundled local boundary
+
+**Chosen:** Lock the camera to India (`maxBounds` + `minZoom` + `fitBounds` on
+load) and hide everything outside India with a **top-most deck.gl inverse-polygon
+fog mask** (world rectangle with India's rings as holes). National + district
+geometry is **bundled locally** under `public/geo/` (full J&K / Ladakh / Aksai
+Chin).
+
+**Rejected:**
+- *MapLibre `fill` mask layer added via `map.addLayer`* — mixing hand-added style
+  layers with deck's `interleaved` overlay makes z-order between the mask and deck
+  data layers fragile. A deck layer placed last in the array is deterministically
+  on top.
+- *Clipping the basemap style to India* — would require authoring a custom tile
+  source; the fog mask achieves the same India-only look with zero basemap work
+  and also hides heat-radius spillover past the border.
+- *Keeping the external GitHub TopoJSON URL* — runtime dependency on GitHub uptime
+  and an outline that does not match India's official stance.
+
+**Why:** The mask is one deterministic layer, engine-agnostic, and doubles as the
+border clip for the heatmap. Local boundary files are offline, fast, and
+politically correct. The bundled outline is **swappable** with a
+Survey-of-India-certified file (or Mappls basemap) without touching code — just
+replace `public/geo/india-outline.geojson`.
+
+**Revisit if:** we adopt the Mappls official basemap (then the fog mask can relax
+to a lighter vignette) or move boundaries to vector tiles.
+
+---
+
 ## ADR-08 · Mandi geometry: add `Mandi.location` PointField + centroid backfill
 
 **Chosen:** Migration adds nullable `location` to `Mandi`; backfill from a

@@ -45,10 +45,30 @@
     --text-hi: #EAF4EE;
     --text-mid: #9DB3A6;
     --text-lo: #5E7268;
+    --control-fill: rgba(255, 255, 255, 0.06);
+    --control-fill-strong: rgba(255, 255, 255, 0.10);
     --rail-w: 52px;
     --filter-w: 280px;
     --panel-w: 340px;
     --timeline-h: 80px;
+  }
+
+  /* Light map theme — applied when the workspace root has data-map-theme="light".
+     Scoped so only the map surface flips; other portal pages stay unaffected. */
+  [data-map-theme="light"] {
+    --map-bg-0: #EEF1F4;
+    --map-bg-1: #E3E8EC;
+    --glass-fill: rgba(255, 255, 255, 0.72);
+    --glass-stroke: rgba(20, 60, 40, 0.16);
+    --glass-stroke-hi: rgba(20, 60, 40, 0.30);
+    --accent: #1FAE6B;
+    --accent-glow: rgba(31, 174, 107, 0.32);
+    --accent-dim: rgba(31, 174, 107, 0.12);
+    --text-hi: #13241B;
+    --text-mid: #41584C;
+    --text-lo: #74897E;
+    --control-fill: rgba(20, 60, 40, 0.06);
+    --control-fill-strong: rgba(20, 60, 40, 0.10);
   }
 }
 

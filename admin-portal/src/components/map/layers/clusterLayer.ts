@@ -30,6 +30,7 @@ export function makeClusterLayer(
   opacity: number,
   onHover: PickHandler,
   onClick: PickHandler,
+  labelColor: [number, number, number, number] = [5, 8, 10, 255],
 ) {
   const circles = new ScatterplotLayer<ClusterFeature>({
     id:              'cluster-circles',
@@ -56,7 +57,7 @@ export function makeClusterLayer(
     getPosition:  (d) => d.geometry.coordinates,
     getText:      (d) => String(d.properties.point_count ?? ''),
     getSize:      10,
-    getColor:     [5, 8, 10, 255],
+    getColor:     labelColor,
     fontFamily:   'monospace',
     fontWeight:   'bold',
     getTextAnchor: 'middle',

@@ -65,6 +65,12 @@ Multi-crop blending: when N crops are selected, render N weighted heat layers wi
 per-crop tinted ramps at reduced individual intensity; additive blend produces the
 "elegant layering" the brief asks for, with shared hotspots reading hottest.
 
+**India clip:** the `HeatmapLayer` aggregates a Gaussian field, so the glow can
+bleed past the national border near coastal/edge cells. It is **visually clipped
+to India by the top-most inverse-polygon mask** (PHASE-1 §1.10a) — no per-layer
+clipping shader needed. Heat reads only inside India; spillover is covered by the
+fog. The same mask clips clusters/pins/flows at the border for free.
+
 ---
 
 ## 3.3 Cluster mode

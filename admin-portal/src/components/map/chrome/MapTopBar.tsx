@@ -20,7 +20,8 @@ function LiveClock() {
 export function MapTopBar() {
   const revealStage          = useMapStore((s) => s.revealStage);
   const setCommandPaletteOpen = useMapStore((s) => s.setCommandPaletteOpen);
-  const [dark, setDark]      = useState(true);
+  const mapTheme             = useMapStore((s) => s.mapTheme);
+  const toggleMapTheme       = useMapStore((s) => s.toggleMapTheme);
 
   if (revealStage < 2) return null;
 
@@ -63,21 +64,21 @@ export function MapTopBar() {
       <button
         onClick={() => setCommandPaletteOpen(true)}
         className="flex items-center gap-2 px-3 py-1 rounded-xl text-xs transition-colors"
-        style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-mid)' }}
+        style={{ background: 'var(--control-fill)', color: 'var(--text-mid)' }}
       >
         <Search className="h-3 w-3" />
         <span>Search</span>
-        <kbd className="ml-1 text-[10px] px-1 rounded" style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-lo)' }}>⌘K</kbd>
+        <kbd className="ml-1 text-[10px] px-1 rounded" style={{ background: 'var(--control-fill-strong)', color: 'var(--text-lo)' }}>⌘K</kbd>
       </button>
 
-      {/* Theme toggle */}
+      {/* Theme toggle — Sun shown in dark mode (click → light), Moon shown in light */}
       <button
-        onClick={() => setDark((d) => !d)}
-        className="p-1.5 rounded-lg transition-colors"
+        onClick={toggleMapTheme}
+        className="p-1.5 rounded-lg transition-colors hover:bg-[var(--control-fill)]"
         style={{ color: 'var(--text-lo)' }}
-        title="Toggle theme"
+        title={mapTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
       >
-        {dark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+        {mapTheme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
       </button>
     </motion.header>
   );

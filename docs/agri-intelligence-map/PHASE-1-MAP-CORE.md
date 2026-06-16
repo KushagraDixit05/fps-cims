@@ -246,8 +246,60 @@ in Phase 3 with the typed tips.
 
 ---
 
+## 1.10a India-Only Confinement (the "India is the world" law)
+
+> **Problem this fixes:** the map opened to a *whole-world view* — Africa, Europe,
+> the USA, and oceans were visible, and the camera could pan anywhere on Earth.
+> The map must immediately read as **"India Agricultural Intelligence Map."**
+> Confinement is achieved with three additive, deterministic mechanisms — no
+> basemap swap, no engine change.
+
+### 1. Bounds & zoom lock (camera can't leave India)
+
+```ts
+// lib/mapStyle.ts
+export const INDIA_BOUNDS:     [[number, number], [number, number]] = [[67.0, 6.0], [98.0, 38.0]]; // fitBounds target (SW, NE)
+export const INDIA_MAX_BOUNDS: [[number, number], [number, number]] = [[63.0, 3.0], [101.0, 40.5]]; // hard pan limit (padded)
+export const INDIA_MIN_ZOOM = 3.6;
+export const INDIA_MAX_ZOOM = 16;
+```
+
+The MapLibre constructor gets `maxBounds: INDIA_MAX_BOUNDS`, `minZoom`, `maxZoom`.
+On `map.on('load')` we `fitBounds(INDIA_BOUNDS, { padding: 40, duration: 0 })` so
+India fills the viewport on the very first paint instead of relying on a raw
+center/zoom guess. The user physically cannot drag past India or zoom out to the
+globe.
+
+### 2. Inverse-polygon fog mask (everything outside India is hidden)
+
+`lib/indiaMask.ts` loads the bundled national outline and builds a single polygon
+whose **outer ring is a world-spanning rectangle** and whose **holes are India's
+boundary rings** — i.e. "fill everywhere *except* India." Rendered as the
+**top-most deck.gl layer** (`SolidPolygonLayer`, fill `#05080A`, opacity ~0.96,
+`pickable:false`), it covers the basemap of neighbouring countries *and* any
+heat-radius spillover past the border, while India shows through the hole.
+
+### 3. Luminous India outline (premium border)
+
+A `GeoJsonLayer` (`stroked:true filled:false`, `[140,220,170,90]`, hairline width)
+traces only India's edge — the subtle glowing frame that makes the surface feel
+like a dedicated command surface, not a generic map.
+
+### Boundaries are bundled locally
+
+District + national geometry now load from `public/geo/india-districts.geojson`
+and `public/geo/india-outline.geojson` (full J&K / Ladakh / Aksai Chin per India's
+official stance) instead of an external GitHub TopoJSON URL — offline, fast, and
+politically correct. The files are swappable with a Survey-of-India-certified set
+(or Mappls) without code changes. See `TECH-DECISIONS` ADR on India masking.
+
+---
+
 ## 1.11 Acceptance criteria
 
+- [ ] On load India fills the frame, centered; no other countries / oceans visible.
+- [ ] Camera cannot pan beyond India (`maxBounds`) or zoom out to the globe (`minZoom`).
+- [ ] National outline includes full J&K + Ladakh; boundaries load from `public/geo/`.
 - [ ] View state lives in `useMapStore`; camera `flyTo` is cinematic (no jump).
 - [ ] Zoom-band opacities visibly cross-fade the mock layer across zoom levels.
 - [ ] Mode rail pill slides between modes; `1–5` hotkeys work; crossfade smooth.

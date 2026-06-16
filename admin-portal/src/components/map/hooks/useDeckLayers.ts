@@ -8,13 +8,17 @@ import { makeClusterLayer } from '../layers/clusterLayer';
 import { makePinLayer } from '../layers/pinLayer';
 import { makeDistrictLayer } from '../layers/districtLayer';
 import { makeFlowLayer } from '../layers/flowLayer';
+import { makeIndiaMaskLayer, makeIndiaOutlineLayer } from '../layers/maskLayer';
 import { DISTRICTS_GEOJSON_URL } from '@/lib/mapStyle';
+import { loadIndiaOutline, buildMaskPolygon, type MaskPolygon } from '@/lib/indiaMask';
+import { mapPalette } from '@/lib/mapPalette';
 import type { GeoAggregateFeature, GeoPointFeature, FlowArc } from '@/types/geo';
 
 export function useDeckLayers() {
   const activeMode       = useMapStore((s) => s.activeMode);
   const mapBounds        = useMapStore((s) => s.mapBounds);
   const zoom             = useMapStore((s) => s.viewState.zoom);
+  const mapTheme         = useMapStore((s) => s.mapTheme);
   const setHoverInfo     = useMapStore((s) => s.setHoverInfo);
   const setSelectedFeature = useMapStore((s) => s.setSelectedFeature);
 
@@ -26,20 +30,32 @@ export function useDeckLayers() {
   const pointsQ     = useGeoPoints(mapBounds);
   const flowsQ      = useGeoFlows('mandi');
 
-  // District boundaries (fetched once, cached)
+  // District boundaries (fetched once, cached). Bundled file is plain GeoJSON;
+  // still tolerate a TopoJSON source via the env override.
   const [districtBoundaries, setDistrictBoundaries] = useState<object[] | null>(null);
   useEffect(() => {
     if (districtBoundaries) return;
     fetch(DISTRICTS_GEOJSON_URL)
       .then((r) => r.json())
       .then((data) => {
-        const features = data?.features ?? data?.objects
-          ? Object.values(data.objects).flatMap((o: unknown) => (o as { geometries?: unknown[] }).geometries ?? [])
-          : [];
-        setDistrictBoundaries(features.length ? features : data?.features ?? []);
+        const features = data?.type === 'Topology'
+          ? Object.values(data.objects ?? {}).flatMap(
+              (o: unknown) => (o as { geometries?: unknown[] }).geometries ?? [],
+            )
+          : (data?.features ?? []);
+        setDistrictBoundaries(features);
       })
       .catch(() => setDistrictBoundaries([]));
   }, [districtBoundaries]);
+
+  // India outline → fog mask polygon + glowing border (loaded once, cached).
+  const [outline, setOutline]     = useState<GeoJSON.FeatureCollection | null>(null);
+  const [maskPolygon, setMask]    = useState<MaskPolygon | null>(null);
+  useEffect(() => {
+    loadIndiaOutline()
+      .then((fc) => { setOutline(fc); setMask(buildMaskPolygon(fc)); })
+      .catch(() => { setOutline(null); setMask(null); });
+  }, []);
 
   const hoverHandler  = useMemo(() => (info: { object?: unknown; x: number; y: number }) => {
     if (!info.object) { setHoverInfo(null); return; }
@@ -59,23 +75,34 @@ export function useDeckLayers() {
   const flowArcs          = (flowsQ.data?.arcs           ?? []) as FlowArc[];
 
   return useMemo(() => {
-    // Pick the data source and opacity for each mode
+    const palette = mapPalette(mapTheme);
+
+    // Pick the data source and opacity for the active mode.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let modeLayers: any[];
     switch (activeMode) {
       case 'heat':
-        return [
-          makeHeatLayer(aggregateFeatures, opacity.heat, zoom, hoverHandler as Parameters<typeof makeHeatLayer>[3]),
+        modeLayers = [
+          makeHeatLayer(
+            aggregateFeatures, opacity.heat, zoom,
+            hoverHandler as Parameters<typeof makeHeatLayer>[3],
+            palette.heatColorRange,
+          ),
         ].flat();
+        break;
 
       case 'cluster':
-        return makeClusterLayer(
+        modeLayers = makeClusterLayer(
           pointFeatures as unknown as Parameters<typeof makeClusterLayer>[0],
           opacity.cluster,
           hoverHandler as Parameters<typeof makeClusterLayer>[2],
           clickHandler as Parameters<typeof makeClusterLayer>[3],
+          palette.clusterLabel,
         ).flat();
+        break;
 
       case 'pin':
-        return [
+        modeLayers = [
           makePinLayer(
             pointFeatures,
             opacity.pin,
@@ -83,24 +110,36 @@ export function useDeckLayers() {
             clickHandler as Parameters<typeof makePinLayer>[3],
           ),
         ];
+        break;
 
       case 'district':
-        return makeDistrictLayer(
+        modeLayers = makeDistrictLayer(
           districtBoundaries as Parameters<typeof makeDistrictLayer>[0],
           aggregateFeatures,
           opacity.district,
           hoverHandler as Parameters<typeof makeDistrictLayer>[3],
           clickHandler as Parameters<typeof makeDistrictLayer>[4],
+          palette.districtNoData,
         ).flat();
+        break;
 
       case 'flow':
-        return [makeFlowLayer(flowArcs, opacity.flow, hoverHandler as Parameters<typeof makeFlowLayer>[2])];
+        modeLayers = [makeFlowLayer(flowArcs, opacity.flow, hoverHandler as Parameters<typeof makeFlowLayer>[2])];
+        break;
 
       default:
-        return [];
+        modeLayers = [];
     }
+
+    // India-only stack: glowing border underneath, mode data, fog mask on top.
+    return [
+      ...makeIndiaOutlineLayer(outline, palette.outlineColor),
+      ...modeLayers,
+      ...makeIndiaMaskLayer(maskPolygon, palette.maskFill),
+    ];
   }, [
     activeMode, aggregateFeatures, stateFeatures, pointFeatures, flowArcs,
     districtBoundaries, opacity, zoom, hoverHandler, clickHandler,
+    outline, maskPolygon, mapTheme,
   ]);
 }

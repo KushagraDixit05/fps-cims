@@ -25,6 +25,7 @@ export function makeDistrictLayer(
   opacity: number,
   onHover: PickHandler,
   onClick: PickHandler,
+  noDataFill: [number, number, number, number] = [20, 40, 30, 60],
 ) {
   if (!boundaries) return [];
 
@@ -44,7 +45,7 @@ export function makeDistrictLayer(
       getFillColor: (d: any) => {
         const name = districtName(d).toLowerCase();
         const stat = statsMap.get(name);
-        if (!stat) return [20, 40, 30, 60] as [number,number,number,number];
+        if (!stat) return noDataFill as [number,number,number,number];
         return scoreToColor(stat.properties.score, 160);
       },
       pickable:     true,
