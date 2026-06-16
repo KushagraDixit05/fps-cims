@@ -32,6 +32,48 @@
   --radius-badge: 8px;
 }
 
+@layer map {
+  :root {
+    --map-bg-0: #05080A;
+    --map-bg-1: #0A0F0D;
+    --glass-fill: rgba(12, 20, 16, 0.55);
+    --glass-stroke: rgba(140, 220, 170, 0.14);
+    --glass-stroke-hi: rgba(140, 220, 170, 0.28);
+    --accent: #34E08A;
+    --accent-glow: rgba(52, 224, 138, 0.35);
+    --accent-dim: rgba(52, 224, 138, 0.12);
+    --text-hi: #EAF4EE;
+    --text-mid: #9DB3A6;
+    --text-lo: #5E7268;
+    --rail-w: 52px;
+    --filter-w: 280px;
+    --panel-w: 340px;
+    --timeline-h: 80px;
+  }
+}
+
+/* Tooltip glass card classes used by all tip components */
+.glass-tip {
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-stroke);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 160px;
+  max-width: 260px;
+  font-family: var(--font-sans, sans-serif);
+}
+.tip-title  { font-size: 13px; font-weight: 600; color: var(--text-hi); margin: 0 0 2px; }
+.tip-stat   { font-size: 11px; color: var(--text-mid); margin: 0; }
+.tip-label  { font-size: 10px; color: var(--text-lo); margin: 0; text-transform: uppercase; letter-spacing: 0.05em; }
+.tip-row    { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-mid); }
+.tip-sep    { width: 1px; height: 10px; background: var(--glass-stroke); display: inline-block; }
+.tip-badge  { display: inline-block; margin-top: 4px; padding: 1px 7px; border-radius: 6px; font-size: 10px; font-weight: 600; text-transform: capitalize; }
+.tip-badge--good    { background: rgba(52,224,138,.18); color: #34E08A; }
+.tip-badge--average { background: rgba(245,197,66,.18);  color: #F5C542; }
+.tip-badge--poor    { background: rgba(251,106,106,.18); color: #FB6A6A; }
+
 @layer base {
   * {
     box-sizing: border-box;

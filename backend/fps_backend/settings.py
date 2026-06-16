@@ -72,6 +72,7 @@ INSTALLED_APPS = [
     'mandi',
     'product_demo',
     'admin_portal',
+    'geo',
 ]
 
 MIDDLEWARE = [
