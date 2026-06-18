@@ -85,11 +85,11 @@ fps/
 │   │   │   └── cropMonitoring.ts   ← getCropMaster, getDistricts, getBlocks,
 │   │   │                               submitFarmerVisit, getVisitSummary, getFarmerVisits,
 │   │   │                               getFarmerVisitDetail
-│   │   ├── database/               ← WatermelonDB local database (Phase 3, schema v3)
+│   │   ├── database/               ← WatermelonDB local database (Phase 3, schema v8)
 │   │   │   ├── index.ts            ← Database instance (SQLiteAdapter + all model classes)
-│   │   │   ├── schema.ts           ← Full schema v3 (farmer_visits, crop_entries,
-│   │   │   │                           mandi_arrivals, product_demos + reference tables)
-│   │   │   ├── migrations.ts       ← v1→v2 (mandi wizard cols), v2→v3 (product_demos table)
+│   │   │   ├── schema.ts           ← Full schema v8 (farmer_visits, crop_entries,
+│   │   │   │                           mandi_arrivals, product_demos, villages + reference tables)
+│   │   │   ├── migrations.ts       ← v1→v8, additive only (see "WatermelonDB Schema" below)
 │   │   │   ├── operations.ts       ← saveVisitLocally(), saveCropEntryLocally(),
 │   │   │   │                           saveMandiArrivalLocally(), saveMandiArrivalWizardLocally(),
 │   │   │   │                           saveProductDemoLocally()
@@ -219,20 +219,24 @@ fps/
 │   │   └── types/models.ts             ← All TypeScript interfaces
 │   └── package.json
 │
-├── docs/
-│   ├── PHASE-0-Foundation-Setup.md
-│   ├── PHASE-1-Backend-Models-API.md
-│   ├── PHASE-2-Mobile-App-Core.md
-│   ├── PHASE-3-Offline-Sync.md     ← ✅ Implemented — WatermelonDB offline-first
-│   └── CropMonitoringPlan.md       ← Detailed spec for the crop monitoring module
-│
-├── CONTEXT.md                      ← This file
-├── DESIGN.md                       ← Design system spec (colors, typography, components)
-├── PRODUCT.md                      ← Product vision, users, brand personality
-├── requirements.md                 ← Full UI/UX redesign requirements (18 requirements)
-├── SETUP.md                        ← Step-by-step setup guide
-├── TESTING_INSTRUCTIONS.md         ← Offline sync testing guide
-└── progress-report.md              ← Current module completion status
+├── README.md                       ← Repo-root project overview (entry point)
+└── docs/                           ← All project documentation (see docs/README.md index)
+    ├── README.md                   ← Documentation index
+    ├── CONTEXT.md                  ← This file
+    ├── SETUP.md                    ← Step-by-step setup guide
+    ├── TESTING_INSTRUCTIONS.md     ← Offline sync testing guide
+    ├── progress-report.md          ← Current module completion status
+    ├── PRODUCTION_AUDIT.md         ← Pre-rollout reliability/security audit
+    ├── PHASE-0-Foundation-Setup.md
+    ├── PHASE-1-Backend-Models-API.md
+    ├── PHASE-2-Mobile-App-Core.md
+    ├── PHASE-3-Offline-Sync.md     ← ✅ Implemented — WatermelonDB offline-first
+    ├── design/
+    │   ├── PRODUCT.md              ← Product vision, users, brand personality
+    │   ├── DESIGN.md               ← Design system spec (colors, typography, components)
+    │   └── requirements.md         ← Full UI/UX redesign requirements (18 requirements)
+    ├── rbac/                       ← RBAC architecture (12 docs)
+    └── archive/                    ← Incomplete historical planning drafts
 ```
 
 ---
@@ -246,11 +250,13 @@ fps/
 | Phase 2 — Mobile Core | ✅ Done | All screens built, connected to live API, running on physical device |
 | **Crop Monitoring Module** | ✅ **Done** | Full 3-step wizard (backend + mobile) — Phases A through F complete |
 | **Mandi Arrival Module** | ✅ **Done** | Full 5-step wizard (backend + mobile) — schema v2, InlinePicker component |
-| **Product Demo Module** | ✅ **Done** | Full 4-step wizard (backend + mobile) — new `product_demo` Django app, schema v3 |
-| **Phase 3 — Offline Sync** | ✅ **Done** | WatermelonDB v3 schema, 5 write operations, background auto-sync, sync dashboard |
+| **Product Demo Module** | ✅ **Done** | Full 4-step wizard (backend + mobile) — new `product_demo` Django app, before/after split + multi-variety (schema v6/v7) |
+| **Phase 3 — Offline Sync** | ✅ **Done** | WatermelonDB **schema v8**, write operations per module, background auto-sync, sync dashboard |
 | **Phase 4 — UI Redesign** | 🔄 **In Progress** | Design system, new auth flow (Splash/Welcome/Login/Signup), redesigned Home, drawer nav — active via AppNavigatorV2 |
-| **Admin Portal** | ✅ **Done** | Next.js 16 at `admin-portal/`; 8 pages: Dashboard, Analytics, Users, Roles, Permissions, Approvals, Audit, Field Data (Visits/Mandi/Demos) with CSV export |
-| **Cloud Deployment** | ✅ **Done** | Dockerized backend on Render, PostgreSQL+PostGIS, auto-migrate/seed, release APK distributed |
+| **Admin Portal** | ✅ **Done** | Next.js 16 at `admin-portal/`; Dashboard, Analytics, Users, Roles, Permissions, Approvals, Audit, Field Data (Visits/Mandi/Demos) with CSV export |
+| **Cloud Deployment** | ✅ **Done** | Dockerized backend on Render, PostgreSQL+PostGIS, auto-migrate/seed, release APK (app v1.4) distributed |
+| **RBAC (permission engine)** | 🧪 **On branch** | Architecture documented (`docs/rbac/`); backend engine on `feature/rbac-implementation`. Admin-portal Roles/Permissions/Approvals/Audit pages exist on `main` as frontend. |
+| **Agri Intelligence Map** | 🧪 **On branch** | Geospatial command-center (MapLibre + deck.gl + Django `geo` app) on `feature/agri-intelligence-map`. **Not merged to `main`.** |
 
 ---
 
@@ -487,23 +493,33 @@ useAutoSync() detects internet via NetInfo
 syncPendingRecords() — POST to Django, mark is_synced = true
 ```
 
-### WatermelonDB Schema (v3)
+### WatermelonDB Schema (v8)
 | Table | Purpose |
 |---|---|
-| `farmer_visits` | Crop Monitoring wizard submissions |
+| `farmer_visits` | Crop Monitoring wizard submissions (`village_id` FK added v4) |
 | `crop_entries` | Legacy 4-step crop form |
-| `mandi_arrivals` | Mandi entry + wizard (v2 cols: varieties_json, photos_json, GPS) |
-| `product_demos` | Product Demo wizard submissions |
+| `mandi_arrivals` | Mandi entry + wizard (wizard cols v2; `mandi_custom_name` v5; `custom_source` v8) |
+| `product_demos` | Product Demo wizard (before/after split v6; multi-variety `varieties_json` v7) |
+| `villages` | Reference: village master (added v4) |
 | `districts` | Reference: district master |
 | `blocks` | Reference: block/taluka master |
 | `crop_master` | Reference: crops + varieties |
 | `mandis` | Reference: mandi master |
 
+**Migration lineage (all additive — old app versions stay schema-valid):**
+- **v1→v2** — mandi wizard cols (`varieties_json`, `photos_json`, `total_arrival_qt`, GPS)
+- **v2→v3** — `product_demos` table (Product Demo module)
+- **v3→v4** — `villages` table + `village_id` FK on `farmer_visits` & `product_demos`
+- **v4→v5** — `mandi_custom_name` ("Others" mandi)
+- **v5→v6** — Product Demo before/after split (`demo_phase`, `after_pending_sync`, `after_sync_error`)
+- **v6→v7** — Product Demo multi-variety (`varieties_json`)
+- **v7→v8** — mandi `custom_source` ("Others" source)
+
 ### Key Files
 | File | Role |
 |---|---|
-| `src/database/schema.ts` | Defines all WatermelonDB tables (v3) |
-| `src/database/migrations.ts` | v1→v2 (mandi wizard cols), v2→v3 (product_demos table) |
+| `src/database/schema.ts` | Defines all WatermelonDB tables (`DB_SCHEMA_VERSION = 8`) |
+| `src/database/migrations.ts` | v1→v8 migrations, additive only |
 | `src/database/operations.ts` | 5 write helpers called by all form screens |
 | `src/sync/syncService.ts` | `syncPendingRecords()`, `getPendingCount()`, `getLastSyncTime()` |
 | `src/sync/syncTypes.ts` | `SyncResult` (includes `offline: boolean` flag), `SyncStats` |
@@ -518,7 +534,7 @@ syncPendingRecords() — POST to Django, mark is_synced = true
 ### What's Done
 | Item | Status |
 |---|---|
-| Design system defined (`DESIGN.md`) | ✅ |
+| Design system defined (`docs/design/DESIGN.md`) | ✅ |
 | `AppNavigatorV2` — Splash→Welcome→Login/Signup→Drawer→Tabs | ✅ Active |
 | `SplashScreen` — animated brand splash | ✅ |
 | `WelcomeScreen` — value prop + Sign In / Get Started CTAs | ✅ |
@@ -555,7 +571,7 @@ syncPendingRecords() — POST to Django, mark is_synced = true
 | Legacy `CropEntry` preserved | Zero risk to existing data; both modules coexist |
 | Runtime base URL detection | Same APK works on emulator and device |
 | WatermelonDB for offline storage | Fast SQLite with reactive queries; works well on New Architecture |
-| Schema migrations (v1→v2→v3) additive only | Never destroys existing records; old app versions stay schema-valid |
+| Schema migrations (v1→v8) additive only | Never destroys existing records; old app versions stay schema-valid |
 | `offline: boolean` in SyncResult | Lets callers distinguish "offline, didn't try" from "online, nothing pending" |
 | `AppNavigatorV2` + DrawerNavigator | Enables sidebar without breaking existing tab/stack routes |
 | `GestureHandlerRootView` at root | Required by `@react-navigation/drawer` |

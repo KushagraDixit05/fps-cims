@@ -1,7 +1,21 @@
 # Farm Prosperity Solutions (FPS) — Progress Report
 
-> **Last updated:** 13 June 2026
-> **Overall status:** Phases 0–4 (partial) complete · Admin Portal live · Cloud deployed on Render · Release APK distributed · **Production-critical stabilization pass applied**
+> **Last updated:** 18 June 2026
+> **Overall status:** Phases 0–4 (partial) complete · Admin Portal live · Cloud deployed on Render · Release APK **v1.4** distributed · **Production-critical stabilization pass applied**
+
+---
+
+## Changes since 13 June 2026
+
+Incremental fixes landed on `main` after the stabilization pass:
+
+- **Mandi source alignment** — mobile sent display labels (Farmer/Trader/FPS Staff/Mandi) while the backend only accepted lowercase keys, so mandi sync failed. Expanded backend `SOURCE_CHOICES` (+`fps_staff`, +`mandi`, migration 0006), send canonical keys from the dropdown, normalize stored source at sync time to flush already-pending records, and handle the "Others" path via `custom_source`. App bumped to **v1.4** (schema v8 `custom_source` column).
+- **Blank phone/email → NULL** — `User.save()` now converts blank `phone_number`/`email` to `NULL` to avoid a unique-constraint 500.
+- **Platform stabilization batch** — admin auth fixes, analytics routes (`/api/admin/analytics/productivity/`, `/approval-sla/`), **SmartDropdown** standardization across forms, backend serializer upgrades, Product Performance dropdown updates, and the WatermelonDB **v8** migration.
+
+**On feature branches (not merged to `main`):**
+- `feature/rbac-implementation` — full RBAC permission engine (architecture in `docs/rbac/`).
+- `feature/agri-intelligence-map` — Agri Intelligence Map geospatial command-center (MapLibre + deck.gl + Django `geo` app).
 
 ---
 
@@ -40,7 +54,7 @@ are unaffected.
 | Crop Monitoring Module | ✅ End-to-end complete (backend + 3-step wizard + dashboard) |
 | Mandi Arrival Module | ✅ End-to-end complete (backend + 5-step wizard) |
 | Product Demo Module | ✅ End-to-end complete (backend + 4-step wizard) |
-| Offline Sync (Phase 3) | ✅ Complete — WatermelonDB v3 + auto-sync + sync dashboard |
+| Offline Sync (Phase 3) | ✅ Complete — WatermelonDB **v8** + auto-sync + sync dashboard |
 | UI Redesign (Phase 4) | 🔄 In progress — auth flow + home screen + drawer nav complete |
 | Admin Portal | ✅ Complete — Next.js 16, 8 pages, field data viewing + CSV export |
 | Cloud Deployment | ✅ Complete — Render (Docker + PostgreSQL + PostGIS) |
@@ -143,12 +157,15 @@ New `product_demo` Django app with `ProductMaster`, `ProductDemo`, `DemoPhoto` m
 
 WatermelonDB (SQLite) as local store. All form types save locally first and sync to Django in background.
 
-| Table | Purpose | Schema Version |
+Current schema: **v8** (additive migration lineage v1→v8 — see `docs/CONTEXT.md`).
+
+| Table | Purpose | Introduced |
 |---|---|---|
-| `farmer_visits` | Crop Monitoring wizard | v1 |
+| `farmer_visits` | Crop Monitoring wizard (`village_id` FK v4) | v1 |
 | `crop_entries` | Legacy crop entry form | v1 |
-| `mandi_arrivals` | Mandi entry (wizard v2 columns added) | v2 |
-| `product_demos` | Product Demo wizard | v3 |
+| `mandi_arrivals` | Mandi entry/wizard (v2 cols; `mandi_custom_name` v5; `custom_source` v8) | v1 |
+| `product_demos` | Product Demo wizard (before/after split v6; multi-variety v7) | v3 |
+| `villages` | Reference: village master | v4 |
 | `districts`, `blocks`, `crop_master`, `mandis` | Reference data | v1 |
 
 Sync engine: `syncPendingRecords()` finds `is_synced=false` records, POSTs to Django, marks synced. `useAutoSync` hook auto-triggers on network reconnect (throttled 60s).
@@ -160,7 +177,7 @@ Sync engine: `syncPendingRecords()` finds `is_synced=false` records, POSTs to Dj
 #### Done
 | Item | Status |
 |---|---|
-| Design system (`DESIGN.md`) | ✅ |
+| Design system (`docs/design/DESIGN.md`) | ✅ |
 | `AppNavigatorV2` — Splash→Welcome→Login/Signup→Drawer→Tabs | ✅ Active |
 | `SplashScreen`, `WelcomeScreen`, `LoginScreen` (v2), `SignupScreen` | ✅ |
 | `HomeScreen` (v2) — drawer-aware, 4 quick-action tiles | ✅ |
@@ -171,7 +188,8 @@ Sync engine: `syncPendingRecords()` finds `is_synced=false` records, POSTs to Dj
 - [ ] Crop Monitoring wizard screens (screens-v2/cropMonitoring/)
 - [ ] Mandi, Reports, Profile screens (v2)
 - [ ] components-v2 component library
-- [ ] Online API sync for Mandi Arrival and Product Demo modules
+- [x] Online API sync for Mandi Arrival — fixed (source alignment, schema v8); pending records now flush
+- [ ] Online API sync for Product Demo module (after-photo deferred sync)
 - [ ] `ProductDemoDetailScreen`
 - [ ] Map view of visit GPS locations
 - [ ] Farmer search / autocomplete
@@ -181,9 +199,9 @@ Sync engine: `syncPendingRecords()` finds `is_synced=false` records, POSTs to Dj
 
 ### ✅ Admin Portal
 
-Next.js 16 app at `admin-portal/`, dev server at `localhost:3000`.
+Next.js 16 app at `admin-portal/`, dev server at `localhost:3000`. Pages live under the `(dashboard)` route group plus a `login` route. Roles/Permissions/Approvals/Audit exist as frontend on `main`; the backing RBAC permission engine lives on `feature/rbac-implementation`.
 
-**8 pages live:**
+**Pages live:**
 | Page | Feature |
 |---|---|
 | Dashboard | KPI cards + stats strip |

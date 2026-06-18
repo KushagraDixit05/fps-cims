@@ -270,6 +270,6 @@ result.offline === false && failed === 0
 ---
 
 ## What's Next
-**Phase 4 (In Progress)** — UI/UX redesign. New auth flow (Splash → Welcome → Login / Sign Up), redesigned Home and Sidebar, premium design system. See `DESIGN.md`, `PRODUCT.md`, and `requirements.md`.
+**Phase 4 (In Progress)** — UI/UX redesign. New auth flow (Splash → Welcome → Login / Sign Up), redesigned Home and Sidebar, premium design system. See `design/DESIGN.md`, `design/PRODUCT.md`, and `design/requirements.md`.
 
 **Phase 5 (Future)** — Map view of visit GPS locations, per-photo geo-tagging, edit submitted entries, PDF/Excel report export, push notifications for sync completion.

@@ -2,7 +2,7 @@
 
 Part of the **Farm Prosperity Solutions (FPS)** internship project. This is the mobile client — an offline-first field operations platform for agricultural field executives.
 
-For full project context, setup instructions, and architecture details, see the root [`CONTEXT.md`](../../CONTEXT.md) and [`SETUP.md`](../../SETUP.md).
+For full project context, setup instructions, and architecture details, see [`docs/CONTEXT.md`](../../docs/CONTEXT.md) and [`docs/SETUP.md`](../../docs/SETUP.md).
 
 ---
 
