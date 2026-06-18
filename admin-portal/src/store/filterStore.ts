@@ -3,30 +3,32 @@ import type { GeoFilterState } from '@/types/geo';
 
 const DEFAULT: GeoFilterState = {
   crops:       [],
+  products:    [],
+  commodities: [],
   modules:     ['visit', 'demo', 'mandi'],
   condition:   null,
   district:    null,
   block:       null,
   village:     null,
   executiveId: null,
-  productName: null,
   dateFrom:    null,
   dateTo:      null,
 };
 
 interface FilterStore extends GeoFilterState {
-  toggleCrop:     (crop: string) => void;
-  toggleModule:   (module: string) => void;
-  setCondition:   (c: string | null) => void;
-  setDistrict:    (d: string | null) => void;
-  setBlock:       (b: string | null) => void;
-  setVillage:     (v: string | null) => void;
-  setDateFrom:    (d: string | null) => void;
-  setDateTo:      (d: string | null) => void;
-  setExecutiveId: (id: number | null) => void;
-  setProductName: (p: string | null) => void;
-  reset:          () => void;
-  queryKey:       () => readonly unknown[];
+  toggleCrop:      (crop: string) => void;
+  toggleProduct:   (product: string) => void;
+  toggleCommodity: (commodity: string) => void;
+  toggleModule:    (module: string) => void;
+  setCondition:    (c: string | null) => void;
+  setDistrict:     (d: string | null) => void;
+  setBlock:        (b: string | null) => void;
+  setVillage:      (v: string | null) => void;
+  setDateFrom:     (d: string | null) => void;
+  setDateTo:       (d: string | null) => void;
+  setExecutiveId:  (id: number | null) => void;
+  reset:           () => void;
+  queryKey:        () => readonly unknown[];
 }
 
 export const useFilterStore = create<FilterStore>((set, get) => ({
@@ -37,6 +39,20 @@ export const useFilterStore = create<FilterStore>((set, get) => ({
       crops: s.crops.includes(crop)
         ? s.crops.filter((c) => c !== crop)
         : [...s.crops, crop],
+    })),
+
+  toggleProduct: (product) =>
+    set((s) => ({
+      products: s.products.includes(product)
+        ? s.products.filter((p) => p !== product)
+        : [...s.products, product],
+    })),
+
+  toggleCommodity: (commodity) =>
+    set((s) => ({
+      commodities: s.commodities.includes(commodity)
+        ? s.commodities.filter((c) => c !== commodity)
+        : [...s.commodities, commodity],
     })),
 
   toggleModule: (module) =>
@@ -53,20 +69,20 @@ export const useFilterStore = create<FilterStore>((set, get) => ({
   setDateFrom:    (d) => set({ dateFrom:    d }),
   setDateTo:      (d) => set({ dateTo:      d }),
   setExecutiveId: (id) => set({ executiveId: id }),
-  setProductName: (p) => set({ productName: p }),
   reset:          () => set({ ...DEFAULT }),
 
   queryKey: () => {
     const s = get();
     return [
       s.crops.join(','),
+      s.products.join(','),
+      s.commodities.join(','),
       s.modules.join(','),
       s.condition,
       s.district,
       s.block,
       s.village,
       s.executiveId,
-      s.productName,
       s.dateFrom,
       s.dateTo,
     ] as const;

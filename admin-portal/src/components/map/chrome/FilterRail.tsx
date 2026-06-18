@@ -6,6 +6,8 @@ import { DateRangePicker } from './DateRangePicker';
 import { useMapStore } from '@/store/mapStore';
 import { useFilterStore } from '@/store/filterStore';
 import { useTimelineStore } from '@/store/timelineStore';
+import { useGeoFacets } from '@/hooks/useGeoData';
+import type { GeoFacets } from '@/types/geo';
 import { SPRING } from '@/lib/mapMotion';
 
 const CROPS = ['Chilli', 'Cotton', 'Soybean', 'Wheat', 'Rice', 'Maize', 'Onion', 'Tomato'];
@@ -19,6 +21,33 @@ const CONDITIONS = [
   { id: 'average', label: 'Average', color: '#F5C542' },
   { id: 'poor',    label: 'Poor',    color: '#FB6A6A' },
 ];
+
+function ChipList({ options, selected, onToggle, empty }: { options: string[]; selected: string[]; onToggle: (v: string) => void; empty: string }) {
+  if (!options.length) {
+    return <p className="text-[10px] pb-2" style={{ color: 'var(--text-lo)' }}>{empty}</p>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5 pb-2">
+      {options.map((o) => {
+        const active = selected.includes(o);
+        return (
+          <button
+            key={o}
+            onClick={() => onToggle(o)}
+            className="px-2.5 py-1 rounded-full text-[11px] font-medium transition-all"
+            style={{
+              background: active ? 'rgba(52,224,138,0.2)' : 'rgba(255,255,255,0.06)',
+              color:      active ? 'var(--accent)' : 'var(--text-mid)',
+              border:     active ? '1px solid rgba(52,224,138,0.4)' : '1px solid transparent',
+            }}
+          >
+            {o}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function SectionHead({ label, open, onToggle }: { label: string; open: boolean; onToggle: () => void }) {
   return (
@@ -38,7 +67,9 @@ function SectionHead({ label, open, onToggle }: { label: string; open: boolean; 
 
 export function FilterRail() {
   const revealStage      = useMapStore((s) => s.revealStage);
-  const { crops, modules, condition, dateFrom, dateTo, toggleCrop, toggleModule, setCondition, setDateFrom, setDateTo, reset } = useFilterStore();
+  const { crops, products, commodities, modules, condition, dateFrom, dateTo, toggleCrop, toggleProduct, toggleCommodity, toggleModule, setCondition, setDateFrom, setDateTo, reset } = useFilterStore();
+  const { data: facets } = useGeoFacets();
+  const f = (facets ?? { products: [], commodities: [] }) as GeoFacets;
   const tlSetPlaying     = useTimelineStore((s) => s.setPlaying);
   const tlSetCurrentDate = useTimelineStore((s) => s.setCurrentDate);
 
@@ -47,12 +78,14 @@ export function FilterRail() {
   function handleDateFrom(d: string | null) { tlSetPlaying(false); tlSetCurrentDate(null); setDateFrom(d); }
   function handleDateTo(d: string | null)   { tlSetPlaying(false); tlSetCurrentDate(null); setDateTo(d);   }
 
-  const [cropOpen,   setCropOpen]   = useState(true);
-  const [advOpen,    setAdvOpen]    = useState(false);
-  const [dateOpen,   setDateOpen]   = useState(false);
-  const [railOpen,   setRailOpen]   = useState(true);
+  const [cropOpen,      setCropOpen]      = useState(true);
+  const [productOpen,   setProductOpen]   = useState(false);
+  const [commodityOpen, setCommodityOpen] = useState(false);
+  const [advOpen,       setAdvOpen]       = useState(false);
+  const [dateOpen,      setDateOpen]      = useState(false);
+  const [railOpen,      setRailOpen]      = useState(true);
 
-  const activeCount = crops.length + (condition ? 1 : 0) + (dateFrom || dateTo ? 1 : 0);
+  const activeCount = crops.length + products.length + commodities.length + (condition ? 1 : 0) + (dateFrom || dateTo ? 1 : 0);
 
   if (revealStage < 2) return null;
 
@@ -141,6 +174,38 @@ export function FilterRail() {
                       );
                     })}
                   </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Products */}
+            <SectionHead label="Products" open={productOpen} onToggle={() => setProductOpen((o) => !o)} />
+            <AnimatePresence>
+              {productOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={SPRING.tactile}
+                  className="overflow-hidden"
+                >
+                  <ChipList options={f.products} selected={products} onToggle={toggleProduct} empty="No products available" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Mandi Commodity */}
+            <SectionHead label="Commodity" open={commodityOpen} onToggle={() => setCommodityOpen((o) => !o)} />
+            <AnimatePresence>
+              {commodityOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={SPRING.tactile}
+                  className="overflow-hidden"
+                >
+                  <ChipList options={f.commodities} selected={commodities} onToggle={toggleCommodity} empty="No commodities available" />
                 </motion.div>
               )}
             </AnimatePresence>

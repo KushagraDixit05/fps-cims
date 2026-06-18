@@ -2,15 +2,21 @@ export type MapMode = 'heat' | 'cluster' | 'pin' | 'district' | 'flow';
 
 export interface GeoFilterState {
   crops: string[];
+  products: string[];
+  commodities: string[];
   modules: string[];
   condition: string | null;
   district: string | null;
   block: string | null;
   village: string | null;
   executiveId: number | null;
-  productName: string | null;
   dateFrom: string | null;
   dateTo: string | null;
+}
+
+export interface GeoFacets {
+  products: string[];
+  commodities: string[];
 }
 
 export interface GeoAggregateProperties {
@@ -36,6 +42,7 @@ export interface GeoPointProperties {
   id: string;
   module: 'visit' | 'demo' | 'mandi';
   farmer?: string;
+  village?: string;
   district?: string;
   block?: string;
   condition?: 'good' | 'average' | 'poor' | null;

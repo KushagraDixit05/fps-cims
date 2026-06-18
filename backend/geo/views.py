@@ -9,8 +9,26 @@ from .scope import DataScope
 from .aggregation import build_district_aggregate, build_state_aggregate, build_points
 from .serializers import VisitRecordSerializer, DemoRecordSerializer, MandiRecordSerializer
 from crops.models import FarmerVisit
-from product_demo.models import ProductDemo
+from product_demo.models import ProductDemo, ProductMaster
 from mandi.models import MandiArrival
+
+
+class FacetsView(APIView):
+    """GET /api/geo/facets/ — option lists for filter controls (products, commodities)."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        scope = DataScope(request.user)
+        products = list(
+            ProductMaster.objects.filter(is_active=True)
+            .order_by('name').values_list('name', flat=True)
+        )
+        commodities = list(
+            scope.apply_to_arrivals(MandiArrival.objects.all())
+            .exclude(commodity='')
+            .values_list('commodity', flat=True).distinct().order_by('commodity')
+        )
+        return Response({'products': products, 'commodities': commodities})
 
 
 class AggregateView(APIView):
@@ -60,21 +78,23 @@ class RecordView(APIView):
         module = request.query_params.get('module', 'visit')
         scope = DataScope(request.user)
 
+        ctx = {'request': request}
+
         if module == 'demo':
-            qs = ProductDemo.objects.filter(id=pk)
+            qs = ProductDemo.objects.filter(id=pk).select_related('executive').prefetch_related('photos')
             qs = scope.apply_to_demos(qs)
             obj = qs.first()
             if not obj:
                 return Response({'error': 'not found'}, status=404)
-            return Response({'module': 'demo', 'data': DemoRecordSerializer(obj).data})
+            return Response({'module': 'demo', 'data': DemoRecordSerializer(obj, context=ctx).data})
 
         if module == 'mandi':
-            qs = MandiArrival.objects.filter(id=pk).select_related('mandi')
+            qs = MandiArrival.objects.filter(id=pk).select_related('mandi', 'submitted_by')
             qs = scope.apply_to_arrivals(qs)
             obj = qs.first()
             if not obj:
                 return Response({'error': 'not found'}, status=404)
-            return Response({'module': 'mandi', 'data': MandiRecordSerializer(obj).data})
+            return Response({'module': 'mandi', 'data': MandiRecordSerializer(obj, context=ctx).data})
 
         # default: visit
         qs = FarmerVisit.objects.filter(id=pk).select_related('executive').prefetch_related('crops', 'photos')
@@ -82,7 +102,7 @@ class RecordView(APIView):
         obj = qs.first()
         if not obj:
             return Response({'error': 'not found'}, status=404)
-        return Response({'module': 'visit', 'data': VisitRecordSerializer(obj).data})
+        return Response({'module': 'visit', 'data': VisitRecordSerializer(obj, context=ctx).data})
 
 
 class RegionSummaryView(APIView):

@@ -6,6 +6,8 @@ from typing import Optional
 @dataclass
 class GeoFilters:
     crops: list = field(default_factory=list)
+    products: list = field(default_factory=list)
+    commodities: list = field(default_factory=list)
     modules: list = field(default_factory=lambda: ['visit', 'demo', 'mandi'])
     condition: Optional[str] = None
     district: Optional[str] = None
@@ -18,6 +20,8 @@ class GeoFilters:
     @classmethod
     def parse(cls, query_params):
         crops = [c for c in query_params.getlist('crops') if c]
+        products = [p for p in query_params.getlist('products') if p]
+        commodities = [c for c in query_params.getlist('commodities') if c]
         modules = [m for m in query_params.getlist('modules') if m]
         if not modules:
             modules = ['visit', 'demo', 'mandi']
@@ -43,6 +47,8 @@ class GeoFilters:
 
         return cls(
             crops=crops,
+            products=products,
+            commodities=commodities,
             modules=modules,
             condition=query_params.get('condition') or None,
             district=query_params.get('district') or None,
@@ -83,13 +89,15 @@ class GeoFilters:
             qs = qs.filter(submitted_at__date__lte=self.date_to)
         if self.executive_id:
             qs = qs.filter(executive_id=self.executive_id)
-        if self.product_name:
+        if self.products:
+            qs = qs.filter(product_name__in=self.products)
+        elif self.product_name:
             qs = qs.filter(product_name__iexact=self.product_name)
         return qs
 
     def apply_to_arrivals(self, qs):
-        if self.crops:
-            qs = qs.filter(commodity__in=self.crops)
+        if self.commodities:
+            qs = qs.filter(commodity__in=self.commodities)
         if self.district:
             qs = qs.filter(mandi__district__iexact=self.district)
         if self.date_from:

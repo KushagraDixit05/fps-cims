@@ -8,13 +8,14 @@ function useFilters() {
   return useFilterStore(
     useShallow((s) => ({
       crops:       s.crops,
+      products:    s.products,
+      commodities: s.commodities,
       modules:     s.modules,
       condition:   s.condition,
       district:    s.district,
       block:       s.block,
       village:     s.village,
       executiveId: s.executiveId,
-      productName: s.productName,
       dateFrom:    s.dateFrom,
       dateTo:      s.dateTo,
     }))
@@ -24,16 +25,25 @@ function useFilters() {
 function toQK(f: ReturnType<typeof useFilters>) {
   return [
     f.crops.join(','),
+    f.products.join(','),
+    f.commodities.join(','),
     f.modules.join(','),
     f.condition,
     f.district,
     f.block,
     f.village,
     f.executiveId,
-    f.productName,
     f.dateFrom,
     f.dateTo,
   ];
+}
+
+export function useGeoFacets() {
+  return useQuery({
+    queryKey:  ['geo', 'facets'],
+    queryFn:   () => geoApi.facets().then((r) => r.data),
+    staleTime: 5 * 60_000,
+  });
 }
 
 export function useGeoAggregate(level: 'district' | 'state' | 'hex' = 'district') {

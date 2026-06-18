@@ -4,6 +4,8 @@ import type { GeoFilterState } from '@/types/geo';
 function toParams(f: Partial<GeoFilterState>): URLSearchParams {
   const p = new URLSearchParams();
   f.crops?.forEach((c) => p.append('crops', c));
+  f.products?.forEach((pr) => p.append('products', pr));
+  f.commodities?.forEach((c) => p.append('commodities', c));
   f.modules?.forEach((m) => p.append('modules', m));
   if (f.condition)   p.set('condition',    f.condition);
   if (f.district)    p.set('district',     f.district);
@@ -11,11 +13,14 @@ function toParams(f: Partial<GeoFilterState>): URLSearchParams {
   if (f.dateFrom)    p.set('date_from',    f.dateFrom);
   if (f.dateTo)      p.set('date_to',      f.dateTo);
   if (f.executiveId) p.set('executive_id', String(f.executiveId));
-  if (f.productName) p.set('product_name', f.productName);
   return p;
 }
 
 export const geoApi = {
+  facets() {
+    return api.get('/api/geo/facets/');
+  },
+
   aggregate(level: string, f: Partial<GeoFilterState> = {}) {
     const p = toParams(f);
     p.set('level', level);
