@@ -18,7 +18,7 @@ export function bandOpacity(zoom: number): Record<string, number> {
   return {
     heat:     zoom < 7 ? 1 : Math.max(0, 1 - (zoom - 7) / 2),
     cluster:  zoom >= 5 && zoom < 11 ? 1 : 0,
-    pin:      zoom >= 8.5 ? Math.min(1, (zoom - 8.5) / 2) : 0,
+    pin:      zoom >= 6.5 ? Math.min(1, (zoom - 6.5) / 1.5) : 0,
     district: zoom >= 5 && zoom < 10 ? 1 : 0,
     flow:     1,
   };

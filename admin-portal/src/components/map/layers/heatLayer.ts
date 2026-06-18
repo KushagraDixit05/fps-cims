@@ -1,7 +1,7 @@
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PickHandler = (info: any) => boolean | void;
-import type { GeoAggregateFeature } from '@/types/geo';
+import type { GeoPointFeature } from '@/types/geo';
 
 const DEFAULT_COLOR_RANGE: [number, number, number][] = [
   [0,   0,   0  ],
@@ -13,20 +13,20 @@ const DEFAULT_COLOR_RANGE: [number, number, number][] = [
 ];
 
 export function makeHeatLayer(
-  data: GeoAggregateFeature[],
+  data: GeoPointFeature[],
   opacity: number,
   zoom: number,
   onHover: PickHandler,
   colorRange: [number, number, number][] = DEFAULT_COLOR_RANGE,
 ) {
-  const radiusPixels = Math.max(40, Math.min(90, 40 + (7 - zoom) * 8));
+  const radiusPixels = Math.max(15, Math.min(45, 15 + (7 - zoom) * 6));
 
-  return new HeatmapLayer<GeoAggregateFeature>({
+  return new HeatmapLayer<GeoPointFeature>({
     id:           'heat',
     data,
     opacity,
     getPosition:  (d) => d.geometry.coordinates as [number, number],
-    getWeight:    (d) => d.properties.count,
+    getWeight:    () => 1,
     radiusPixels,
     colorRange,
     pickable:     true,

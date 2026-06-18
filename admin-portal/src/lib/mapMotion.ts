@@ -12,15 +12,15 @@ export const CAMERA = {
 } as const;
 
 export const CONDITION_COLORS: Record<string, [number, number, number, number]> = {
-  good:    [52,  224, 138, 220],
-  average: [245, 197, 66,  220],
-  poor:    [251, 106, 106, 220],
+  good:    [52,  224, 138, 255],
+  average: [245, 197, 66,  255],
+  poor:    [251, 106, 106, 255],
 };
 
 export const MODULE_COLORS: Record<string, [number, number, number, number]> = {
-  visit: [52,  224, 138, 200],
-  mandi: [251, 191, 36,  200],
-  demo:  [34,  211, 238, 200],
+  visit: [52,  224, 138, 255],
+  mandi: [251, 191, 36,  255],
+  demo:  [34,  211, 238, 255],
 };
 
 export const CROP_COLORS: Record<string, [number, number, number, number]> = {

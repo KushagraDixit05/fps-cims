@@ -14,6 +14,8 @@ import {
   mapStyleUrl,
 } from '@/lib/mapStyle';
 import { useDeckLayers } from './hooks/useDeckLayers';
+import { useGeoPoints } from '@/hooks/useGeoData';
+import type { GeoPointFeature } from '@/types/geo';
 
 export function MapCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -26,6 +28,13 @@ export function MapCanvas() {
   const flyToTarget    = useMapStore((s) => s.flyToTarget);
   const setFlyToTarget = useMapStore((s) => s.setFlyToTarget);
   const layers         = useDeckLayers();
+
+  const mapBounds        = useMapStore((s) => s.mapBounds);
+  const pointsQ          = useGeoPoints(mapBounds);
+  const pointFeaturesRef = useRef<GeoPointFeature[]>([]);
+  useEffect(() => {
+    pointFeaturesRef.current = (pointsQ.data?.features ?? []) as GeoPointFeature[];
+  }, [pointsQ.data]);
 
   // Init MapLibre + deck.gl overlay
   useEffect(() => {
@@ -55,6 +64,44 @@ export function MapCanvas() {
     const overlay = new MapboxOverlay({ interleaved: true, layers: [] });
     overlayRef.current = overlay;
     map.addControl(overlay as unknown as maplibregl.IControl);
+
+    const handleMapClick = (e: maplibregl.MapMouseEvent) => {
+      const ov = overlayRef.current;
+      if (!ov) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const info = (ov as any).pickObject({ x: e.point.x, y: e.point.y, radius: 8 });
+      if (!info?.object) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const feat  = info.object as any;
+      const props = feat.properties ?? feat;
+      const { setSelectedFeature, setSelectedRecordGroup } = useMapStore.getState();
+
+      if (props.module) {
+        const pf = pointFeaturesRef.current;
+        const [cx, cy] = (feat.geometry?.coordinates ?? [0, 0]) as [number, number];
+        const EPSILON = 0.0001;
+        const group = pf
+          .filter((f) => {
+            const [fx, fy] = f.geometry.coordinates as [number, number];
+            return Math.abs(fx - cx) <= EPSILON && Math.abs(fy - cy) <= EPSILON;
+          })
+          .map((f) => ({
+            id: f.properties.id,
+            module: f.properties.module,
+            preview: {
+              name:      f.properties.farmer ?? f.properties.mandi,
+              village:   f.properties.village,
+              district:  f.properties.district,
+              date:      f.properties.date,
+              condition: f.properties.condition ?? undefined,
+            },
+          }));
+        setSelectedRecordGroup(group.length > 0 ? group : [{ id: props.id, module: props.module }]);
+      } else if (props.id) {
+        setSelectedFeature(props.id, 'district');
+      }
+    };
+    map.on('click', handleMapClick);
 
     const syncState = () => {
       const c = map.getCenter();

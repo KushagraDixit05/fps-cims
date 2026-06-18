@@ -1,6 +1,6 @@
 "use client";
 import { motion } from 'framer-motion';
-import { Flame, Layers, MapPin, Map, Wind } from 'lucide-react';
+import { Flame, Layers, MapPin, Map } from 'lucide-react';
 import { useMapStore } from '@/store/mapStore';
 import { SPRING } from '@/lib/mapMotion';
 import type { MapMode } from '@/types/geo';
@@ -10,7 +10,6 @@ const MODES: { id: MapMode; label: string; Icon: React.ElementType }[] = [
   { id: 'cluster',  label: 'Cluster',  Icon: Layers },
   { id: 'pin',      label: 'Pins',     Icon: MapPin },
   { id: 'district', label: 'District', Icon: Map    },
-  { id: 'flow',     label: 'Flow',     Icon: Wind   },
 ];
 
 export function ModeRail() {

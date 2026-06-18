@@ -19,8 +19,9 @@ export function useDeckLayers() {
   const mapBounds        = useMapStore((s) => s.mapBounds);
   const zoom             = useMapStore((s) => s.viewState.zoom);
   const mapTheme         = useMapStore((s) => s.mapTheme);
-  const setHoverInfo     = useMapStore((s) => s.setHoverInfo);
-  const setSelectedFeature = useMapStore((s) => s.setSelectedFeature);
+  const setHoverInfo            = useMapStore((s) => s.setHoverInfo);
+  const setSelectedFeature      = useMapStore((s) => s.setSelectedFeature);
+  const setSelectedRecordGroup  = useMapStore((s) => s.setSelectedRecordGroup);
 
   const { opacity } = useCameraBand();
 
@@ -62,7 +63,14 @@ export function useDeckLayers() {
     setHoverInfo({ x: info.x, y: info.y, feature: info.object as GeoAggregateFeature, mode: activeMode });
   }, [activeMode, setHoverInfo]);
 
-  const clickHandler = useMemo(() => (info: { object?: unknown }) => {
+  // For individual records in any mode: always shows RecordTip (mode='pin').
+  const recordHoverHandler = useMemo(() => (info: { object?: unknown; x: number; y: number }) => {
+    if (!info.object) { setHoverInfo(null); return; }
+    setHoverInfo({ x: info.x, y: info.y, feature: info.object as GeoAggregateFeature, mode: 'pin' });
+  }, [setHoverInfo]);
+
+  // For aggregate views (district): opens region summary panel.
+  const regionClickHandler = useMemo(() => (info: { object?: unknown }) => {
     if (!info.object) return;
     const feat = info.object as GeoAggregateFeature;
     const id   = feat?.properties?.id ?? (feat as unknown as { properties: { id: string } })?.properties?.id;
@@ -74,6 +82,37 @@ export function useDeckLayers() {
   const pointFeatures     = (pointsQ.data?.features     ?? []) as GeoPointFeature[];
   const flowArcs          = (flowsQ.data?.arcs           ?? []) as FlowArc[];
 
+  // For pin/cluster/heat modes: opens individual record detail panel.
+  // Collects all co-located features (within ~10m) and sets the group with preview data.
+  const recordClickHandler = useMemo(() => (info: { object?: unknown }) => {
+    if (!info.object) return;
+    const feat = info.object as GeoPointFeature;
+    const id     = feat?.properties?.id;
+    const module = feat?.properties?.module;
+    if (!id || !module) return;
+
+    const [cx, cy] = feat.geometry.coordinates as [number, number];
+    const EPSILON = 0.0001;
+    const group = pointFeatures
+      .filter((f) => {
+        const [fx, fy] = f.geometry.coordinates as [number, number];
+        return Math.abs(fx - cx) <= EPSILON && Math.abs(fy - cy) <= EPSILON;
+      })
+      .map((f) => ({
+        id: f.properties.id,
+        module: f.properties.module,
+        preview: {
+          name:      f.properties.farmer ?? f.properties.mandi,
+          village:   f.properties.village,
+          district:  f.properties.district,
+          date:      f.properties.date,
+          condition: f.properties.condition ?? undefined,
+        },
+      }));
+
+    setSelectedRecordGroup(group.length > 0 ? group : [{ id, module }]);
+  }, [pointFeatures, setSelectedRecordGroup]);
+
   return useMemo(() => {
     const palette = mapPalette(mapTheme);
 
@@ -84,9 +123,16 @@ export function useDeckLayers() {
       case 'heat':
         modeLayers = [
           makeHeatLayer(
-            aggregateFeatures, opacity.heat, zoom,
+            pointFeatures, opacity.heat, zoom,
             hoverHandler as Parameters<typeof makeHeatLayer>[3],
             palette.heatColorRange,
+          ),
+          // Invisible pick layer so individual records are hoverable/clickable in heat mode.
+          makePinLayer(
+            pointFeatures, 0,
+            recordHoverHandler as Parameters<typeof makePinLayer>[2],
+            recordClickHandler as Parameters<typeof makePinLayer>[3],
+            'heat-pick',
           ),
         ].flat();
         break;
@@ -95,8 +141,8 @@ export function useDeckLayers() {
         modeLayers = makeClusterLayer(
           pointFeatures as unknown as Parameters<typeof makeClusterLayer>[0],
           opacity.cluster,
-          hoverHandler as Parameters<typeof makeClusterLayer>[2],
-          clickHandler as Parameters<typeof makeClusterLayer>[3],
+          recordHoverHandler as Parameters<typeof makeClusterLayer>[2],
+          recordClickHandler as Parameters<typeof makeClusterLayer>[3],
           palette.clusterLabel,
         ).flat();
         break;
@@ -107,7 +153,7 @@ export function useDeckLayers() {
             pointFeatures,
             opacity.pin,
             hoverHandler as Parameters<typeof makePinLayer>[2],
-            clickHandler as Parameters<typeof makePinLayer>[3],
+            recordClickHandler as Parameters<typeof makePinLayer>[3],
           ),
         ];
         break;
@@ -118,7 +164,7 @@ export function useDeckLayers() {
           aggregateFeatures,
           opacity.district,
           hoverHandler as Parameters<typeof makeDistrictLayer>[3],
-          clickHandler as Parameters<typeof makeDistrictLayer>[4],
+          regionClickHandler as Parameters<typeof makeDistrictLayer>[4],
           palette.districtNoData,
         ).flat();
         break;
@@ -139,7 +185,8 @@ export function useDeckLayers() {
     ];
   }, [
     activeMode, aggregateFeatures, stateFeatures, pointFeatures, flowArcs,
-    districtBoundaries, opacity, zoom, hoverHandler, clickHandler,
+    districtBoundaries, opacity, zoom, hoverHandler, recordHoverHandler,
+    regionClickHandler, recordClickHandler,
     outline, maskPolygon, mapTheme,
   ]);
 }
