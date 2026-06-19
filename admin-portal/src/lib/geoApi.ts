@@ -6,6 +6,7 @@ function toParams(f: Partial<GeoFilterState>): URLSearchParams {
   f.crops?.forEach((c) => p.append('crops', c));
   f.products?.forEach((pr) => p.append('products', pr));
   f.commodities?.forEach((c) => p.append('commodities', c));
+  f.mandis?.forEach((m) => p.append('mandis', m));
   f.modules?.forEach((m) => p.append('modules', m));
   if (f.condition)   p.set('condition',    f.condition);
   if (f.district)    p.set('district',     f.district);

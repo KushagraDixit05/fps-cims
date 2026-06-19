@@ -67,9 +67,9 @@ function SectionHead({ label, open, onToggle }: { label: string; open: boolean; 
 
 export function FilterRail() {
   const revealStage      = useMapStore((s) => s.revealStage);
-  const { crops, products, commodities, modules, condition, dateFrom, dateTo, toggleCrop, toggleProduct, toggleCommodity, toggleModule, setCondition, setDateFrom, setDateTo, reset } = useFilterStore();
-  const { data: facets } = useGeoFacets();
-  const f = (facets ?? { products: [], commodities: [] }) as GeoFacets;
+  const { crops, products, commodities, mandis, modules, condition, dateFrom, dateTo, toggleCrop, toggleProduct, toggleCommodity, toggleMandi, toggleModule, setCondition, setDateFrom, setDateTo, reset } = useFilterStore();
+  const { data: facets, isLoading: facetsLoading } = useGeoFacets();
+  const f = (facets ?? { products: [], commodities: [], mandis: [] }) as GeoFacets;
   const tlSetPlaying     = useTimelineStore((s) => s.setPlaying);
   const tlSetCurrentDate = useTimelineStore((s) => s.setCurrentDate);
 
@@ -81,11 +81,12 @@ export function FilterRail() {
   const [cropOpen,      setCropOpen]      = useState(true);
   const [productOpen,   setProductOpen]   = useState(false);
   const [commodityOpen, setCommodityOpen] = useState(false);
+  const [mandiOpen,     setMandiOpen]     = useState(false);
   const [advOpen,       setAdvOpen]       = useState(false);
   const [dateOpen,      setDateOpen]      = useState(false);
   const [railOpen,      setRailOpen]      = useState(true);
 
-  const activeCount = crops.length + products.length + commodities.length + (condition ? 1 : 0) + (dateFrom || dateTo ? 1 : 0);
+  const activeCount = crops.length + products.length + commodities.length + mandis.length + (condition ? 1 : 0) + (dateFrom || dateTo ? 1 : 0);
 
   if (revealStage < 2) return null;
 
@@ -136,8 +137,12 @@ export function FilterRail() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={SPRING.panel}
-            className="overflow-hidden rounded-xl px-3 py-3 space-y-2"
+            className="overflow-hidden"
+          >
+          <div
+            className="rounded-xl px-3 py-3 space-y-2 overflow-y-auto"
             style={{
+              maxHeight:      'calc(100vh - 8rem)',
               background:     'var(--glass-fill)',
               border:         '1px solid var(--glass-stroke)',
               backdropFilter: 'blur(16px)',
@@ -206,6 +211,25 @@ export function FilterRail() {
                   className="overflow-hidden"
                 >
                   <ChipList options={f.commodities} selected={commodities} onToggle={toggleCommodity} empty="No commodities available" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Mandi */}
+            <SectionHead label="Mandi" open={mandiOpen} onToggle={() => setMandiOpen((o) => !o)} />
+            <AnimatePresence>
+              {mandiOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={SPRING.tactile}
+                  className="overflow-hidden"
+                >
+                  {facetsLoading
+                    ? <p className="text-[10px] pb-2" style={{ color: 'var(--text-lo)' }}>Loading…</p>
+                    : <ChipList options={f.mandis ?? []} selected={mandis} onToggle={toggleMandi} empty="No mandis available" />
+                  }
                 </motion.div>
               )}
             </AnimatePresence>
@@ -293,6 +317,7 @@ export function FilterRail() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
           </motion.div>
         )}
       </AnimatePresence>

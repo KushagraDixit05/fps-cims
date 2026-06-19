@@ -10,7 +10,7 @@ from .aggregation import build_district_aggregate, build_state_aggregate, build_
 from .serializers import VisitRecordSerializer, DemoRecordSerializer, MandiRecordSerializer
 from crops.models import FarmerVisit
 from product_demo.models import ProductDemo, ProductMaster
-from mandi.models import MandiArrival
+from mandi.models import Mandi, MandiArrival
 
 
 class FacetsView(APIView):
@@ -28,7 +28,12 @@ class FacetsView(APIView):
             .exclude(commodity='')
             .values_list('commodity', flat=True).distinct().order_by('commodity')
         )
-        return Response({'products': products, 'commodities': commodities})
+        mandis = list(
+            Mandi.objects.filter(is_active=True)
+            .order_by('name')
+            .values_list('name', flat=True)
+        )
+        return Response({'products': products, 'commodities': commodities, 'mandis': mandis})
 
 
 class AggregateView(APIView):

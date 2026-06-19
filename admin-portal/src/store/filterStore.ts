@@ -5,6 +5,7 @@ const DEFAULT: GeoFilterState = {
   crops:       [],
   products:    [],
   commodities: [],
+  mandis:      [],
   modules:     ['visit', 'demo', 'mandi'],
   condition:   null,
   district:    null,
@@ -19,6 +20,7 @@ interface FilterStore extends GeoFilterState {
   toggleCrop:      (crop: string) => void;
   toggleProduct:   (product: string) => void;
   toggleCommodity: (commodity: string) => void;
+  toggleMandi:     (mandi: string) => void;
   toggleModule:    (module: string) => void;
   setCondition:    (c: string | null) => void;
   setDistrict:     (d: string | null) => void;
@@ -55,6 +57,13 @@ export const useFilterStore = create<FilterStore>((set, get) => ({
         : [...s.commodities, commodity],
     })),
 
+  toggleMandi: (mandi) =>
+    set((s) => ({
+      mandis: s.mandis.includes(mandi)
+        ? s.mandis.filter((m) => m !== mandi)
+        : [...s.mandis, mandi],
+    })),
+
   toggleModule: (module) =>
     set((s) => ({
       modules: s.modules.includes(module)
@@ -77,6 +86,7 @@ export const useFilterStore = create<FilterStore>((set, get) => ({
       s.crops.join(','),
       s.products.join(','),
       s.commodities.join(','),
+      s.mandis.join(','),
       s.modules.join(','),
       s.condition,
       s.district,

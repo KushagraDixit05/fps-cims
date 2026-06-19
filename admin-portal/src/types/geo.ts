@@ -4,6 +4,7 @@ export interface GeoFilterState {
   crops: string[];
   products: string[];
   commodities: string[];
+  mandis: string[];
   modules: string[];
   condition: string | null;
   district: string | null;
@@ -17,6 +18,7 @@ export interface GeoFilterState {
 export interface GeoFacets {
   products: string[];
   commodities: string[];
+  mandis: string[];
 }
 
 export interface GeoAggregateProperties {

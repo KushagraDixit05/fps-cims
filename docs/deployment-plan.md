@@ -9,6 +9,7 @@
 
 ## Table of Contents
 
+0. [Project Components & Service Inventory](#0-project-components--service-inventory)
 1. [Executive Summary](#1-executive-summary)
 2. [Current Architecture](#2-current-architecture)
 3. [Cloud Platform Comparison](#3-cloud-platform-comparison)
@@ -20,6 +21,49 @@
 9. [Monitoring & Maintenance](#9-monitoring--maintenance)
 10. [Cost Estimation](#10-cost-estimation)
 11. [Final Recommendation](#11-final-recommendation)
+
+---
+
+## 0. Project Components & Service Inventory
+
+### What This Project Is Made Of
+
+Seven distinct components that each need a home:
+
+| # | Component | What it is |
+|---|---|---|
+| 1 | **Django REST API (backend)** | Python/Django 6, GeoDjango + PostGIS, JWT auth, 6 apps: accounts, crops, mandi, product_demo, geo, admin_portal |
+| 2 | **Admin Portal (web frontend)** | Next.js 16 + React 19 + TypeScript — map dashboard, filters, sidebar, RBAC — runs in a browser |
+| 3 | **React Native Mobile App (APK)** | Offline-first field app (WatermelonDB), distributed as an Android APK to field executives |
+| 4 | **PostgreSQL + PostGIS database** | Relational DB with geospatial extension — stores users, crops, visits, mandi prices, geo boundaries |
+| 5 | **Media / file storage** | Farmer visit photos uploaded from the mobile app — must survive server restarts (Render's disk is ephemeral) |
+| 6 | **CI/CD pipeline** | Automated deploy on every push to `main`; weekly DB backup workflow via GitHub Actions |
+| 7 | **Geospatial map tile API** | Mappls (MapMyIndia) API for India-compliant map tiles in the admin portal |
+
+### Current Free-Tier Services
+
+| Component | Service | Plan | Key Limits |
+|---|---|---|---|
+| Django API backend | **Render** | Starter (~$7/mo) or Free | Spins down after 15 min idle → 30–60s cold start for mobile users; no SSH; 512 MB RAM; can't run Celery alongside gunicorn |
+| PostgreSQL + PostGIS | **Neon** | Free | Auto-suspends after 5 min idle; compute quota limits; not suitable for consistent low-latency prod queries |
+| Media / file storage | **Cloudinary** | Free | 25 GB storage, 25 GB bandwidth/month; vendor lock-in; no fine-grained URL access control |
+| Admin portal | **Vercel** | Hobby (free) | **registered to github account** |
+| CI/CD + source code | **GitHub** | Free | 2,000 Actions minutes/month on private repos; weekly DB backup workflow already live |
+| Map tiles | **Mappls API** | Free tier | Rate-limited; adequate for development and demo; key stored in `.env` |
+| Mobile APK | N/A — no hosting needed | — | APK built locally and distributed manually (WhatsApp / Google Drive) |
+
+### What's Missing / Still Needs a Service
+
+| Need | Current state | Service required |
+|---|---|---|
+| **Background task queue (Celery)** | Code stub exists, not yet active | Redis broker — ElastiCache (AWS) or Upstash free tier |
+| **Push notifications** | Not implemented | Firebase Cloud Messaging (FCM) — free tier covers millions of messages |
+| **APK distribution** | Manual (file share) | Firebase App Distribution (free) or internal MDM solution |
+| **Uptime monitoring** | None | UptimeRobot free tier — monitors every 5 min, emails on downtime |
+| **Error tracking** | None | Sentry free tier — 5,000 errors/month, full stack traces |
+| **Company-owned infra** | All services on intern's personal accounts | AWS under company account: RDS (DB) + S3 (media) + EC2 (backend) + Amplify (admin portal) |
+
+> **Key takeaway:** The free-tier stack costs ~$7–10/month and works technically. The problem is ownership — Render, Neon, Cloudinary, and Vercel are all registered to the intern. When the internship ends, the company loses access to the API, database, media files, and admin portal. That is the primary driver for the AWS migration in the sections below.
 
 ---
 
