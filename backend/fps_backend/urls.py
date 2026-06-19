@@ -32,6 +32,9 @@ urlpatterns = [
 
     # --- Admin portal (field data viewing + CSV export) ---
     path('api/admin/', include('admin_portal.urls')),
+
+    # --- Geo intelligence map ---
+    path('api/geo/', include('geo.urls')),
 ]
 
 

@@ -1,3 +1,4 @@
+import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -17,8 +18,32 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, null=True, blank=True)
     phone_number = models.CharField(max_length=15, unique=True, null=True, blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='field_executive')
-    region = models.CharField(max_length=100, blank=True)  # e.g. "Nanded", "Guntur"
+    region = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
+
+    # RBAC / profile fields
+    employee_id = models.CharField(max_length=50, null=True, blank=True)
+    state = models.CharField(max_length=100, blank=True, default='')
+    districts = models.JSONField(default=list)
+    profile_photo = models.CharField(max_length=255, blank=True, default='')
+    last_login_device = models.CharField(max_length=200, blank=True, default='')
+    last_login_ip = models.GenericIPAddressField(null=True, blank=True)
+    deactivation_reason = models.TextField(blank=True, default='')
+    deactivated_at = models.DateTimeField(null=True, blank=True)
+    primary_role_id = models.UUIDField(null=True, blank=True)
+
+    created_by = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='created_users'
+    )
+    deactivated_by = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='deactivated_users'
+    )
+    reporting_to = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='reportees'
+    )
 
     class Meta:
         verbose_name = 'User'

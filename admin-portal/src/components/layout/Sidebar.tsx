@@ -16,6 +16,7 @@ import {
   Sprout,
   Store,
   FlaskConical,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
@@ -106,6 +107,11 @@ export function Sidebar() {
         <NavItem href="/field-data/visits" label="Farmer Visits" icon={Sprout} active={isActive("/field-data/visits")} />
         <NavItem href="/field-data/mandi" label="Mandi Arrivals" icon={Store} active={isActive("/field-data/mandi")} />
         <NavItem href="/field-data/demos" label="Product Demos" icon={FlaskConical} active={isActive("/field-data/demos")} />
+
+        <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 px-3 mt-4 mb-2">
+          Intelligence
+        </p>
+        <NavItem href="/map" label="Agri Map" icon={Globe} active={isActive("/map")} />
       </nav>
 
       {/* User footer */}

@@ -1,4 +1,4 @@
-from django.db import models
+from django.contrib.gis.db import models
 from django.conf import settings
 import uuid
 
@@ -12,6 +12,7 @@ class Mandi(models.Model):
     district = models.CharField(max_length=100)
     state = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
+    location = models.PointField(null=True, blank=True)  # GPS center — backfill via backfill_mandi_locations
 
     class Meta:
         verbose_name_plural = 'Mandis'
