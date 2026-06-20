@@ -279,6 +279,7 @@ class FarmerVisit(models.Model):
     local_id = models.CharField(max_length=100, blank=True)
     is_synced = models.BooleanField(default=True)
     approval_status = models.CharField(max_length=30, default='draft')
+    approved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-submitted_at']
