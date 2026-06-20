@@ -34,6 +34,12 @@ the repo-root [README.md](../README.md). Start here to find a specific doc.
 | [PHASE-2-Mobile-App-Core.md](PHASE-2-Mobile-App-Core.md) | Navigation, screens, form patterns. |
 | [PHASE-3-Offline-Sync.md](PHASE-3-Offline-Sync.md) | WatermelonDB offline-first store, sync engine, migrations. |
 
+## Agri Intelligence Map
+
+| Doc | What it covers |
+|---|---|
+| [agri-intelligence-map/FULL-SPEC.md](agri-intelligence-map/FULL-SPEC.md) | Complete spec — architecture, layers, API design, PostGIS queries, frontend components, deployment. Merged to `main` on 19 June 2026. |
+
 ## RBAC (feature/rbac-implementation)
 
 The [rbac/](rbac/) folder holds the 12-doc RBAC architecture (overview, database schema,

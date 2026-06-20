@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { MapMode, HoverInfo } from '@/types/geo';
 
 interface ViewState {
@@ -30,7 +29,7 @@ interface MapStore {
   mapBounds:         [number, number, number, number] | null;
   cameraZoomBand:    ZoomBand;
   activeMode:        MapMode;
-  mapTheme:          'dark' | 'light';
+  mapTheme:          'light';
   hoverInfo:         HoverInfo | null;
   selectedFeatureId: string | null;
   selectedLevel:     string | null;
@@ -45,8 +44,6 @@ interface MapStore {
   setMapBounds:           (bounds: [number, number, number, number]) => void;
   setCameraZoomBand:      (band: ZoomBand) => void;
   setActiveMode:          (mode: MapMode) => void;
-  setMapTheme:            (t: 'dark' | 'light') => void;
-  toggleMapTheme:         () => void;
   setHoverInfo:           (info: HoverInfo | null) => void;
   setSelectedFeature:     (id: string | null, level?: string | null) => void;
   setSelectedRecord:      (rec: SelectedRecord | null) => void;
@@ -57,8 +54,7 @@ interface MapStore {
 }
 
 export const useMapStore = create<MapStore>()(
-  persist(
-    (set) => ({
+  (set) => ({
       viewState: {
         longitude: 78.9,
         latitude:  20.5,
@@ -69,7 +65,7 @@ export const useMapStore = create<MapStore>()(
       mapBounds:          null,
       cameraZoomBand:     0,
       activeMode:         'heat',
-      mapTheme:           'dark',
+      mapTheme:           'light',
       hoverInfo:           null,
       selectedFeatureId:   null,
       selectedLevel:       null,
@@ -82,8 +78,6 @@ export const useMapStore = create<MapStore>()(
       setMapBounds:           (bounds) => set({ mapBounds: bounds }),
       setCameraZoomBand:      (band) => set({ cameraZoomBand: band }),
       setActiveMode:          (mode) => set({ activeMode: mode }),
-      setMapTheme:            (t) => set({ mapTheme: t }),
-      toggleMapTheme:         () => set((s) => ({ mapTheme: s.mapTheme === 'dark' ? 'light' : 'dark' })),
       setHoverInfo:           (info) => set({ hoverInfo: info }),
       setSelectedFeature:     (id, level = null) => set({ selectedFeatureId: id, selectedLevel: level, selectedRecord: null, selectedRecordGroup: null }),
       setSelectedRecord:      (rec) => set({ selectedRecord: rec, selectedFeatureId: null, selectedLevel: null }),
@@ -99,9 +93,4 @@ export const useMapStore = create<MapStore>()(
       flyToTarget:            null,
       setFlyToTarget:         (bounds) => set({ flyToTarget: bounds }),
     }),
-    {
-      name: 'fps-map',
-      partialize: (s) => ({ mapTheme: s.mapTheme }),
-    },
-  ),
 );

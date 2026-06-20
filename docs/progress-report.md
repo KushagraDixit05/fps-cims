@@ -1,21 +1,23 @@
 # Farm Prosperity Solutions (FPS) — Progress Report
 
-> **Last updated:** 18 June 2026
-> **Overall status:** Phases 0–4 (partial) complete · Admin Portal live · Cloud deployed on Render · Release APK **v1.4** distributed · **Production-critical stabilization pass applied**
+> **Last updated:** 19 June 2026
+> **Overall status:** Phases 0–4 (partial) complete · Admin Portal live · Agri Intelligence Map live · Cloud deployed on Render + Vercel · Release APK **v1.4** distributed · **Production-critical stabilization pass applied**
 
 ---
 
-## Changes since 13 June 2026
+## Changes since 18 June 2026
 
-Incremental fixes landed on `main` after the stabilization pass:
-
-- **Mandi source alignment** — mobile sent display labels (Farmer/Trader/FPS Staff/Mandi) while the backend only accepted lowercase keys, so mandi sync failed. Expanded backend `SOURCE_CHOICES` (+`fps_staff`, +`mandi`, migration 0006), send canonical keys from the dropdown, normalize stored source at sync time to flush already-pending records, and handle the "Others" path via `custom_source`. App bumped to **v1.4** (schema v8 `custom_source` column).
-- **Blank phone/email → NULL** — `User.save()` now converts blank `phone_number`/`email` to `NULL` to avoid a unique-constraint 500.
-- **Platform stabilization batch** — admin auth fixes, analytics routes (`/api/admin/analytics/productivity/`, `/approval-sla/`), **SmartDropdown** standardization across forms, backend serializer upgrades, Product Performance dropdown updates, and the WatermelonDB **v8** migration.
+- **Agri Intelligence Map merged to `main` and deployed** — `feature/agri-intelligence-map` merged via `--no-ff`. Full geospatial command-center live at `/map` on the admin portal:
+  - New `geo` Django app with 7 read-only API endpoints (`/api/geo/facets/`, `/aggregate/`, `/points/`, `/record/`, `/region/`, `/flows/`, `/timeline/`)
+  - PostGIS spatial GIST indexes on `FarmerVisit`, `MandiArrival`, `ProductDemo`
+  - `mandi` model gains optional `location` PointField (SRID 4326, migration 0007)
+  - Admin portal: MapLibre GL + deck.gl map at `(map)/map` route group; cluster/heat/flow/pin/district layers; command palette; filter rail; date picker; record sidebar; India-only confinement with fog mask
+  - GeoJSON bundled in `public/geo/` (444 KB districts, 16 KB outline) — served as static assets
+- **RBAC columns added to DB** — `accounts/0004_add_rbac_fields` actually creates the 11 User columns that `0003_rbac_fields_state_only` had declared in ORM state only. Fixes Django admin 500 on `/admin/`.
+- **`next.config.ts` updated** — added `transpilePackages` for deck.gl/luma.gl/math.gl suite to fix Turbopack production build hang on Vercel.
 
 **On feature branches (not merged to `main`):**
-- `feature/rbac-implementation` — full RBAC permission engine (architecture in `docs/rbac/`).
-- `feature/agri-intelligence-map` — Agri Intelligence Map geospatial command-center (MapLibre + deck.gl + Django `geo` app).
+- `feature/rbac-implementation` — full RBAC permission engine (architecture in `docs/rbac/`). The DB columns for RBAC fields now exist on `main` (via `0004_add_rbac_fields`); enforcement logic remains on this branch.
 
 ---
 
@@ -38,10 +40,7 @@ audit findings are deferred and tracked separately.
 photo storage, Neon `CONN_HEALTH_CHECKS`, sync retry backoff/dead-letter, WatermelonDB migration
 reordering, global sync mutex, app error boundary, N+1 query cleanup, logging/Sentry.
 
-**Known dev-environment note:** the shared dev database carries extra `accounts_user` columns from
-a separate RBAC feature branch (schema drift). Do **not** point `main` at a database migrated by
-that branch — keep one database per schema lineage. Fresh Neon production DBs built from `main`
-are unaffected.
+**Known dev-environment note:** the RBAC User columns (`employee_id`, `state`, `districts`, etc.) are now on `main` via `accounts/0004_add_rbac_fields`. Any database migrated from `main` will have these columns. The `feature/rbac-implementation` branch adds the enforcement logic on top; keep its database separate to avoid migration conflicts.
 
 ---
 
@@ -56,8 +55,9 @@ are unaffected.
 | Product Demo Module | ✅ End-to-end complete (backend + 4-step wizard) |
 | Offline Sync (Phase 3) | ✅ Complete — WatermelonDB **v8** + auto-sync + sync dashboard |
 | UI Redesign (Phase 4) | 🔄 In progress — auth flow + home screen + drawer nav complete |
-| Admin Portal | ✅ Complete — Next.js 16, 8 pages, field data viewing + CSV export |
-| Cloud Deployment | ✅ Complete — Render (Docker + PostgreSQL + PostGIS) |
+| Admin Portal | ✅ Complete — Next.js 16, 9 pages, field data + CSV export + Agri Map |
+| Agri Intelligence Map | ✅ Live — MapLibre + deck.gl geospatial command-center at `/map` |
+| Cloud Deployment | ✅ Complete — Render (Docker + PostGIS) + Vercel (admin portal) |
 | Release APK | ✅ Built and distributed to testers |
 
 ---
@@ -199,27 +199,57 @@ Sync engine: `syncPendingRecords()` finds `is_synced=false` records, POSTs to Dj
 
 ### ✅ Admin Portal
 
-Next.js 16 app at `admin-portal/`, dev server at `localhost:3000`. Pages live under the `(dashboard)` route group plus a `login` route. Roles/Permissions/Approvals/Audit exist as frontend on `main`; the backing RBAC permission engine lives on `feature/rbac-implementation`.
+Next.js 16 app at `admin-portal/`, dev server at `localhost:3000`. Route groups: `(dashboard)` for all management pages, `(map)` for the Agri Intelligence Map, plus a `login` route. Roles/Permissions/Approvals/Audit exist as frontend on `main`; the backing RBAC permission engine lives on `feature/rbac-implementation`.
 
 **Pages live:**
-| Page | Feature |
-|---|---|
-| Dashboard | KPI cards + stats strip |
-| Analytics | Productivity chart + Approval SLA chart |
-| Users | Paginated user list + create/edit drawer |
-| Roles | Role list + role detail with permission matrix |
-| Permissions | Full permission matrix editor |
-| Approvals | Maker-checker approval queue + detail view |
-| Audit Log | Full audit trail table |
-| Field Data — Farmer Visits | Filterable paginated table + Export CSV |
-| Field Data — Mandi Arrivals | Filterable paginated table + Export CSV |
-| Field Data — Product Demos | Filterable paginated table + Export CSV |
+| Page | Route group | Feature |
+|---|---|---|
+| Dashboard | (dashboard) | KPI cards + stats strip |
+| Analytics | (dashboard) | Productivity chart + Approval SLA chart |
+| Users | (dashboard) | Paginated user list + create/edit drawer |
+| Roles | (dashboard) | Role list + role detail with permission matrix |
+| Permissions | (dashboard) | Full permission matrix editor |
+| Approvals | (dashboard) | Maker-checker approval queue + detail view |
+| Audit Log | (dashboard) | Full audit trail table |
+| Field Data — Farmer Visits | (dashboard) | Filterable paginated table + Export CSV |
+| Field Data — Mandi Arrivals | (dashboard) | Filterable paginated table + Export CSV |
+| Field Data — Product Demos | (dashboard) | Filterable paginated table + Export CSV |
+| Agri Intelligence Map | (map) | MapLibre + deck.gl geospatial command-center |
 
 **Backend: `admin_portal` Django app**
 - `GET/POST /api/admin/field-data/visits/` — list + streaming CSV export
 - `GET/POST /api/admin/field-data/mandi/` — list + streaming CSV export
 - `GET/POST /api/admin/field-data/demos/` — list + streaming CSV export
 - All endpoints gated by `is_staff`; filters: date range, district, crop/product, executive
+
+---
+
+### ✅ Agri Intelligence Map
+
+Geospatial command-center for field data visualization. Lives at `/map` on the admin portal under the `(map)` route group.
+
+**Frontend (admin-portal):**
+- MapLibre GL JS base map (CartoCDN dark/light tiles, India-only confinement with fog mask)
+- deck.gl layers: cluster, heatmap, flow, pin, district choropleth
+- Command palette with district search
+- Filter rail: module (visits/mandi/demos), executive, product, commodity, date range
+- Timeline dock with daily/weekly/monthly bucketing
+- Record sidebar — click any point to see full record details
+- GeoJSON bundled locally (`public/geo/`) — offline-capable, no external tile dependency for boundaries
+
+**Backend (`geo` Django app):**
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/geo/facets/` | Available filters (districts, executives, products, commodities) |
+| `GET /api/geo/aggregate/?level=district\|state` | Choropleth aggregation GeoJSON |
+| `GET /api/geo/points/?bbox=` | Point features within viewport |
+| `GET /api/geo/record/<id>/?module=` | Full record detail for sidebar |
+| `GET /api/geo/region/<level>/<id>/summary/` | District/state summary panel |
+| `GET /api/geo/flows/?type=` | Flow lines between locations |
+| `GET /api/geo/timeline/?bucket=` | Time-series counts for timeline dock |
+
+All endpoints are read-only, gated by `IsAuthenticated`. Field executives see only their own records (scope filter in `geo/scope.py`).
 
 ---
 
@@ -232,5 +262,6 @@ Next.js 16 app at `admin-portal/`, dev server at `localhost:3000`. Pages live un
 | Auto-migrate + auto-seed on container startup | ✅ |
 | Live URL: `https://fps-cims-backend.onrender.com` | ✅ |
 | Django Admin: `https://fps-cims-backend.onrender.com/admin` | ✅ |
+| Admin Portal on Vercel (Next.js 16, Turbopack) | ✅ |
 | Release APK signed with `farm-prosperity-release.keystore` | ✅ |
 | APK distributed to testers via ADB | ✅ |

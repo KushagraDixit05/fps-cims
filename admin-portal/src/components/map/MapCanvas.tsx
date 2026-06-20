@@ -5,13 +5,12 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { useMapStore } from '@/store/mapStore';
 import {
-  MAP_STYLE_URL,
+  MAP_STYLE_LIGHT,
   INDIA_INITIAL_VIEW,
   INDIA_BOUNDS,
   INDIA_MAX_BOUNDS,
   INDIA_MIN_ZOOM,
   INDIA_MAX_ZOOM,
-  mapStyleUrl,
 } from '@/lib/mapStyle';
 import { useDeckLayers } from './hooks/useDeckLayers';
 import { useGeoPoints } from '@/hooks/useGeoData';
@@ -24,7 +23,6 @@ export function MapCanvas() {
 
   const setViewState   = useMapStore((s) => s.setViewState);
   const setMapBounds   = useMapStore((s) => s.setMapBounds);
-  const mapTheme       = useMapStore((s) => s.mapTheme);
   const flyToTarget    = useMapStore((s) => s.flyToTarget);
   const setFlyToTarget = useMapStore((s) => s.setFlyToTarget);
   const layers         = useDeckLayers();
@@ -42,7 +40,7 @@ export function MapCanvas() {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style:   MAP_STYLE_URL,
+      style:   MAP_STYLE_LIGHT,
       center:  [INDIA_INITIAL_VIEW.longitude, INDIA_INITIAL_VIEW.latitude],
       zoom:    INDIA_INITIAL_VIEW.zoom,
       pitch:   INDIA_INITIAL_VIEW.pitch,
@@ -134,20 +132,6 @@ export function MapCanvas() {
     mapRef.current.fitBounds([[west, south], [east, north]], { padding: 60, duration: 900, maxZoom: 10 });
     setFlyToTarget(null);
   }, [flyToTarget, setFlyToTarget]);
-
-  // Swap basemap when the theme changes (skip the initial mount — constructor handled it).
-  const isFirstThemeRender = useRef(true);
-  useEffect(() => {
-    if (isFirstThemeRender.current) { isFirstThemeRender.current = false; return; }
-    const map = mapRef.current;
-    if (!map) return;
-    map.setStyle(mapStyleUrl(mapTheme));
-    // Re-apply deck layers after MapLibre rebuilds the style (interleaved layers are dropped).
-    map.once('styledata', () => {
-      overlayRef.current?.setProps({ layers });
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapTheme]);
 
   // Sync deck.gl layers whenever they change
   useEffect(() => {

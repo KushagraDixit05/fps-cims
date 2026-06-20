@@ -13,17 +13,14 @@ import { TooltipPortal }    from './tooltips/TooltipPortal';
 import { useCameraBand }    from './hooks/useCameraBand';
 import { useMapKeyboard }   from './hooks/useMapKeyboard';
 import { useMapReveal }     from './hooks/useMapReveal';
-import { useMapStore }      from '@/store/mapStore';
 
 function MapInner() {
   useCameraBand();
   useMapKeyboard();
   useMapReveal();
-  const mapTheme = useMapStore((s) => s.mapTheme);
-
   return (
     <div
-      data-map-theme={mapTheme}
+      data-map-theme="light"
       style={{ position: 'relative', width: '100vw', height: '100dvh', background: 'var(--map-bg-0)' }}
     >
       {/* WebGL canvas — fills entire container */}

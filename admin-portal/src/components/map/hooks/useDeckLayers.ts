@@ -18,7 +18,6 @@ export function useDeckLayers() {
   const activeMode       = useMapStore((s) => s.activeMode);
   const mapBounds        = useMapStore((s) => s.mapBounds);
   const zoom             = useMapStore((s) => s.viewState.zoom);
-  const mapTheme         = useMapStore((s) => s.mapTheme);
   const setHoverInfo            = useMapStore((s) => s.setHoverInfo);
   const setSelectedFeature      = useMapStore((s) => s.setSelectedFeature);
   const setSelectedRecordGroup  = useMapStore((s) => s.setSelectedRecordGroup);
@@ -114,7 +113,7 @@ export function useDeckLayers() {
   }, [pointFeatures, setSelectedRecordGroup]);
 
   return useMemo(() => {
-    const palette = mapPalette(mapTheme);
+    const palette = mapPalette('light');
 
     // Pick the data source and opacity for the active mode.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -187,6 +186,6 @@ export function useDeckLayers() {
     activeMode, aggregateFeatures, stateFeatures, pointFeatures, flowArcs,
     districtBoundaries, opacity, zoom, hoverHandler, recordHoverHandler,
     regionClickHandler, recordClickHandler,
-    outline, maskPolygon, mapTheme,
+    outline, maskPolygon,
   ]);
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Globe, Search, Moon, Sun, Radio } from 'lucide-react';
+import { Globe, Search, Radio } from 'lucide-react';
 import Link from 'next/link';
 import { useMapStore } from '@/store/mapStore';
 import { SPRING } from '@/lib/mapMotion';
@@ -20,8 +20,6 @@ function LiveClock() {
 export function MapTopBar() {
   const revealStage          = useMapStore((s) => s.revealStage);
   const setCommandPaletteOpen = useMapStore((s) => s.setCommandPaletteOpen);
-  const mapTheme             = useMapStore((s) => s.mapTheme);
-  const toggleMapTheme       = useMapStore((s) => s.toggleMapTheme);
 
   if (revealStage < 2) return null;
 
@@ -71,15 +69,6 @@ export function MapTopBar() {
         <kbd className="ml-1 text-[10px] px-1 rounded" style={{ background: 'var(--control-fill-strong)', color: 'var(--text-lo)' }}>⌘K</kbd>
       </button>
 
-      {/* Theme toggle — Sun shown in dark mode (click → light), Moon shown in light */}
-      <button
-        onClick={toggleMapTheme}
-        className="p-1.5 rounded-lg transition-colors hover:bg-[var(--control-fill)]"
-        style={{ color: 'var(--text-lo)' }}
-        title={mapTheme === 'dark' ? 'Switch to light map' : 'Switch to dark map'}
-      >
-        {mapTheme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
-      </button>
     </motion.header>
   );
 }
