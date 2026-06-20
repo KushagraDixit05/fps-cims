@@ -41,14 +41,20 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const datePickerValue = (() => {
-    const d = new Date(data.date);
+    const d = new Date(data.date ? data.date.trim() + 'T12:00:00' : '');
     return isNaN(d.getTime()) ? new Date() : d;
   })();
+
+  const displayDate = data.date
+    ? new Date(data.date.trim() + 'T12:00:00').toLocaleDateString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric',
+      })
+    : '';
 
   const handleDateChange = (_: DateTimePickerEvent, selected?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selected) {
-      onChange({ date: selected.toISOString().split('T')[0] });
+      onChange({ date: selected.toLocaleDateString('en-CA') });
     }
   };
 
@@ -175,32 +181,28 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
           />
         )}
 
-        <TouchableOpacity onPress={() => setShowDatePicker(true)} activeOpacity={0.7}>
-          <FormInput
-            label="Date"
-            required
-            value={data.date}
-            editable={false}
-            pointerEvents="none"
-            placeholder="YYYY-MM-DD"
-            error={errors.date}
-          />
-        </TouchableOpacity>
+        <View style={styles.dateWrapper}>
+          <Text style={styles.dateLabel}>
+            Date <Text style={styles.required}>*</Text>
+          </Text>
+          <TouchableOpacity
+            style={[styles.dateTrigger, errors.date ? styles.dateTriggerErr : null]}
+            onPress={() => setShowDatePicker(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.dateTriggerText, !displayDate && styles.placeholder]}>
+              {displayDate || 'Select date…'}
+            </Text>
+            <Text style={styles.calIcon}>📅</Text>
+          </TouchableOpacity>
+          {errors.date ? <Text style={styles.errorText}>{errors.date}</Text> : null}
+        </View>
 
-        {showDatePicker && Platform.OS === 'android' && (
+        {showDatePicker && (
           <DateTimePicker
             value={datePickerValue}
             mode="date"
-            display="default"
-            maximumDate={new Date()}
-            onChange={handleDateChange}
-          />
-        )}
-        {showDatePicker && Platform.OS === 'ios' && (
-          <DateTimePicker
-            value={datePickerValue}
-            mode="date"
-            display="inline"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             maximumDate={new Date()}
             onChange={handleDateChange}
           />
@@ -236,6 +238,24 @@ const styles = StyleSheet.create({
   retryMsg:      { fontSize: 13, color: '#856404', flex: 1 },
   retryBtn:      { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: colors.primary, borderRadius: 6 },
   retryBtnText:  { color: 'white', fontSize: 13, fontWeight: '600' },
+  dateWrapper:     { marginBottom: 14 },
+  dateLabel:       { fontSize: 13, color: colors.textSecondary, fontWeight: '500', marginBottom: 6 },
+  required:        { color: colors.error },
+  dateTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 13,
+    backgroundColor: colors.surface,
+  },
+  dateTriggerErr:  { borderColor: colors.error },
+  dateTriggerText: { fontSize: 14, color: colors.textPrimary, flex: 1 },
+  placeholder:     { color: colors.textMuted },
+  calIcon:         { fontSize: 16 },
+  errorText:       { marginTop: 4, fontSize: 12, color: colors.error },
 });
 
 export default Step1_MandiDetails;

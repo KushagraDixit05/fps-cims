@@ -92,7 +92,7 @@ const Step3_SourceRemark = ({
             placeholder="Enter remark (optional)"
             placeholderTextColor={colors.textMuted}
             multiline
-            numberOfLines={4}
+            scrollEnabled
             maxLength={310}
             textAlignVertical="top"
           />
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
-    minHeight: 100,
+    height: 120,
   },
   remarkErr:      { borderColor: colors.error },
   errorText:      { marginTop: 4, fontSize: 12, color: colors.error },
