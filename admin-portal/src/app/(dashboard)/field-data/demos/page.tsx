@@ -46,7 +46,7 @@ export default function ProductDemosPage() {
       className="space-y-5 max-w-7xl mx-auto"
     >
       <PageHeader
-        title="Product Demos"
+        title="Product Performance"
         description={`${total.toLocaleString()} total records`}
         actions={
           <Button variant="secondary" onClick={handleExport} disabled={exporting}>

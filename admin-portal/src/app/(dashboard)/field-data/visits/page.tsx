@@ -82,7 +82,7 @@ export default function FarmerVisitsPage() {
       className="space-y-5 max-w-7xl mx-auto"
     >
       <PageHeader
-        title="Farmer Visits"
+        title="Crop Intelligence"
         description={`${total.toLocaleString()} total records`}
         actions={
           <Button variant="secondary" onClick={handleExport} disabled={exporting}>

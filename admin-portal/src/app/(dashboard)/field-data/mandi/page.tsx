@@ -36,7 +36,7 @@ export default function MandiArrivalsPage() {
       className="space-y-5 max-w-7xl mx-auto"
     >
       <PageHeader
-        title="Mandi Arrivals"
+        title="Market Intelligence"
         description={`${total.toLocaleString()} total records`}
         actions={
           <Button variant="secondary" onClick={handleExport} disabled={exporting}>
