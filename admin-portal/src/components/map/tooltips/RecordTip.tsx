@@ -1,9 +1,9 @@
 import type { GeoPointFeature } from '@/types/geo';
 
 const MODULE_LABEL: Record<string, string> = {
-  visit: 'Farmer Visit',
-  demo:  'Product Demo',
-  mandi: 'Mandi Arrival',
+  visit: 'Crop Intelligence',
+  demo:  'Product Performance',
+  mandi: 'Market Intelligence',
 };
 
 export function RecordTip({ feature }: { feature: GeoPointFeature }) {

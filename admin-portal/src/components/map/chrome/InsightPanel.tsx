@@ -19,7 +19,7 @@ const PIE_COLORS = ['#34E08A', '#F5C542', '#22D3EE', '#FB6A6A', '#A78BFA', '#F97
 const CONDITION_HEX: Record<string, string> = { good: '#34E08A', average: '#F5C542', poor: '#FB6A6A' };
 const RESULT_HEX: Record<string, string> = { excellent: '#34E08A', good: '#22D3EE', average: '#F5C542', poor: '#FB6A6A', no_effect: '#94A3B8' };
 const MODULE_HEX: Record<string, string> = { visit: '#34E08A', mandi: '#FBbf24', demo: '#22D3EE' };
-const MODULE_LABEL: Record<string, string> = { visit: 'Farmer Visit', demo: 'Product Demo', mandi: 'Mandi Arrival' };
+const MODULE_LABEL: Record<string, string> = { visit: 'Crop Intelligence', demo: 'Product Performance', mandi: 'Market Intelligence' };
 
 // ─── Small atoms ─────────────────────────────────────────────────────────────
 function KpiCard({ label, value, icon: Icon, color }: { label: string; value: string | number; icon: React.ElementType; color?: string }) {
