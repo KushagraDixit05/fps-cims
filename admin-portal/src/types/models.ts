@@ -130,3 +130,77 @@ export interface ApprovalSLAMetric {
     max_hours: number;
   };
 }
+
+// ── Agricultural Intelligence Analytics ──────────────────────────────────────
+
+export interface SummaryPeriodData {
+  crop_entries: number;
+  market_entries: number;
+  product_demos: number;
+  active_executives: number;
+  farmers_covered: number;
+  villages_covered: number;
+}
+
+export interface SummaryResponse {
+  period: "today" | "week" | "month";
+  current: SummaryPeriodData;
+  previous: SummaryPeriodData;
+  all_time: SummaryPeriodData;
+}
+
+export interface CropIntelligenceResponse {
+  total_entries: number;
+  total_farmers: number;
+  total_villages: number;
+  top_crops: { crop: string; count: number }[];
+  top_varieties: { variety: string; count: number }[];
+  condition_distribution: { good: number; average: number; poor: number };
+  problem_distribution: { pest: number; disease: number; weather: number; labour: number; price: number; other: number };
+  district_coverage: { district: string; entries: number; villages: number }[];
+  block_coverage: { block: string; district: string; entries: number; villages: number }[];
+  village_coverage: { village: string; block: string; district: string; entries: number }[];
+}
+
+export interface MarketIntelligenceResponse {
+  total_entries: number;
+  commodity_arrivals: { commodity: string; quantity: number; entries: number }[];
+  source_distribution: { trader: number; farmer: number; fps_staff: number; mandi: number; official: number; other: number };
+  top_mandis: { mandi: string; district: string; entries: number; commodities: number; total_qty: number }[];
+  district_activity: { district: string; entries: number }[];
+  commodity_trends: { commodity: string; trend: "up" | "down" | "steady"; current_avg_rate: number | null; previous_avg_rate: number | null }[];
+}
+
+export interface ProductPerformanceResponse {
+  total_demos: number;
+  active_demos: number;
+  completed_demos: number;
+  funnel: { started: number; after_pending: number; completed: number };
+  product_rankings: { product: string; demos: number; completed: number; completion_rate: number }[];
+  crop_product_combinations: { crop: string; product: string; count: number }[];
+  result_distribution: { excellent: number; good: number; average: number; poor: number; no_effect: number };
+  executive_demos: { user_id: number; name: string; demos: number; completed: number }[];
+}
+
+export interface RecentActivity {
+  id: string;
+  module: "crops" | "mandi" | "product_demo";
+  user: string;
+  farmer: string;
+  crop: string;
+  location: string;
+  timestamp: string;
+}
+
+export interface ExecutivePerformanceMetric {
+  user_id: number;
+  username: string;
+  full_name: string;
+  farmer_visits: number;
+  mandi_arrivals: number;
+  product_demos: number;
+  farmers_covered: number;
+  villages_covered: number;
+  last_activity: string | null;
+  total_activities: number;
+}
