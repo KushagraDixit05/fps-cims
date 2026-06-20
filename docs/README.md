@@ -48,6 +48,23 @@ integration, audit, security, scalability, implementation phases). The backend e
 lives on the `feature/rbac-implementation` branch; the admin-portal Roles/Permissions/
 Approvals/Audit pages exist on `main` as frontend.
 
+## Enhancement Phases (feature roadmap)
+
+The [enhancement-phases/](enhancement-phases/) folder contains the phased implementation plan
+for new platform features (future dates, activity feed, farmer identity, crop-wise
+market intelligence, editable submissions, master data admin, expanded reports).
+Start at [enhancement-phases/README.md](enhancement-phases/README.md) for the full
+traceability matrix and dependency graph.
+
+| Phase | What it covers |
+|---|---|
+| [Phase 0 — Quick Wins](enhancement-phases/PHASE-0-Quick-Wins.md) | Future dates, activity feed, module renaming, share button, step merge, remarks |
+| [Phase 1 — Additive Fields](enhancement-phases/PHASE-1-Additive-Fields.md) | Market trend, self source, market insight, before/after GPS |
+| [Phase 2 — Farmer Identity](enhancement-phases/PHASE-2-Farmer-Identity-Profiling.md) | Phone-based unique farmer, auto-fill, visit grouping |
+| [Phase 3 — Crop-Wise Market Intel](enhancement-phases/PHASE-3-CropWise-Market-Intelligence.md) | Per-crop arrivals, filtered Step 2, crop-wise review |
+| [Phase 4 — Editable Submissions](enhancement-phases/PHASE-4-Editable-Submissions-Audit.md) | Time-boxed edits, role-based permissions, audit trail |
+| [Phase 5 — Master Data & Reports](enhancement-phases/PHASE-5-Master-Data-Reports.md) | Admin CRUD for master data, analytics dashboard |
+
 ## Production
 
 | Doc | What it covers |

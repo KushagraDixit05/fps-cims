@@ -52,4 +52,5 @@ echo ""
 # ── Run React Native ──────────────────────────────────────────
 
 npx react-native run-android \
+  --port 8081 \
   --extra-params "-PreactNativeArchitectures=$ARCH"

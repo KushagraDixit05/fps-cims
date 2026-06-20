@@ -63,7 +63,7 @@ export const MANDI_SOURCES: { value: MandiArrivalSource; label: string }[] = [
 // ─── Wizard State ─────────────────────────────────────────────────────────────
 
 export interface MandiArrivalFormState {
-  step: 1 | 2 | 3 | 4 | 5 | 'review';
+  step: 1 | 2 | 3 | 4 | 'review';
   mandiDetails: MandiDetailsDraft;
   varieties: CropVarietyDraft[];
   source: MandiArrivalSource | '';

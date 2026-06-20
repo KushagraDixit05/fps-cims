@@ -103,13 +103,10 @@ export const validateCropRecord = (crop: CropRecordDraft): CropRecordErrors => {
     // Wrapped in try/catch: a malformed string must never crash the validator.
     try {
       const sowing = new Date(crop.date_of_sowing.trim() + 'T12:00:00');
-      const today = new Date();
-      today.setHours(23, 59, 59, 999); // allow any time today
       if (isNaN(sowing.getTime())) {
         errors.date_of_sowing = 'Invalid date. Please re-select.';
-      } else if (sowing > today) {
-        errors.date_of_sowing = 'Date of sowing cannot be a future date.';
       }
+      // Future dates are now allowed (user is warned at selection time via showFutureDateWarning)
     } catch (err) {
       console.error('[validateCropRecord] Date parse error:', err);
       errors.date_of_sowing = 'Invalid date. Please re-select.';

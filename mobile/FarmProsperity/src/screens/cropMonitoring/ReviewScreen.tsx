@@ -13,6 +13,9 @@ import {
 import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
+import AppIcon from '../../components/AppIcon';
+import { Share2, IconStroke } from '../../utils/icons';
+import { shareReviewDetails } from '../../utils/shareReviewDetails';
 import type { CropMonitoringFormState } from '../../types/cropMonitoring';
 import { OTHERS_VALUE, resolveOthersValue } from '../../utils/othersValidation';
 
@@ -76,10 +79,29 @@ const ReviewScreen = ({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.heading}>Review & Confirm</Text>
-      <Text style={styles.subtext}>
-        Please verify all details before submitting.
-      </Text>
+      <View style={styles.headingRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.heading}>Review & Confirm</Text>
+          <Text style={styles.subtext}>
+            Please verify all details before submitting.
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.shareBtn}
+          onPress={() => shareReviewDetails({
+            module: 'Crop Intelligence',
+            farmerName: farmerDetails.farmer_name,
+            date: crops[0]?.date_of_sowing || 'N/A',
+            location: `${farmerDetails.village_name} · ${resolveOthersValue(farmerDetails.block_name, farmerDetails.custom_block_name ?? '')}`,
+            cropDetails: crops.map(c => resolveOthersValue(c.crop_name, c.custom_crop_name ?? '')).join(', '),
+            observations: remark || undefined,
+          })}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <AppIcon icon={Share2} size={20} color={colors.primary} strokeWidth={IconStroke} />
+        </TouchableOpacity>
+      </View>
 
       {/* ── Farmer Details ── */}
       <Card>
@@ -203,6 +225,8 @@ const styles = StyleSheet.create({
   content:        { padding: 16, paddingBottom: 40 },
   heading:        { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
   subtext:        { fontSize: 13, color: colors.textSecondary, marginBottom: 16 },
+  headingRow:     { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 0 },
+  shareBtn:       { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
 
   sectionHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle:   { fontSize: 14, fontWeight: '700', color: colors.textPrimary },

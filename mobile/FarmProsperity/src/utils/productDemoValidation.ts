@@ -132,13 +132,10 @@ export const validateStep2 = (data: CropStageDraft): CropStageErrors => {
   } else {
     try {
       const demo = new Date(data.demo_date.trim() + 'T12:00:00');
-      const today = new Date();
-      today.setHours(23, 59, 59, 999);
       if (isNaN(demo.getTime())) {
         errors.demo_date = 'Invalid date. Please re-select.';
-      } else if (demo > today) {
-        errors.demo_date = 'Demo date cannot be a future date.';
       }
+      // Future dates are now allowed (user is warned at selection time via showFutureDateWarning)
     } catch {
       errors.demo_date = 'Invalid date. Please re-select.';
     }

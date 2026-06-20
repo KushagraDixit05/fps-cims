@@ -2,7 +2,7 @@
 // Wizard Step 1 — Mandi picker, Date, Total Arrival.
 // Rendered inside MandiArrivalFormScreen.tsx when step === 1.
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import {
   View,
@@ -21,6 +21,7 @@ import InlinePicker from '../../components/InlinePicker';
 import type { MandiDetailsDraft, MandiDetailsErrors } from '../../types/mandiArrival';
 import { validateStep1, hasMandiDetailsErrors } from '../../utils/mandiArrivalValidation';
 import { todayISO } from '../../utils/helpers';
+import { showFutureDateWarning } from '../../utils/futureDateWarning';
 import database from '../../database';
 import { MandiModel } from '../../database/models/MandiModel';
 import { getMandis } from '../../api/mandi';
@@ -39,6 +40,7 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
   const [mandis, setMandis] = useState<Mandi[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const previousDateRef = useRef(data.date);
 
   const datePickerValue = (() => {
     const d = new Date(data.date);
@@ -48,7 +50,18 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
   const handleDateChange = (_: DateTimePickerEvent, selected?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selected) {
-      onChange({ date: selected.toISOString().split('T')[0] });
+      const iso = selected.toISOString().split('T')[0];
+      showFutureDateWarning(
+        selected,
+        () => {
+          previousDateRef.current = iso;
+          onChange({ date: iso });
+        },
+        () => {
+          // Revert to previous date on cancel
+          onChange({ date: previousDateRef.current });
+        },
+      );
     }
   };
 
@@ -192,7 +205,6 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
             value={datePickerValue}
             mode="date"
             display="default"
-            maximumDate={new Date()}
             onChange={handleDateChange}
           />
         )}
@@ -201,7 +213,6 @@ const Step1_MandiDetails = ({ data, onChange, onNext }: Step1Props) => {
             value={datePickerValue}
             mode="date"
             display="inline"
-            maximumDate={new Date()}
             onChange={handleDateChange}
           />
         )}

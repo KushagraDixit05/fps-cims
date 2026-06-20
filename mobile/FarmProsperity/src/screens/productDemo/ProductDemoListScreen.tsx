@@ -75,8 +75,8 @@ const ProductDemoListScreen = () => {
         ListEmptyComponent={
           <EmptyState
             icon={Package}
-            title="No product demos"
-            subtitle="Tap + to add a product demo entry."
+            title="No entries yet"
+            subtitle="Tap + to add a Product Performance entry."
           />
         }
         renderItem={({ item }) => (

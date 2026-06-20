@@ -1,5 +1,5 @@
 // src/hooks/useMandiArrivalForm.ts
-// Central state manager for the 5-step Mandi Arrival wizard.
+// Central state manager for the 4-step Market Intelligence wizard.
 // Uses useReducer so all state lives in one place — Review & Edit navigation
 // never loses previously entered data.
 // Mirrors the pattern of useCropMonitoringForm.ts.

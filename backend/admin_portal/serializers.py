@@ -56,6 +56,8 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
         User = get_user_model()
         user = User(**validated_data)
         user.set_password(password)
+        if user.role == 'admin':
+            user.is_staff = True
         user.save()
         return user
 

@@ -48,7 +48,7 @@ class MandiArrivalViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = MandiArrival.objects.select_related('mandi', 'submitted_by')
-        if user.is_superuser or user.is_staff or getattr(user, 'role', '') == 'admin':
+        if user.is_staff or user.is_superuser:
             return qs.all()
         return qs.filter(submitted_by=user)
 

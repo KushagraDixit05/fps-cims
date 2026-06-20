@@ -21,6 +21,7 @@ import ConditionSelector from './ConditionSelector';
 import ProblemCheckboxGroup from './ProblemCheckboxGroup';
 import SmartDropdown from './SmartDropdown';
 import { OTHERS_VALUE } from '../utils/othersValidation';
+import { showFutureDateWarning } from '../utils/futureDateWarning';
 
 import type {
   CropRecordDraft,
@@ -191,6 +192,7 @@ const CropCard = ({
   const [collapsed, setCollapsed] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const isPickerOpenRef = React.useRef(false);
+  const previousSowingDateRef = React.useRef(data.date_of_sowing);
 
   // Sync ref with state
   React.useEffect(() => {
@@ -293,7 +295,17 @@ const CropCard = ({
 
     try {
       const iso = date.toISOString().split('T')[0]; // "YYYY-MM-DD"
-      onChange({ date_of_sowing: iso });
+      showFutureDateWarning(
+        date,
+        () => {
+          previousSowingDateRef.current = iso;
+          onChange({ date_of_sowing: iso });
+        },
+        () => {
+          // Revert to previous date on cancel
+          onChange({ date_of_sowing: previousSowingDateRef.current });
+        },
+      );
     } catch {
       // date formatting failed — ignore silently
     }
@@ -432,7 +444,6 @@ const CropCard = ({
               value={datePickerValue}
               mode="date"
               display="default"
-              maximumDate={new Date()}
               onChange={handleDateChange}
             />
           )}
@@ -442,7 +453,6 @@ const CropCard = ({
               value={datePickerValue}
               mode="date"
               display="inline"
-              maximumDate={new Date()}
               onChange={handleDateChange}
             />
           )}

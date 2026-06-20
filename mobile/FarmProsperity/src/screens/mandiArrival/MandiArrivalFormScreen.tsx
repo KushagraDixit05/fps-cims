@@ -22,17 +22,16 @@ import ScreenHeader from '../../components/ScreenHeader';
 import Step1_MandiDetails   from './Step1_MandiDetails';
 import Step2_CropVarieties  from './Step2_CropVarieties';
 import Step3_SourceRemark   from './Step3_SourceRemark';
-import Step4_Photos         from './Step4_Photos';
-import Step5_Location       from './Step5_Location';
+import Step4_PhotosLocation from './Step4_PhotosLocation';
 import ReviewScreen         from './ReviewScreen';
 import SuccessScreen        from './SuccessScreen';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
-const ProgressBar = ({ step }: { step: 1 | 2 | 3 | 4 | 5 | 'review' }) => {
+const ProgressBar = ({ step }: { step: 1 | 2 | 3 | 4 | 'review' }) => {
   const numericStep = step === 'review' ? TOTAL_STEPS : step;
   const pct = ((numericStep - 1) / (TOTAL_STEPS - 1)) * 100;
   return (
@@ -98,8 +97,7 @@ const MandiArrivalFormScreen = () => {
     else if (s === 2)    form.setStep(1);
     else if (s === 3)    form.setStep(2);
     else if (s === 4)    form.setStep(3);
-    else if (s === 5)    form.setStep(4);
-    else                 form.setStep(5); // 'review' → step 5
+    else                 form.setStep(4); // 'review' → step 4
   };
 
   // Show success screen once we have a local result
@@ -119,7 +117,7 @@ const MandiArrivalFormScreen = () => {
       {/* ── Compact header ── */}
       <ScreenHeader
         title="Market Intelligence — New Entry"
-        subtitle={state.step !== 'review' ? `Step ${state.step} of 5` : 'Review'}
+        subtitle={state.step !== 'review' ? `Step ${state.step} of 4` : 'Review'}
         onBack={handleBack}
       />
 
@@ -160,21 +158,14 @@ const MandiArrivalFormScreen = () => {
       )}
 
       {state.step === 4 && (
-        <Step4_Photos
+        <Step4_PhotosLocation
           photos={state.photos}
-          onAdd={form.addPhoto}
-          onRemove={form.removePhoto}
-          onNext={() => form.setStep(5)}
-          onBack={() => form.setStep(3)}
-        />
-      )}
-
-      {state.step === 5 && (
-        <Step5_Location
           location={state.location}
-          onCapture={form.setLocation}
+          onAddPhoto={form.addPhoto}
+          onRemovePhoto={form.removePhoto}
+          onCaptureLocation={form.setLocation}
           onNext={() => form.setStep('review')}
-          onBack={() => form.setStep(4)}
+          onBack={() => form.setStep(3)}
         />
       )}
 
@@ -185,7 +176,7 @@ const MandiArrivalFormScreen = () => {
           onEditVarieties={() => form.setStep(2)}
           onEditSource={() => form.setStep(3)}
           onSubmit={handleSubmit}
-          onBack={() => form.setStep(5)}
+          onBack={() => form.setStep(4)}
           submitting={submitting}
         />
       )}

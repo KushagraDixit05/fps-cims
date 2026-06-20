@@ -62,8 +62,8 @@ const SuccessScreen = ({
         <Text style={styles.title}>Entry Submitted{'\n'}Successfully!</Text>
         <Text style={styles.subtitle}>
           {farmerName
-            ? `Your crop monitoring data has been saved.`
-            : 'Your crop monitoring data has been saved.'}
+            ? `Your Crop Intelligence data has been saved.`
+            : 'Your Crop Intelligence data has been saved.'}
         </Text>
 
         <View style={styles.divider} />

@@ -138,18 +138,15 @@ export const validateStep4 = (photos: PhotoDraft[]): Step4Errors => {
   return errors;
 };
 
-// ─── Step 5: Location ─────────────────────────────────────────────────────────
+// ─── Step 5 (Legacy) / Location within Step 4 ────────────────────────────────
+// Location is now OPTIONAL after the Step 4+5 merge. This validator is kept for
+// backwards compatibility but no longer enforces a captured GPS fix.
 
 export interface Step5Errors {
   location?: string;
 }
 
-export const validateStep5 = (location: LocationDraft): Step5Errors => {
-  const errors: Step5Errors = {};
-
-  if (!location.captured || location.latitude === null || location.longitude === null) {
-    errors.location = 'Please capture your GPS location before continuing.';
-  }
-
-  return errors;
+export const validateStep5 = (_location: LocationDraft): Step5Errors => {
+  // Location is optional — no validation errors.
+  return {};
 };

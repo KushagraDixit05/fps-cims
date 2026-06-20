@@ -41,6 +41,7 @@ export {
   Camera,
   FileBarChart,
   ClipboardList,
+  Share2,
 } from 'lucide-react-native';
 
 /** Standard icon sizes used across the app. */

@@ -64,7 +64,7 @@ class FarmerViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == 'admin':
+        if user.is_staff or user.is_superuser:
             return Farmer.objects.select_related('village', 'created_by').all()
         return Farmer.objects.filter(created_by=user).select_related('village')
 
@@ -100,9 +100,8 @@ class CropEntryViewSet(viewsets.ModelViewSet):
             'farmer', 'farmer__village'
         ).prefetch_related('photos')
 
-        if user.role == 'admin':
+        if user.is_staff or user.is_superuser:
             return base_qs.all()
-        # Field executives see only their own submissions
         return base_qs.filter(submitted_by=user)
 
     @action(detail=False, methods=['get'], url_path='summary')
@@ -211,7 +210,7 @@ class FarmerVisitViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         base_qs = FarmerVisit.objects.prefetch_related('crops', 'photos')
-        if user.is_superuser or getattr(user, 'role', '') == 'admin':
+        if user.is_staff or user.is_superuser:
             return base_qs.all()
         return base_qs.filter(executive=user)
 

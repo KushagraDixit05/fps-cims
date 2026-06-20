@@ -2,7 +2,7 @@
 // Product Demo wizard Step 2 — Crop & Stage Details.
 // One crop, one or more varieties of that crop (Crop-Monitoring style).
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import { OTHERS_VALUE } from '../../utils/othersValidation';
 import type { CropStageDraft, CropStageErrors, VarietyDraft } from '../../types/productDemo';
 import type { CropMaster } from '../../types/cropMonitoring';
 import { validateStep2, hasErrors } from '../../utils/productDemoValidation';
+import { showFutureDateWarning } from '../../utils/futureDateWarning';
 import database from '../../database';
 import { CropMasterModel } from '../../database/models/CropMasterModel';
 import { getCropMaster } from '../../api/cropMonitoring';
@@ -76,6 +77,7 @@ const Step2_CropStageDetails = ({ data, onChange, onNext, onBack }: Step2Props) 
   const [cropMaster, setCropMaster] = useState<CropMaster[]>([]);
   const [loadingMaster, setLoadingMaster] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const previousDateRef = useRef(data.demo_date);
 
   useEffect(() => {
     const load = async () => {
@@ -128,7 +130,18 @@ const Step2_CropStageDetails = ({ data, onChange, onNext, onBack }: Step2Props) 
     }
     if (event.type === 'dismissed') return;
     if (date && isValidDate(date)) {
-      onChange({ demo_date: toISODate(date) });
+      const iso = toISODate(date);
+      showFutureDateWarning(
+        date,
+        () => {
+          previousDateRef.current = iso;
+          onChange({ demo_date: iso });
+        },
+        () => {
+          // Revert to previous date on cancel
+          onChange({ demo_date: previousDateRef.current });
+        },
+      );
     }
   };
 
@@ -282,7 +295,6 @@ const Step2_CropStageDetails = ({ data, onChange, onNext, onBack }: Step2Props) 
             value={parsedDate ?? new Date()}
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            maximumDate={new Date()}
             onChange={handleDateChange}
           />
         )}

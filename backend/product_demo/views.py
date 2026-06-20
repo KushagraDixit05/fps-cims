@@ -34,7 +34,7 @@ class ProductDemoViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         qs = ProductDemo.objects.select_related('executive').prefetch_related('photos')
-        if hasattr(user, 'is_admin') and user.is_admin:
+        if user.is_staff or user.is_superuser:
             return qs.all()
         return qs.filter(executive=user)
 

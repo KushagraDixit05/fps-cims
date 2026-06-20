@@ -54,11 +54,11 @@ const SuccessScreen = ({
       </Animated.View>
 
       <Animated.View style={{ opacity: opacityAnim, alignItems: 'center', width: '100%' }}>
-        <Text style={styles.title}>Demo Entry Submitted{'\n'}Successfully!</Text>
+        <Text style={styles.title}>Product Performance Entry{'\n'}Submitted Successfully!</Text>
         <Text style={styles.subtitle}>
           {farmerName && productName
             ? `Demo of ${productName} for ${farmerName} has been saved.`
-            : 'Your product demo data has been saved.'}
+            : 'Your Product Performance data has been saved.'}
         </Text>
 
         <View style={styles.divider} />
