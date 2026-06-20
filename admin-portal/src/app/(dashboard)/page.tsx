@@ -1,55 +1,70 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { PageHeader } from "@/components/common/PageHeader";
-import { StatsStrip } from "@/components/dashboard/StatsStrip";
-import { ProductivityChart } from "@/components/dashboard/ProductivityChart";
-import { ApprovalSLAChart } from "@/components/dashboard/ApprovalSLAChart";
-import { RecentApprovals } from "@/components/dashboard/RecentApprovals";
+import { SummaryStrip } from "@/components/dashboard/SummaryStrip";
+import { CropIntelligenceSection } from "@/components/dashboard/CropIntelligenceSection";
+import { MarketIntelligenceSection } from "@/components/dashboard/MarketIntelligenceSection";
+import { ProductPerformanceSection } from "@/components/dashboard/ProductPerformanceSection";
+import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+
+const DAY_OPTIONS = [7, 30, 90];
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <p className="text-[13px] font-bold uppercase tracking-wider text-fps-muted">{children}</p>
+      <div className="flex-1 h-px bg-fps-border" />
+    </div>
+  );
+}
 
 export default function DashboardPage() {
+  const [days, setDays] = useState(30);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className="space-y-6 max-w-7xl mx-auto"
+      className="space-y-7 max-w-7xl mx-auto"
     >
       <PageHeader
         title="Operations Dashboard"
-        description="Farm Prosperity Solutions — Field Intelligence Command Center"
-      />
-
-      <StatsStrip />
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <ProductivityChart />
-        <ApprovalSLAChart />
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <RecentApprovals />
-
-        <div className="rounded-2xl border border-fps-border bg-fps-primary/5 border-fps-primary/20 p-5 flex flex-col justify-center items-center gap-2">
-          <div className="text-3xl">🌾</div>
-          <p className="text-[15px] font-bold text-fps-ink">FPS Admin Portal</p>
-          <p className="text-sm text-fps-secondary text-center max-w-xs">
-            Full RBAC system with 6 roles, 50 permissions, approval workflows, and complete audit trail.
-          </p>
-          <div className="grid grid-cols-3 gap-3 mt-2 w-full">
-            {[
-              { label: "Roles", value: "6" },
-              { label: "Permissions", value: "50" },
-              { label: "Modules", value: "5" },
-            ].map((s) => (
-              <div key={s.label} className="rounded-xl bg-white border border-fps-border p-3 text-center">
-                <p className="text-xl font-extrabold text-fps-primary">{s.value}</p>
-                <p className="text-[10px] font-bold uppercase tracking-wide text-fps-muted">{s.label}</p>
-              </div>
+        description="Agricultural Intelligence Command Center"
+        actions={
+          <div className="flex items-center gap-1 bg-white rounded-xl border border-fps-border p-1">
+            {DAY_OPTIONS.map((d) => (
+              <button
+                key={d}
+                onClick={() => setDays(d)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+                  days === d
+                    ? "bg-fps-primary text-white"
+                    : "text-fps-secondary hover:bg-fps-canvas"
+                }`}
+              >
+                {d}d
+              </button>
             ))}
           </div>
-        </div>
-      </div>
+        }
+      />
+
+      <SummaryStrip />
+
+      <SectionLabel>Crop Intelligence</SectionLabel>
+      <CropIntelligenceSection days={days} />
+
+      <SectionLabel>Market Intelligence</SectionLabel>
+      <MarketIntelligenceSection days={days} />
+
+      <SectionLabel>Product Performance</SectionLabel>
+      <ProductPerformanceSection days={days} />
+
+      <SectionLabel>Recent Activities</SectionLabel>
+      <ActivityFeed />
     </motion.div>
   );
 }
