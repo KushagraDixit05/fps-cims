@@ -1,7 +1,63 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from crops.models import FarmerVisit, CropRecord
 from mandi.models import MandiArrival
 from product_demo.models import ProductDemo
+
+
+# ── User Management ───────────────────────────────────────────────────────────
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    full_name = serializers.SerializerMethodField()
+    reporting_to_name = serializers.SerializerMethodField()
+    primary_role = serializers.SerializerMethodField()
+    primary_role_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name', 'full_name',
+            'phone_number', 'employee_id', 'role',
+            'primary_role', 'primary_role_id',
+            'state', 'districts',
+            'is_active', 'date_joined', 'last_login',
+            'deactivated_at', 'deactivation_reason',
+            'reporting_to', 'reporting_to_name',
+        ]
+        read_only_fields = ['id', 'date_joined', 'last_login', 'deactivated_at']
+
+    def get_full_name(self, obj):
+        return obj.get_full_name() or obj.username
+
+    def get_reporting_to_name(self, obj):
+        if obj.reporting_to:
+            return obj.reporting_to.get_full_name() or obj.reporting_to.username
+        return None
+
+    def get_primary_role(self, obj):
+        return None
+
+    def get_primary_role_id(self, obj):
+        return None
+
+
+class AdminUserCreateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = [
+            'username', 'password', 'first_name', 'last_name',
+            'email', 'phone_number', 'employee_id', 'role', 'state', 'districts',
+        ]
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        User = get_user_model()
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
 
 
 class CropRecordInlineSerializer(serializers.ModelSerializer):
