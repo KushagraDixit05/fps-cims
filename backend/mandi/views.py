@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db import IntegrityError
 from django.db.models import Sum
 from datetime import date
 
@@ -53,8 +54,8 @@ class MandiArrivalViewSet(viewsets.ModelViewSet):
         return qs.filter(submitted_by=user)
 
     def create(self, request, *args, **kwargs):
-        # Idempotency: a retried offline sync (same client local_id) must not
-        # create a duplicate. Return the already-stored record instead.
+        # Idempotency layer 1: a retried offline sync (same client local_id) must
+        # not create a duplicate. Return the already-stored record instead.
         local_id = request.data.get('local_id')
         if local_id:
             existing = MandiArrival.objects.filter(
@@ -63,7 +64,45 @@ class MandiArrivalViewSet(viewsets.ModelViewSet):
             if existing:
                 serializer = self.get_serializer(existing)
                 return Response(serializer.data, status=status.HTTP_200_OK)
-        return super().create(request, *args, **kwargs)
+
+        # Idempotency layer 2: natural-key reconciliation. The (mandi, date,
+        # commodity) tuple is unique_together. If the row already exists — created
+        # under a different or empty local_id (older records, app reinstall, a
+        # double-tap that produced two local rows) — the offline retry would
+        # otherwise hit DRF's UniqueTogetherValidator and stay pending forever.
+        # Return the existing record so the client marks itself synced, and
+        # backfill local_id for faster matching on the next sync.
+        existing = self._find_natural_key_match(request.data)
+        if existing is not None:
+            if local_id and not existing.local_id:
+                existing.local_id = local_id
+                existing.save(update_fields=['local_id'])
+            serializer = self.get_serializer(existing)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Idempotency layer 3: race safety net. Two concurrent syncs can both pass
+        # the lookups above and race to INSERT; the loser hits an IntegrityError
+        # at the DB level (past the validator). Reconcile to the winning row.
+        try:
+            return super().create(request, *args, **kwargs)
+        except IntegrityError:
+            existing = self._find_natural_key_match(request.data)
+            if existing is not None:
+                serializer = self.get_serializer(existing)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            raise
+
+    def _find_natural_key_match(self, data):
+        """Return an existing MandiArrival matching the unique (mandi, date,
+        commodity) tuple in the request payload, or None."""
+        mandi = data.get('mandi')
+        arrival_date = data.get('date')
+        commodity = data.get('commodity')
+        if not (mandi and arrival_date and commodity):
+            return None
+        return MandiArrival.objects.filter(
+            mandi_id=mandi, date=arrival_date, commodity=commodity
+        ).first()
 
     def perform_create(self, serializer):
         serializer.save(submitted_by=self.request.user)

@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db import IntegrityError
 from django.db.models import Sum, Count
 
 from fps_backend.pagination import MobilePagination
@@ -248,7 +249,26 @@ class FarmerVisitViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        visit = serializer.save()
+        try:
+            visit = serializer.save()
+        except IntegrityError:
+            # Race safety net: a concurrent retry with the same local_id won the
+            # INSERT past the guard above. Reconcile to the existing visit.
+            existing = FarmerVisit.objects.filter(
+                executive=request.user, local_id=local_id
+            ).first() if local_id else None
+            if existing is not None:
+                return Response(
+                    {
+                        'id': str(existing.id),
+                        'submitted_at': existing.submitted_at.isoformat(),
+                        'farmer_name': existing.farmer_name,
+                        'crop_count': existing.crop_count,
+                        'location': {'lat': existing.latitude, 'lng': existing.longitude},
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            raise
 
         # Return lightweight response on 201
         return Response(

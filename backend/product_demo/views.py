@@ -2,7 +2,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.utils import timezone
 from django.db.models import Count
 
@@ -58,7 +58,17 @@ class ProductDemoViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        demo = serializer.save()
+        try:
+            demo = serializer.save()
+        except IntegrityError:
+            # Race safety net: a concurrent retry with the same local_id won the
+            # INSERT past the guard above. Reconcile to the existing record.
+            existing = ProductDemo.objects.filter(
+                executive=request.user, local_id=local_id
+            ).first() if local_id else None
+            if existing is not None:
+                return Response({'id': str(existing.id)}, status=status.HTTP_200_OK)
+            raise
         return Response({'id': str(demo.id)}, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'], url_path='complete-after',

@@ -135,6 +135,19 @@ const syncFarmerVisits = async (result: SyncResult): Promise<void> => {
       result.synced++;
       console.log(`[Sync] farmer_visit synced: ${visit.farmerName} → server id ${response.id}`);
     } catch (err: any) {
+      // Already on the server (unique constraint) → resolve to synced.
+      if (isDuplicateError(err)) {
+        await database.write(async () => {
+          await visit.update((v) => {
+            v.isSynced  = true;
+            v.syncError = null;
+            v.updatedAtLocal = Date.now();
+          });
+        });
+        result.synced++;
+        console.log(`[Sync] farmer_visit already on server, marked synced: ${visit.farmerName}`);
+        continue;
+      }
       const msg = buildErrorMessage(err);
       result.failed++;
       result.errors.push(`Visit (${visit.farmerName}): ${msg}`);
@@ -251,6 +264,19 @@ const syncCropEntries = async (result: SyncResult): Promise<void> => {
       result.synced++;
       console.log(`[Sync] crop_entry synced: ${entry.cropName}`);
     } catch (err: any) {
+      // Already on the server (unique constraint) → resolve to synced.
+      if (isDuplicateError(err)) {
+        await database.write(async () => {
+          await entry.update((e) => {
+            e.isSynced       = true;
+            e.syncError      = null;
+            e.updatedAtLocal = Date.now();
+          });
+        });
+        result.synced++;
+        console.log(`[Sync] crop_entry already on server, marked synced: ${entry.cropName}`);
+        continue;
+      }
       const msg = buildErrorMessage(err);
       result.failed++;
       result.errors.push(`Crop entry (${entry.cropName}): ${msg}`);
@@ -328,6 +354,19 @@ const syncMandiArrivals = async (result: SyncResult): Promise<void> => {
       result.synced++;
       console.log(`[Sync] mandi_arrival synced: ${arrival.commodity}`);
     } catch (err: any) {
+      // Already on the server (unique_together) → resolve to synced, not pending.
+      if (isDuplicateError(err)) {
+        await database.write(async () => {
+          await arrival.update((a) => {
+            a.isSynced       = true;
+            a.syncError      = null;
+            a.updatedAtLocal = Date.now();
+          });
+        });
+        result.synced++;
+        console.log(`[Sync] mandi_arrival already on server, marked synced: ${arrival.commodity}`);
+        continue;
+      }
       const msg = buildErrorMessage(err);
       result.failed++;
       result.errors.push(`Mandi arrival (${arrival.commodity}): ${msg}`);
@@ -372,6 +411,19 @@ const syncProductDemos = async (result: SyncResult): Promise<void> => {
       result.synced++;
       console.log(`[Sync] product_demo synced: ${demo.farmerName} → server id ${response.id}`);
     } catch (err: any) {
+      // Already on the server (unique constraint) → resolve to synced.
+      if (isDuplicateError(err)) {
+        await database.write(async () => {
+          await demo.update((d) => {
+            d.isSynced       = true;
+            d.syncError      = null;
+            d.updatedAtLocal = Date.now();
+          });
+        });
+        result.synced++;
+        console.log(`[Sync] product_demo already on server, marked synced: ${demo.farmerName}`);
+        continue;
+      }
       const msg = buildErrorMessage(err);
       result.failed++;
       result.errors.push(`Product demo (${demo.farmerName} · ${demo.productName}): ${msg}`);
@@ -518,4 +570,24 @@ const buildErrorMessage = (err: any): string => {
     }
   }
   return err?.message ?? 'Unknown error';
+};
+
+/**
+ * Detects a server-side uniqueness rejection (HTTP 400 whose body reports a
+ * unique_together violation). Such an error means the record ALREADY EXISTS on
+ * the server — so the local copy should be treated as synced, not left pending.
+ *
+ * The patched backend reconciles these to a 200, so this is a self-healing
+ * fallback for records that got stuck against an older server build (or whose
+ * server row was created under a different/empty local_id).
+ */
+const isDuplicateError = (err: any): boolean => {
+  if (err?.response?.status !== 400) return false;
+  let body = '';
+  try {
+    body = JSON.stringify(err.response.data ?? '');
+  } catch {
+    return false;
+  }
+  return /unique set|must make a unique set|already exists|unique constraint/i.test(body);
 };

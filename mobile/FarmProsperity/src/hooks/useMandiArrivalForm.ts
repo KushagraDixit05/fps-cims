@@ -4,7 +4,7 @@
 // never loses previously entered data.
 // Mirrors the pattern of useCropMonitoringForm.ts.
 
-import { useReducer, useCallback } from 'react';
+import { useReducer, useCallback, useRef } from 'react';
 import type {
   MandiArrivalFormState,
   MandiDetailsDraft,
@@ -160,8 +160,8 @@ export interface UseMandiArrivalFormReturn {
   // Step 5
   setLocation: (loc: LocationDraft) => void;
 
-  // Submit & reset
-  submit: () => Promise<MandiArrivalSaveResult>;
+  // Submit & reset — submit() resolves null if a save is already in progress.
+  submit: () => Promise<MandiArrivalSaveResult | null>;
   reset: () => void;
 }
 
@@ -169,6 +169,9 @@ export interface UseMandiArrivalFormReturn {
 
 export const useMandiArrivalForm = (): UseMandiArrivalFormReturn => {
   const [state, dispatch] = useReducer(formReducer, INITIAL_STATE);
+  // Guards against double-tap on the Review submit button creating two local
+  // rows (each would get its own local_id and defeat backend idempotency).
+  const submittingRef = useRef(false);
 
   const setStep = useCallback(
     (step: MandiArrivalFormState['step']) =>
@@ -227,9 +230,20 @@ export const useMandiArrivalForm = (): UseMandiArrivalFormReturn => {
     [],
   );
 
-  const submit = useCallback(async () => {
-    // Offline-first: save locally, sync to server in background when online.
-    return saveMandiArrivalWizardLocally(state);
+  const submit = useCallback(async (): Promise<MandiArrivalSaveResult | null> => {
+    // In-flight lock: a rapid double-tap must not create two local rows. The
+    // ref is synchronous, so it blocks the second tap even before React
+    // re-renders the disabled button. Returns null when a save is already running.
+    if (submittingRef.current) {
+      return null;
+    }
+    submittingRef.current = true;
+    try {
+      // Offline-first: save locally, sync to server in background when online.
+      return await saveMandiArrivalWizardLocally(state);
+    } finally {
+      submittingRef.current = false;
+    }
   }, [state]);
 
   const reset = useCallback(() => dispatch({ type: 'RESET' }), []);

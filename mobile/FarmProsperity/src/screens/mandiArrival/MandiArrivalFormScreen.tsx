@@ -68,6 +68,8 @@ const MandiArrivalFormScreen = () => {
     setSubmitting(true);
     try {
       const result = await form.submit();
+      // null → a save was already in progress (double-tap); ignore this tap.
+      if (!result) return;
       setSuccessData(result);
     } catch (err: any) {
       const msg =
