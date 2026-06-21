@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Download, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Search } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SkeletonTable } from "@/components/common/SkeletonTable";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ const RESULT_VARIANT: Record<string, "good" | "warn" | "error" | "info" | "secon
 export default function ProductDemosPage() {
   const [filters, setFilters] = useState<DemoFilters>({ page: 1 });
   const [exporting, setExporting] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { data, isLoading } = useDemos(filters);
   const rows = data?.results ?? [];
@@ -46,7 +47,7 @@ export default function ProductDemosPage() {
       className="space-y-5 max-w-7xl mx-auto"
     >
       <PageHeader
-        title="Product Performance"
+        title="Product Performance Module"
         description={`${total.toLocaleString()} total records`}
         actions={
           <Button variant="secondary" onClick={handleExport} disabled={exporting}>
@@ -96,6 +97,7 @@ export default function ProductDemosPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-fps-border bg-fps-canvas">
+                  <th className="w-8 px-3 py-3" />
                   {["Demo Date", "Executive", "Farmer", "Location", "Crop", "Product", "Dose", "Result", "Photos"].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-fps-muted whitespace-nowrap">
                       {h}
@@ -106,15 +108,22 @@ export default function ProductDemosPage() {
               <tbody>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="h-32 text-center text-fps-muted text-sm">
+                    <td colSpan={10} className="h-32 text-center text-fps-muted text-sm">
                       No product demos found
                     </td>
                   </tr>
                 ) : rows.map((row) => (
+                  <>
                   <tr
                     key={row.id}
-                    className="border-b border-fps-divider last:border-0 hover:bg-fps-canvas/70 transition-colors"
+                    className="border-b border-fps-divider last:border-0 hover:bg-fps-canvas/70 transition-colors cursor-pointer"
+                    onClick={() => setExpandedId((p) => p === row.id ? null : row.id)}
                   >
+                    <td className="px-3 py-3 text-fps-muted">
+                      {expandedId === row.id
+                        ? <ChevronDown className="h-3.5 w-3.5" />
+                        : <ChevronRight className="h-3.5 w-3.5" />}
+                    </td>
                     <td className="px-4 py-3 text-xs font-mono text-fps-muted whitespace-nowrap">
                       {new Date(row.demo_date).toLocaleDateString("en-IN")}
                     </td>
@@ -146,6 +155,22 @@ export default function ProductDemosPage() {
                       {row.before_photos}B / {row.after_photos}A
                     </td>
                   </tr>
+                  {expandedId === row.id && (
+                    <tr key={`${row.id}-expand`} className="bg-fps-canvas/40">
+                      <td colSpan={10} className="px-6 py-4 space-y-2">
+                        {row.additional_observations && (
+                          <p className="text-xs text-fps-secondary"><span className="font-semibold">Observations:</span> {row.additional_observations}</p>
+                        )}
+                        {row.remark && (
+                          <p className="text-xs text-fps-secondary"><span className="font-semibold">Remark:</span> {row.remark}</p>
+                        )}
+                        {!row.additional_observations && !row.remark && (
+                          <p className="text-xs text-fps-muted italic">No observations or remark recorded.</p>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                  </>
                 ))}
               </tbody>
             </table>
