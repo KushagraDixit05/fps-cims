@@ -38,6 +38,7 @@ import LoginScreen from '../screens-v2/LoginScreen';
 // ── v2 App Screens ────────────────────────────────────────────────────────────
 import HomeScreen from '../screens-v2/HomeScreen';
 import SidebarContent from '../screens-v2/SidebarContent';
+import MarketIntelligenceHubScreen from '../screens-v2/MarketIntelligenceHubScreen';
 
 // ── Existing screens (unchanged — still used for all other tabs/routes) ───────
 import MandiListScreen from '../screens/MandiListScreen';
@@ -49,6 +50,7 @@ import CropMonitoringFormScreen from '../screens/cropMonitoring/CropMonitoringFo
 import CropMonitoringDetailScreen from '../screens/cropMonitoring/CropMonitoringDetailScreen';
 import CropMonitoringListScreen from '../screens/cropMonitoring/CropMonitoringListScreen';
 import MandiArrivalFormScreen from '../screens/mandiArrival/MandiArrivalFormScreen';
+import MandiArrivalListScreen from '../screens/mandiArrival/MandiArrivalListScreen';
 import ProductDemoListScreen from '../screens/productDemo/ProductDemoListScreen';
 import ProductDemoFormScreen from '../screens/productDemo/ProductDemoFormScreen';
 import ProductDemoDetailScreen from '../screens/productDemo/ProductDemoDetailScreen';
@@ -102,7 +104,7 @@ const MainTabs = () => (
     {/* Home tab now uses the v2 HomeScreen */}
     <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Home' }} />
     <Tab.Screen name="Crops" component={CropMonitoringListScreen} options={{ tabBarLabel: 'Crops' }} />
-    <Tab.Screen name="Mandi" component={MandiListScreen} options={{ tabBarLabel: 'Market' }} />
+    <Tab.Screen name="Mandi" component={MarketIntelligenceHubScreen} options={{ tabBarLabel: 'Market' }} />
     <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Reports' }} />
   </Tab.Navigator>
 );
@@ -156,6 +158,7 @@ const AppNavigatorV2 = () => {
             <RootStack.Screen name="Main" component={DrawerNavigator} />
 
             {/* ── Mandi screens ── */}
+            <RootStack.Screen name="MandiList" component={MandiListScreen} options={{ headerShown: false }} />
             <RootStack.Screen name="MandiEntryForm" component={MandiEntryFormScreen} options={{ ...headerOptions, title: 'Add Mandi Entry' }} />
             <RootStack.Screen name="MandiDetail" component={MandiDetailScreen} options={{ ...headerOptions, title: 'Mandi Detail' }} />
 
@@ -164,6 +167,7 @@ const AppNavigatorV2 = () => {
             <RootStack.Screen name="CropMonitoringDetail" component={CropMonitoringDetailScreen} options={{ ...headerOptions, title: 'Visit Details' }} />
 
             {/* ── Mandi Arrival Module ── */}
+            <RootStack.Screen name="MandiArrivalList" component={MandiArrivalListScreen} options={{ headerShown: false }} />
             <RootStack.Screen name="MandiArrivalForm" component={MandiArrivalFormScreen} options={{ headerShown: false }} />
 
             {/* ── Product Demo Module ── */}

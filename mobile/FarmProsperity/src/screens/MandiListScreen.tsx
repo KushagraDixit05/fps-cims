@@ -117,7 +117,7 @@ const MandiListScreen = () => {
     <View style={styles.root}>
       {receiptHost}
       {/* ── Header ── */}
-      <ScreenHeader title="Market Intelligence Module" subtitle={`${arrivals.length} records`} onBack={() => navigation.navigate('Home' as any)} />
+      <ScreenHeader title="Market Intelligence Module" subtitle={`${arrivals.length} records`} onBack={() => navigation.goBack()} />
 
       {/* ── Mandi Picker ── */}
       <View style={styles.pickerSection}>

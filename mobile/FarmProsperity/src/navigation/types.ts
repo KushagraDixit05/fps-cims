@@ -30,6 +30,8 @@ export type RootStackParamList = {
   CropDetail: { entry: CropEntry };
 
   // ── Mandi screens ──────────────────────────────────────────────────────────
+  /** Market Intelligence entries list (reached from the Market Intelligence hub). */
+  MandiList: undefined;
   MandiEntryForm: undefined;
   MandiDetail: { arrival: MandiArrival };
 
@@ -46,6 +48,8 @@ export type RootStackParamList = {
   CropMonitoringDetail: { visitId: string };
 
   // ── Mandi Arrival Module (new) ──────────────────────────────────────────────
+  /** List of all recorded market intelligence entries (Visits-style). */
+  MandiArrivalList: undefined;
   /** Entry point — launches 5-step mandi arrival wizard. */
   MandiArrivalForm: undefined;
 
