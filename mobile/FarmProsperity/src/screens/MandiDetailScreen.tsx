@@ -17,6 +17,9 @@ import { getYoYComparison } from '../api/mandi';
 import { colors } from '../utils/colors';
 import { formatDate, formatQuantity, formatCurrency } from '../utils/helpers';
 import Card from '../components/Card';
+import ShareIconButton from '../components/share/ShareIconButton';
+import { useReceiptShare } from '../components/share/useReceiptShare';
+import { buildMandiSharePayload } from '../utils/shareEntry';
 import type { YoYComparison } from '../types';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -25,6 +28,7 @@ type MandiDetailRoute = RouteProp<RootStackParamList, 'MandiDetail'>;
 const MandiDetailScreen = () => {
   const { params } = useRoute<MandiDetailRoute>();
   const { arrival } = params;
+  const { shareEntry, receiptHost } = useReceiptShare();
 
   const [yoy, setYoY] = useState<YoYComparison | null>(null);
   const [yoyLoading, setYoyLoading] = useState(true);
@@ -36,9 +40,22 @@ const MandiDetailScreen = () => {
       .finally(() => setYoyLoading(false));
   }, [arrival.mandi, arrival.commodity]);
 
+  const sharePayload = buildMandiSharePayload({
+    mandiName: arrival.mandi_name ?? `Mandi #${arrival.mandi}`,
+    date: arrival.date,
+    totalArrivalQt: arrival.arrival_quantity,
+    source: arrival.custom_source || arrival.source,
+    avgRate: arrival.avg_rate ?? null,
+    minRate: arrival.min_rate ?? null,
+    maxRate: arrival.max_rate ?? null,
+    remark: arrival.remark,
+  });
+
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+      {receiptHost}
       <Card>
+        <ShareIconButton onPress={() => shareEntry(sharePayload)} style={styles.shareBtn} />
         <Text style={styles.commodity}>{arrival.commodity}</Text>
         <Text style={styles.mandiName}>{arrival.mandi_name ?? `Mandi #${arrival.mandi}`}</Text>
         <Text style={styles.meta}>{arrival.mandi_state}</Text>
@@ -119,6 +136,7 @@ const DetailRow = ({ label, value }: { label: string; value: string }) => (
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   content: { padding: 14 },
+  shareBtn: { position: 'absolute', top: 8, right: 8, zIndex: 1 },
   commodity: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
   mandiName: { fontSize: 15, fontWeight: '600', color: colors.primary, marginBottom: 2 },
   meta: { fontSize: 13, color: colors.textSecondary, marginBottom: 2 },

@@ -26,13 +26,44 @@ import EmptyState from '../../components/EmptyState';
 import LoadingScreen from '../../components/LoadingScreen';
 import ScreenHeader from '../../components/ScreenHeader';
 import AppIcon from '../../components/AppIcon';
+import ShareIconButton from '../../components/share/ShareIconButton';
+import { useReceiptShare } from '../../components/share/useReceiptShare';
+import { buildCropSharePayload } from '../../utils/shareEntry';
 import { Leaf, Plus, ChevronRight } from '../../utils/icons';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
+/** Build a share summary from a persisted visit record (no network needed). */
+const cropPayloadFromModel = (item: FarmerVisitModel) => {
+  let crops: any[] = [];
+  let photoCount = 0;
+  try { crops = JSON.parse(item.cropsJson || '[]'); } catch { crops = []; }
+  try { photoCount = JSON.parse(item.photosJson || '[]').length; } catch { photoCount = 0; }
+  return buildCropSharePayload({
+    farmerName: item.farmerName,
+    village: item.villageName,
+    block: item.blockName,
+    district: item.districtName,
+    mobile: item.mobileNumber,
+    totalLandAcre: item.totalLandAcre,
+    latitude: item.latitude,
+    longitude: item.longitude,
+    photoCount,
+    date: crops[0]?.date_of_sowing || new Date(item.createdAtLocal).toISOString().slice(0, 10),
+    remark: item.remark,
+    crops: crops.map((c) => ({
+      name: c.crop_name,
+      varieties: c.variety || '',
+      areaAcre: c.current_area_acre,
+      condition: c.crop_condition,
+    })),
+  });
+};
+
 const CropMonitoringListScreen = () => {
   const navigation = useNavigation<Nav>();
+  const { shareEntry, receiptHost } = useReceiptShare();
   const [visits, setVisits] = useState<FarmerVisitModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,8 +104,9 @@ const CropMonitoringListScreen = () => {
 
   return (
     <View style={styles.root}>
+      {receiptHost}
       <ScreenHeader
-        title="Crop Intelligence — Visits"
+        title="Crop Intelligence Module — Visits"
         subtitle={`${visits.length} record${visits.length !== 1 ? 's' : ''}`}
         onBack={() => navigation.goBack()}
       />
@@ -128,9 +160,12 @@ const CropMonitoringListScreen = () => {
                   )}
                 </View>
               </View>
-              {item.isSynced && (
-                <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} strokeWidth={2} />
-              )}
+              <View style={styles.rowActions}>
+                <ShareIconButton onPress={() => shareEntry(cropPayloadFromModel(item))} />
+                {item.isSynced && (
+                  <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} strokeWidth={2} />
+                )}
+              </View>
             </TouchableOpacity>
           );
         }}
@@ -167,6 +202,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   rowBody: { flex: 1, paddingRight: 8 },
+  rowActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
   title: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
   subtitle: { fontSize: 13, color: colors.textSecondary, marginBottom: 8 },

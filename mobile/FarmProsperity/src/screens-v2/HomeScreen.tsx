@@ -45,9 +45,9 @@ type ActionTile = {
 };
 
 const ACTION_TILES: ActionTile[] = [
-  { bg: '#E1F2E8', icon: Leaf,      iconColor: '#1A4A2E', title: 'Crop Intelligence',      sub: 'Visits · New entry',   screen: 'CropMonitoringList' },
-  { bg: '#FEF3DA', icon: Store,     iconColor: '#C8900A', title: 'Market Intelligence',    sub: 'Arrivals · Trends',    screen: 'MandiArrivalForm', badge: 'Live' },
-  { bg: '#E8F4FD', icon: Package,   iconColor: '#0277BD', title: 'Product Performance',    sub: 'Demo · Results',       screen: 'ProductDemoList' },
+  { bg: '#E1F2E8', icon: Leaf,      iconColor: '#1A4A2E', title: 'Crop Intelligence Module',      sub: 'Visits · New entry',   screen: 'CropMonitoringList' },
+  { bg: '#FEF3DA', icon: Store,     iconColor: '#C8900A', title: 'Market Intelligence Module',    sub: 'Arrivals · Trends',    screen: 'MandiArrivalForm', badge: 'Live' },
+  { bg: '#E8F4FD', icon: Package,   iconColor: '#0277BD', title: 'Product Performance Module',    sub: 'Demo · Results',       screen: 'ProductDemoList' },
   { bg: '#F3E8FF', icon: BarChart2, iconColor: '#7C3AED', title: 'Reports',                sub: 'Analytics · YoY',      screen: 'Reports' },
 ];
 
@@ -71,9 +71,9 @@ interface ActivityItem {
 }
 
 const MODULE_META: Record<ActivityModule, { icon: React.ComponentType<any>; color: string; bg: string; label: string }> = {
-  crop_intelligence:    { icon: Leaf,    color: '#1A4A2E', bg: '#E1F2E8', label: 'Crop Intelligence' },
-  market_intelligence:  { icon: Store,   color: '#C8900A', bg: '#FEF3DA', label: 'Market Intelligence' },
-  product_performance:  { icon: Package, color: '#0277BD', bg: '#E8F4FD', label: 'Product Performance' },
+  crop_intelligence:    { icon: Leaf,    color: '#1A4A2E', bg: '#E1F2E8', label: 'Crop Intelligence Module' },
+  market_intelligence:  { icon: Store,   color: '#C8900A', bg: '#FEF3DA', label: 'Market Intelligence Module' },
+  product_performance:  { icon: Package, color: '#0277BD', bg: '#E8F4FD', label: 'Product Performance Module' },
 };
 
 /** Convert a WatermelonDB FarmerVisitModel row to an ActivityItem. */
@@ -319,7 +319,7 @@ const HomeScreen = () => {
             <View style={styles.cardIconWrap}>
               <AppIcon icon={icon} size={24} color={iconColor} strokeWidth={IconStroke} />
             </View>
-            <Text style={styles.cardTitle}>{title}</Text>
+            <Text style={styles.cardTitle} adjustsFontSizeToFit numberOfLines={2} minimumFontScale={0.75}>{title}</Text>
             <Text style={styles.cardSub}>{sub}</Text>
           </TouchableOpacity>
         ))}

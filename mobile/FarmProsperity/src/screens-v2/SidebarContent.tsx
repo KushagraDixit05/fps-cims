@@ -30,8 +30,8 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { icon: Home,      label: 'Home',                 screen: 'Home' },
-  { icon: Leaf,      label: 'Crop Intelligence',    screen: 'CropMonitoringList' },
-  { icon: Store,     label: 'Market Intelligence',  screen: 'Mandi' },
+  { icon: Leaf,      label: 'Crop Intelligence Module',    screen: 'CropMonitoringList' },
+  { icon: Store,     label: 'Market Intelligence Module',  screen: 'Mandi' },
   { icon: Map,       label: 'My Visits',            screen: 'Crops' },
   { icon: BarChart2, label: 'Reports',              screen: 'Reports' },
 ];

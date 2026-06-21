@@ -16,13 +16,45 @@ import EmptyState from '../../components/EmptyState';
 import LoadingScreen from '../../components/LoadingScreen';
 import ScreenHeader from '../../components/ScreenHeader';
 import AppIcon from '../../components/AppIcon';
+import ShareIconButton from '../../components/share/ShareIconButton';
+import { useReceiptShare } from '../../components/share/useReceiptShare';
+import { buildDemoSharePayload } from '../../utils/shareEntry';
 import { Package, Plus, ChevronRight } from '../../utils/icons';
 import type { RootStackParamList } from '../../navigation/types';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
+/** Build a share summary from a persisted product demo record. */
+const demoPayloadFromModel = (item: ProductDemoModel) => {
+  let varieties: string[] = [];
+  try {
+    const parsed = JSON.parse(item.varietiesJson || '[]');
+    varieties = Array.isArray(parsed) ? parsed : [];
+  } catch { varieties = []; }
+  const varietyNames = varieties.filter(Boolean).join(', ') || item.variety || '';
+  return buildDemoSharePayload({
+    farmerName: item.farmerName,
+    village: item.villageName,
+    block: item.blockName,
+    district: item.districtName,
+    mobile: item.mobileNumber,
+    totalLandAcre: item.totalLandAcre,
+    crop: item.cropName,
+    variety: varietyNames,
+    varietyLabel: varieties.length > 1 ? 'Varieties' : 'Variety',
+    cropStage: item.cropStage,
+    stageDays: item.cropStageDays,
+    product: item.productName,
+    dose: item.dose,
+    doseUnit: item.doseUnit,
+    demoDate: item.demoDate,
+    remark: item.remark,
+  });
+};
+
 const ProductDemoListScreen = () => {
   const navigation = useNavigation<Nav>();
+  const { shareEntry, receiptHost } = useReceiptShare();
   const [demos, setDemos] = useState<ProductDemoModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -61,8 +93,9 @@ const ProductDemoListScreen = () => {
 
   return (
     <View style={styles.root}>
+      {receiptHost}
       {/* ── Header ── */}
-      <ScreenHeader title="Product Performance Tracker" subtitle={`${demos.length} records`} onBack={() => navigation.goBack()} />
+      <ScreenHeader title="Product Performance Module Tracker" subtitle={`${demos.length} records`} onBack={() => navigation.goBack()} />
 
       {/* ── List ── */}
       <FlatList
@@ -76,7 +109,7 @@ const ProductDemoListScreen = () => {
           <EmptyState
             icon={Package}
             title="No entries yet"
-            subtitle="Tap + to add a Product Performance entry."
+            subtitle="Tap + to add a Product Performance Module entry."
           />
         }
         renderItem={({ item }) => (
@@ -127,7 +160,10 @@ const ProductDemoListScreen = () => {
                  )}
               </View>
             </View>
-            <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} strokeWidth={2} />
+            <View style={styles.rowActions}>
+              <ShareIconButton onPress={() => shareEntry(demoPayloadFromModel(item))} />
+              <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} strokeWidth={2} />
+            </View>
           </TouchableOpacity>
         )}
       />
@@ -172,6 +208,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   rowBody: { flex: 1, paddingRight: 8 },
+  rowActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
   title: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
   subtitle: { fontSize: 13, color: colors.textSecondary, marginBottom: 8 },

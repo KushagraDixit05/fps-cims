@@ -116,7 +116,7 @@ const MandiArrivalFormScreen = () => {
     <View style={styles.root}>
       {/* ── Compact header ── */}
       <ScreenHeader
-        title="Market Intelligence — New Entry"
+        title="Market Intelligence Module — New Entry"
         subtitle={state.step !== 'review' ? `Step ${state.step} of 4` : 'Review'}
         onBack={handleBack}
       />

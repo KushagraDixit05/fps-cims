@@ -1,7 +1,7 @@
 // src/screens/cropMonitoring/ReviewScreen.tsx
 // Read-only summary screen. Shows all entered data before final submission.
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,15 @@ import {
   StyleSheet,
   Image,
 } from 'react-native';
+import ViewShot from 'react-native-view-shot';
 import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import AppIcon from '../../components/AppIcon';
+import ShareReceiptCard from '../../components/share/ShareReceiptCard';
 import { Share2, IconStroke } from '../../utils/icons';
 import { shareReviewDetails } from '../../utils/shareReviewDetails';
+import { buildCropSharePayload } from '../../utils/shareEntry';
 import type { CropMonitoringFormState } from '../../types/cropMonitoring';
 import { OTHERS_VALUE, resolveOthersValue } from '../../utils/othersValidation';
 
@@ -72,6 +75,34 @@ const ReviewScreen = ({
   submitting,
 }: ReviewScreenProps) => {
   const { farmerDetails, crops, photos, location, remark } = state;
+  const shareRef = useRef<React.ElementRef<typeof ViewShot>>(null);
+
+  const locationStr =
+    location.captured && location.latitude !== null
+      ? `${Math.abs(location.latitude).toFixed(4)}° N, ${Math.abs(location.longitude!).toFixed(4)}° E`
+      : 'Not captured';
+
+  const sharePayload = buildCropSharePayload({
+    farmerName: farmerDetails.farmer_name,
+    village: farmerDetails.village_name,
+    block: resolveOthersValue(farmerDetails.block_name, farmerDetails.custom_block_name ?? ''),
+    district: farmerDetails.district_name,
+    mobile: farmerDetails.mobile_number,
+    totalLandAcre: farmerDetails.total_land_acre,
+    locationDisplay: locationStr,
+    photoCount: photos.length,
+    date: crops[0]?.date_of_sowing || new Date().toISOString().slice(0, 10),
+    remark,
+    crops: crops.map((crop) => ({
+      name: resolveOthersValue(crop.crop_name, crop.custom_crop_name ?? ''),
+      varieties: (crop.varieties ?? [])
+        .map((v) => (v.variety === OTHERS_VALUE ? (v.custom_variety || 'Others') : v.variety))
+        .filter(Boolean)
+        .join(', '),
+      areaAcre: crop.current_area_acre,
+      condition: crop.crop_condition,
+    })),
+  });
 
   return (
     <ScrollView
@@ -79,6 +110,13 @@ const ReviewScreen = ({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      {/* Off-screen branded card captured for image sharing */}
+      <View style={styles.offscreen} pointerEvents="none">
+        <ViewShot ref={shareRef}>
+          <ShareReceiptCard data={sharePayload} />
+        </ViewShot>
+      </View>
+
       <View style={styles.headingRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.heading}>Review & Confirm</Text>
@@ -88,14 +126,7 @@ const ReviewScreen = ({
         </View>
         <TouchableOpacity
           style={styles.shareBtn}
-          onPress={() => shareReviewDetails({
-            module: 'Crop Intelligence',
-            farmerName: farmerDetails.farmer_name,
-            date: crops[0]?.date_of_sowing || 'N/A',
-            location: `${farmerDetails.village_name} · ${resolveOthersValue(farmerDetails.block_name, farmerDetails.custom_block_name ?? '')}`,
-            cropDetails: crops.map(c => resolveOthersValue(c.crop_name, c.custom_crop_name ?? '')).join(', '),
-            observations: remark || undefined,
-          })}
+          onPress={() => shareReviewDetails(sharePayload, shareRef)}
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
@@ -227,6 +258,7 @@ const styles = StyleSheet.create({
   subtext:        { fontSize: 13, color: colors.textSecondary, marginBottom: 16 },
   headingRow:     { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 0 },
   shareBtn:       { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  offscreen:      { position: 'absolute', left: -9999, top: 0 },
 
   sectionHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle:   { fontSize: 14, fontWeight: '700', color: colors.textPrimary },

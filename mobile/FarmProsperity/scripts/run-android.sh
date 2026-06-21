@@ -53,4 +53,5 @@ echo ""
 
 npx react-native run-android \
   --port 8081 \
+  --appId com.farmprosperity.dev \
   --extra-params "-PreactNativeArchitectures=$ARCH"

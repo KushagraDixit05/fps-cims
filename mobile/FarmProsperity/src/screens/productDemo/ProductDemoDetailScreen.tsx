@@ -23,6 +23,9 @@ import { Q } from '@nozbe/watermelondb';
 import type { RootStackParamList } from '../../navigation/types';
 import { colors } from '../../utils/colors';
 import ScreenHeader from '../../components/ScreenHeader';
+import ShareIconButton from '../../components/share/ShareIconButton';
+import { useReceiptShare } from '../../components/share/useReceiptShare';
+import { buildDemoSharePayload } from '../../utils/shareEntry';
 import Button from '../../components/Button';
 import PhotoPicker from '../../components/PhotoPicker';
 import DemoResultSelector from '../../components/DemoResultSelector';
@@ -68,6 +71,7 @@ const ProductDemoDetailScreen = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const route = useRoute<Nav>();
   const { demoId } = route.params; // server id
+  const { shareEntry, receiptHost } = useReceiptShare();
 
   const [demo, setDemo] = useState<ProductDemoModel | null>(null);
   const [loading, setLoading] = useState(true);
@@ -172,12 +176,33 @@ const ProductDemoDetailScreen = () => {
   const isCompleted = phase === 'completed' || !!demo.demoResult;
   const afterPending = demo.afterPendingSync;
 
+  const sharePayload = buildDemoSharePayload({
+    farmerName: demo.farmerName,
+    village: demo.villageName,
+    block: demo.blockName,
+    district: demo.districtName,
+    mobile: demo.mobileNumber,
+    totalLandAcre: demo.totalLandAcre,
+    crop: demo.cropName,
+    variety: varietyDisplay,
+    varietyLabel: varietyList.length > 1 ? 'Varieties' : 'Variety',
+    cropStage: demo.cropStage,
+    stageDays: demo.cropStageDays,
+    product: demo.productName,
+    dose: demo.dose,
+    doseUnit: demo.doseUnit,
+    demoDate: demo.demoDate,
+    remark: demo.remark,
+  });
+
   return (
     <View style={styles.root}>
+      {receiptHost}
       <ScreenHeader
-        title="Product Performance — Details"
+        title="Product Performance Module — Details"
         subtitle={demo.farmerName}
         onBack={() => navigation.goBack()}
+        rightElement={<ShareIconButton onPress={() => shareEntry(sharePayload)} color="white" />}
       />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 

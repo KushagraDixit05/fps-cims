@@ -1,7 +1,7 @@
 // src/screens/productDemo/ReviewScreen.tsx
 // Read-only summary screen. Shows all entered data before final submission.
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,15 @@ import {
   StyleSheet,
   Image,
 } from 'react-native';
+import ViewShot from 'react-native-view-shot';
 import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import AppIcon from '../../components/AppIcon';
+import ShareReceiptCard from '../../components/share/ShareReceiptCard';
 import { Share2, IconStroke } from '../../utils/icons';
 import { shareReviewDetails } from '../../utils/shareReviewDetails';
+import { buildDemoSharePayload } from '../../utils/shareEntry';
 import { OTHERS_VALUE, resolveOthersValue } from '../../utils/othersValidation';
 import type { ProductDemoFormState, DemoResult } from '../../types/productDemo';
 
@@ -96,6 +99,31 @@ const ReviewScreen = ({
   submitting,
 }: ReviewScreenProps) => {
   const { farmerDetails, cropStage, productDose, result } = state;
+  const shareRef = useRef<React.ElementRef<typeof ViewShot>>(null);
+
+  const varietyNames = cropStage.varieties
+    .map((v) => (v.variety === OTHERS_VALUE ? v.custom_variety.trim() : v.variety))
+    .filter((n) => n.length > 0)
+    .join(', ');
+
+  const sharePayload = buildDemoSharePayload({
+    farmerName: farmerDetails.farmer_name,
+    village: farmerDetails.village_name,
+    block: resolveOthersValue(farmerDetails.block_name, farmerDetails.custom_block_name ?? ''),
+    district: farmerDetails.district_name,
+    mobile: farmerDetails.mobile_number,
+    totalLandAcre: farmerDetails.total_land_acre,
+    crop: resolveOthersValue(cropStage.crop_name, cropStage.custom_crop_name ?? ''),
+    variety: varietyNames,
+    varietyLabel: cropStage.varieties.length > 1 ? 'Varieties' : 'Variety',
+    cropStage: cropStage.crop_stage,
+    stageDays: cropStage.crop_stage_days,
+    product: resolveOthersValue(productDose.product_name, productDose.custom_product_name ?? ''),
+    dose: productDose.dose,
+    doseUnit: productDose.dose_unit,
+    demoDate: cropStage.demo_date,
+    remark: result.remark,
+  });
 
   return (
     <ScrollView
@@ -103,6 +131,13 @@ const ReviewScreen = ({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      {/* Off-screen branded card captured for image sharing */}
+      <View style={styles.offscreen} pointerEvents="none">
+        <ViewShot ref={shareRef}>
+          <ShareReceiptCard data={sharePayload} />
+        </ViewShot>
+      </View>
+
       <View style={styles.headingRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.heading}>Review & Confirm</Text>
@@ -110,14 +145,7 @@ const ReviewScreen = ({
         </View>
         <TouchableOpacity
           style={styles.shareBtn}
-          onPress={() => shareReviewDetails({
-            module: 'Product Performance',
-            farmerName: farmerDetails.farmer_name,
-            date: cropStage.demo_date,
-            location: `${farmerDetails.village_name} · ${resolveOthersValue(farmerDetails.block_name, farmerDetails.custom_block_name ?? '')}`,
-            cropDetails: resolveOthersValue(cropStage.crop_name, cropStage.custom_crop_name ?? ''),
-            summary: `Product: ${resolveOthersValue(productDose.product_name, productDose.custom_product_name ?? '')} · Dose: ${productDose.dose} ${productDose.dose_unit}`,
-          })}
+          onPress={() => shareReviewDetails(sharePayload, shareRef)}
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
@@ -217,6 +245,7 @@ const styles = StyleSheet.create({
   subtext:        { fontSize: 13, color: colors.textSecondary, marginBottom: 16 },
   headingRow:     { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 0 },
   shareBtn:       { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  offscreen:      { position: 'absolute', left: -9999, top: 0 },
   sectionHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle:   { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   editLink:       { fontSize: 12, fontWeight: '700', color: colors.primary },

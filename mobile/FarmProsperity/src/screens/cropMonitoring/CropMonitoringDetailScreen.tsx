@@ -9,6 +9,9 @@ import {
 import { useRoute, type RouteProp } from '@react-navigation/native';
 import { colors } from '../../utils/colors';
 import Card from '../../components/Card';
+import ShareIconButton from '../../components/share/ShareIconButton';
+import { useReceiptShare } from '../../components/share/useReceiptShare';
+import { buildCropSharePayload } from '../../utils/shareEntry';
 import { getFarmerVisitDetail } from '../../api/cropMonitoring';
 import type { FarmerVisitDetail } from '../../types/cropMonitoring';
 import type { RootStackParamList } from '../../navigation/types';
@@ -30,6 +33,7 @@ const Row = ({ label, value }: { label: string; value: string }) => (
 const CropMonitoringDetailScreen = () => {
   const route = useRoute<RouteP>();
   const { visitId } = route.params;
+  const { shareEntry, receiptHost } = useReceiptShare();
 
   const [visit, setVisit] = useState<FarmerVisitDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,10 +67,33 @@ const CropMonitoringDetailScreen = () => {
     day: '2-digit', month: 'short', year: 'numeric',
   });
 
+  const sharePayload = buildCropSharePayload({
+    farmerName: visit.farmer_name,
+    village: visit.village_name,
+    block: visit.block_name,
+    district: visit.district_name,
+    mobile: visit.mobile_number,
+    totalLandAcre: visit.total_land_acre,
+    locationDisplay: visit.location_display,
+    latitude: visit.latitude,
+    longitude: visit.longitude,
+    photoCount: visit.photos.length,
+    date: visit.submitted_at.slice(0, 10),
+    remark: visit.remark,
+    crops: visit.crops.map((c) => ({
+      name: c.crop_name,
+      varieties: (c.varieties ?? []).map((v) => v.variety).filter(Boolean).join(', ') || c.variety,
+      areaAcre: c.current_area_acre,
+      condition: c.crop_condition,
+    })),
+  });
+
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      {receiptHost}
       {/* Header card */}
       <Card style={styles.headerCard}>
+        <ShareIconButton onPress={() => shareEntry(sharePayload)} style={styles.shareBtn} />
         <Text style={styles.farmerName}>{visit.farmer_name}</Text>
         <Text style={styles.locationText}>
           {visit.village_name} · {visit.block_name} · {visit.district_name}
@@ -141,6 +168,7 @@ const styles = StyleSheet.create({
   errorText:    { fontSize: 14, color: colors.error, textAlign: 'center', padding: 24 },
 
   headerCard:   { marginBottom: 12 },
+  shareBtn:     { position: 'absolute', top: 8, right: 8, zIndex: 1 },
   farmerName:   { fontSize: 20, fontWeight: '800', color: colors.textPrimary, marginBottom: 4 },
   locationText: { fontSize: 13, color: colors.textSecondary, marginBottom: 2 },
   dateText:     { fontSize: 12, color: colors.textMuted, marginTop: 4 },

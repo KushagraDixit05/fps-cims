@@ -2,7 +2,7 @@
 // Read-only summary screen. Shows all entered data before final submission.
 // Mirrors cropMonitoring/ReviewScreen.tsx structure exactly.
 
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,15 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import ViewShot from 'react-native-view-shot';
 import { colors } from '../../utils/colors';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import AppIcon from '../../components/AppIcon';
+import ShareReceiptCard from '../../components/share/ShareReceiptCard';
 import { Share2, IconStroke } from '../../utils/icons';
 import { shareReviewDetails } from '../../utils/shareReviewDetails';
+import { buildMandiSharePayload } from '../../utils/shareEntry';
 import type { MandiArrivalFormState } from '../../types/mandiArrival';
 import { resolveOthersValue } from '../../utils/othersValidation';
 
@@ -66,11 +69,31 @@ const ReviewScreen = ({
   submitting,
 }: ReviewScreenProps) => {
   const { mandiDetails, varieties, source, custom_source, remark, photos, location } = state;
+  const shareRef = useRef<React.ElementRef<typeof ViewShot>>(null);
 
   const locationStr =
     location.captured && location.latitude !== null
       ? `${Math.abs(location.latitude).toFixed(4)}° N, ${Math.abs(location.longitude!).toFixed(4)}° E`
       : 'Not captured';
+
+  const mandiName = mandiDetails.mandi_name || mandiDetails.custom_mandi_name || `Mandi #${mandiDetails.mandi_id}`;
+
+  const sharePayload = buildMandiSharePayload({
+    mandiName,
+    date: mandiDetails.date,
+    totalArrivalQt: mandiDetails.total_arrival_qt || null,
+    source: resolveOthersValue(source, custom_source ?? ''),
+    locationDisplay: locationStr,
+    photoCount: photos.length,
+    remark,
+    varieties: varieties.map((v) => ({
+      name: resolveOthersValue(v.crop_variety_name, v.custom_crop_variety_name ?? ''),
+      quantityQt: v.quantity_qt,
+      topRate: v.top_rate,
+      mostly: v.mostly_sales_rate,
+      bottom: v.bottom_rate,
+    })),
+  });
 
   return (
     <ScrollView
@@ -78,6 +101,13 @@ const ReviewScreen = ({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      {/* Off-screen branded card captured for image sharing */}
+      <View style={styles.offscreen} pointerEvents="none">
+        <ViewShot ref={shareRef}>
+          <ShareReceiptCard data={sharePayload} />
+        </ViewShot>
+      </View>
+
       <View style={styles.headingRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.heading}>Review Details</Text>
@@ -87,15 +117,7 @@ const ReviewScreen = ({
         </View>
         <TouchableOpacity
           style={styles.shareBtn}
-          onPress={() => shareReviewDetails({
-            module: 'Market Intelligence',
-            mandiName: mandiDetails.mandi_name || mandiDetails.custom_mandi_name || '',
-            date: mandiDetails.date,
-            location: mandiDetails.mandi_name || 'N/A',
-            cropDetails: varieties.map(v => resolveOthersValue(v.crop_variety_name, v.custom_crop_variety_name ?? '')).join(', '),
-            observations: remark || undefined,
-            summary: `Total Arrival: ${mandiDetails.total_arrival_qt || 'N/A'} Qt \u00b7 ${varieties.length} varieties`,
-          })}
+          onPress={() => shareReviewDetails(sharePayload, shareRef)}
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
@@ -179,6 +201,7 @@ const styles = StyleSheet.create({
   subtext:        { fontSize: 13, color: colors.textSecondary, marginBottom: 16 },
   headingRow:     { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 0 },
   shareBtn:       { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  offscreen:      { position: 'absolute', left: -9999, top: 0 },
 
   sectionHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle:   { fontSize: 14, fontWeight: '700', color: colors.textPrimary },

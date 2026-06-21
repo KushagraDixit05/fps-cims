@@ -29,14 +29,31 @@ import { formatDate, formatQuantity, formatCurrency } from '../utils/helpers';
 import EmptyState from '../components/EmptyState';
 import LoadingScreen from '../components/LoadingScreen';
 import AppIcon from '../components/AppIcon';
+import ShareIconButton from '../components/share/ShareIconButton';
+import { useReceiptShare } from '../components/share/useReceiptShare';
+import { buildMandiSharePayload } from '../utils/shareEntry';
 import { Store, Plus, ChevronRight, IconStroke } from '../utils/icons';
 import type { Mandi, MandiArrival, YoYComparison } from '../types';
 import type { RootStackParamList } from '../navigation/types';
+
+/** Build a share summary from an API arrival (summary fields only — no varieties). */
+const mandiPayloadFromArrival = (arrival: MandiArrival) =>
+  buildMandiSharePayload({
+    mandiName: arrival.mandi_name ?? `Mandi #${arrival.mandi}`,
+    date: arrival.date,
+    totalArrivalQt: arrival.arrival_quantity,
+    source: arrival.custom_source || arrival.source,
+    avgRate: arrival.avg_rate ?? null,
+    minRate: arrival.min_rate ?? null,
+    maxRate: arrival.max_rate ?? null,
+    remark: arrival.remark,
+  });
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
 const MandiListScreen = () => {
   const navigation = useNavigation<Nav>();
+  const { shareEntry, receiptHost } = useReceiptShare();
 
   const [mandis, setMandis] = useState<Mandi[]>([]);
   const [selectedMandi, setSelectedMandi] = useState<Mandi | null>(null);
@@ -98,8 +115,9 @@ const MandiListScreen = () => {
 
   return (
     <View style={styles.root}>
+      {receiptHost}
       {/* ── Header ── */}
-      <ScreenHeader title="Market Intelligence" subtitle={`${arrivals.length} records`} onBack={() => navigation.navigate('Home' as any)} />
+      <ScreenHeader title="Market Intelligence Module" subtitle={`${arrivals.length} records`} onBack={() => navigation.navigate('Home' as any)} />
 
       {/* ── Mandi Picker ── */}
       <View style={styles.pickerSection}>
@@ -192,6 +210,7 @@ const MandiListScreen = () => {
               arrival={item}
               yoy={yoy}
               onPress={() => navigation.navigate('MandiDetail', { arrival: item })}
+              onShare={() => shareEntry(mandiPayloadFromArrival(item))}
             />
           )}
         />
@@ -241,10 +260,12 @@ const ArrivalRow = ({
   arrival,
   yoy,
   onPress,
+  onShare,
 }: {
   arrival: MandiArrival;
   yoy: YoYComparison | null;
   onPress: () => void;
+  onShare: () => void;
 }) => {
   // Determine if this entry's quantity is above the YoY avg
   const isAbove =
@@ -293,7 +314,10 @@ const ArrivalRow = ({
         </View>
         <Text style={styles.sourceBadge}>{arrival.source}</Text>
       </View>
-      <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} strokeWidth={2} />
+      <View style={styles.rowActions}>
+        <ShareIconButton onPress={onShare} />
+        <AppIcon icon={ChevronRight} size={18} color={colors.textMuted} strokeWidth={2} />
+      </View>
     </TouchableOpacity>
   );
 };
@@ -391,6 +415,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   rowBody: { flex: 1, padding: 12 },
+  rowActions: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 8 },
   rowTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',

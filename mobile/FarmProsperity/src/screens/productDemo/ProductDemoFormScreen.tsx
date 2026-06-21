@@ -107,7 +107,7 @@ const ProductDemoFormScreen = () => {
     <View style={styles.root}>
       {/* ── Compact header ── */}
       <ScreenHeader
-        title="Product Performance — New Entry"
+        title="Product Performance Module — New Entry"
         subtitle={state.step !== 'review' ? `Step ${state.step} of 4` : 'Review'}
         onBack={handleBack}
       />
