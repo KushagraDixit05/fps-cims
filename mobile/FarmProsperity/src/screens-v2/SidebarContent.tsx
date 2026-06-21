@@ -17,7 +17,7 @@ import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { useAuth } from '../store/authStore';
 import AppIcon from '../components/AppIcon';
 import {
-  Home, Leaf, Store, Map, BarChart2,
+  Home, Leaf, Store, BarChart2,
   User, LogOut, RefreshCw, MapPin,
   IconStroke,
 } from '../utils/icons';
@@ -30,9 +30,8 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   { icon: Home,      label: 'Home',                 screen: 'Home' },
-  { icon: Leaf,      label: 'Crop Intelligence Module',    screen: 'CropMonitoringList' },
+  { icon: Leaf,      label: 'Crop Intelligence Module',    screen: 'Crops' },
   { icon: Store,     label: 'Market Intelligence Module',  screen: 'Mandi' },
-  { icon: Map,       label: 'My Visits',            screen: 'Crops' },
   { icon: BarChart2, label: 'Reports',              screen: 'Reports' },
 ];
 

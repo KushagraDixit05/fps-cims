@@ -40,9 +40,6 @@ import HomeScreen from '../screens-v2/HomeScreen';
 import SidebarContent from '../screens-v2/SidebarContent';
 
 // ── Existing screens (unchanged — still used for all other tabs/routes) ───────
-import CropListScreen from '../screens/CropListScreen';
-import CropEntryFormScreen from '../screens/CropEntryFormScreen';
-import CropDetailScreen from '../screens/CropDetailScreen';
 import MandiListScreen from '../screens/MandiListScreen';
 import MandiEntryFormScreen from '../screens/MandiEntryFormScreen';
 import MandiDetailScreen from '../screens/MandiDetailScreen';
@@ -104,7 +101,7 @@ const MainTabs = () => (
   >
     {/* Home tab now uses the v2 HomeScreen */}
     <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Home' }} />
-    <Tab.Screen name="Crops" component={CropListScreen} options={{ tabBarLabel: 'Crops' }} />
+    <Tab.Screen name="Crops" component={CropMonitoringListScreen} options={{ tabBarLabel: 'Crops' }} />
     <Tab.Screen name="Mandi" component={MandiListScreen} options={{ tabBarLabel: 'Market' }} />
     <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Reports' }} />
   </Tab.Navigator>
@@ -158,17 +155,12 @@ const AppNavigatorV2 = () => {
           <>
             <RootStack.Screen name="Main" component={DrawerNavigator} />
 
-            {/* ── Legacy Crop Entry screens ── */}
-            <RootStack.Screen name="CropEntryForm" component={CropEntryFormScreen} options={{ ...headerOptions, title: 'Add Crop Entry' }} />
-            <RootStack.Screen name="CropDetail" component={CropDetailScreen} options={{ ...headerOptions, title: 'Crop Detail' }} />
-
             {/* ── Mandi screens ── */}
             <RootStack.Screen name="MandiEntryForm" component={MandiEntryFormScreen} options={{ ...headerOptions, title: 'Add Mandi Entry' }} />
             <RootStack.Screen name="MandiDetail" component={MandiDetailScreen} options={{ ...headerOptions, title: 'Mandi Detail' }} />
 
             {/* ── Crop Monitoring Module ── */}
             <RootStack.Screen name="CropMonitoringForm" component={CropMonitoringFormScreen} options={{ headerShown: false }} />
-            <RootStack.Screen name="CropMonitoringList" component={CropMonitoringListScreen} options={{ headerShown: false }} />
             <RootStack.Screen name="CropMonitoringDetail" component={CropMonitoringDetailScreen} options={{ ...headerOptions, title: 'Visit Details' }} />
 
             {/* ── Mandi Arrival Module ── */}

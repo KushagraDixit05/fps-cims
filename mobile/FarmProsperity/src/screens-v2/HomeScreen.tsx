@@ -45,7 +45,7 @@ type ActionTile = {
 };
 
 const ACTION_TILES: ActionTile[] = [
-  { bg: '#E1F2E8', icon: Leaf,      iconColor: '#1A4A2E', title: 'Crop Intelligence Module',      sub: 'Visits · New entry',   screen: 'CropMonitoringList' },
+  { bg: '#E1F2E8', icon: Leaf,      iconColor: '#1A4A2E', title: 'Crop Intelligence Module',      sub: 'Visits · New entry',   screen: 'Crops' },
   { bg: '#FEF3DA', icon: Store,     iconColor: '#C8900A', title: 'Market Intelligence Module',    sub: 'Arrivals · Trends',    screen: 'MandiArrivalForm', badge: 'Live' },
   { bg: '#E8F4FD', icon: Package,   iconColor: '#0277BD', title: 'Product Performance Module',    sub: 'Demo · Results',       screen: 'ProductDemoList' },
   { bg: '#F3E8FF', icon: BarChart2, iconColor: '#7C3AED', title: 'Reports',                sub: 'Analytics · YoY',      screen: 'Reports' },
