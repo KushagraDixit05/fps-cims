@@ -41,13 +41,13 @@ Every requirement from the specification is mapped to exactly one phase. No requ
 
 | # | Requirement | Priority | Phase |
 |---|-------------|----------|-------|
-| G-1 | Future Date Selection Support | Now | **Phase 0** |
-| G-2 | Home Dashboard Activity Feed (Recent Visits → Recent Activities) | Now | **Phase 0** |
+| G-1 | Future Date Selection Support | Now | **Phase 0** ✅ Done |
+| G-2 | Home Dashboard Activity Feed (Recent Visits → Recent Activities) | Now | **Phase 0** ✅ Done |
 | G-3 | One Phone Number = One Farmer | Later | **Phase 2** |
 | G-4 | Edit Submitted Entries | Now | **Phase 4** |
 | G-5 | CSV Export for Multiple Varieties | Done (Product Demo) | **Phase 1** (mandi crops in Phase 3) |
-| G-6 | Module Naming Standardization | Remaining in Mobile | **Phase 0** |
-| G-7 | Share Review Details | Now | **Phase 0** |
+| G-6 | Module Naming Standardization | Remaining in Mobile | **Phase 0** ✅ Done |
+| G-7 | Share Review Details | Now | **Phase 0** ✅ Done (text + image) |
 
 ### Crop Intelligence Module
 
@@ -56,7 +56,7 @@ Every requirement from the specification is mapped to exactly one phase. No requ
 | C-1 | Farmer Profiling & Auto-Fill | Later | **Phase 2** |
 | C-2 | Farmer Visit Grouping | Later | **Phase 2** |
 | C-3 | Admin Managed Master Data | Later | **Phase 5** |
-| C-4 | Future Date Handling (CMM-specific) | Now | **Phase 0** (part of G-1) |
+| C-4 | Future Date Handling (CMM-specific) | Now | **Phase 0** ✅ Done (part of G-1) |
 
 ### Market Intelligence Module
 
@@ -67,7 +67,7 @@ Every requirement from the specification is mapped to exactly one phase. No requ
 | M-3 | Filter Crops (Step 1 → Step 2 linkage) | Now | **Phase 3** |
 | M-4 | Add "Self" Source | Now | **Phase 1** |
 | M-5 | Market Insight Field | Now | **Phase 1** |
-| M-6 | Merge Steps 4 & 5 (Photos + Location) | Now | **Phase 0** |
+| M-6 | Merge Steps 4 & 5 (Photos + Location) | Now | **Phase 0** ✅ Done |
 | M-7 | Crop-Wise Review Summary | Now | **Phase 3** |
 
 ### Product Performance Module
@@ -75,7 +75,7 @@ Every requirement from the specification is mapped to exactly one phase. No requ
 | # | Requirement | Priority | Phase |
 |---|-------------|----------|-------|
 | P-1 | Photos + Location (Before/After GPS) | Now | **Phase 1** |
-| P-2 | Remarks Field (surface in UI/review/export) | Now | **Phase 0** |
+| P-2 | Remarks Field (surface in UI/review/export) | Now | **Phase 0** ✅ Done |
 
 ### Reports Module
 
@@ -89,7 +89,7 @@ Every requirement from the specification is mapped to exactly one phase. No requ
 
 ## Execution Guidelines
 
-1. **Complete Phase 0 first** — these are safe, low-risk changes that unblock user-facing improvements immediately.
+1. **Phase 0 — ✅ complete (2026-06-22).** These safe, low-risk changes shipped on `feature/business-enhancements` (not yet merged to `main`); G-7 also delivered image sharing, and module naming adopted the "… Module" convention. See [PHASE-0-Quick-Wins.md](PHASE-0-Quick-Wins.md).
 2. **Phase 1 and Phase 2 can run in parallel** — they touch different parts of the codebase (Phase 1 = Market/Product fields, Phase 2 = Farmer identity).
 3. **Phase 3 depends on Phase 1** — the Market Trend and Market Insight fields must exist before restructuring the crop-wise arrival flow.
 4. **Phase 4 should wait for RBAC** — editable submissions require role-based constraints (who can edit what) to be meaningful.

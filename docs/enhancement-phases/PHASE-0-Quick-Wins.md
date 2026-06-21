@@ -3,6 +3,10 @@
 > **Goal:** Ship low-risk, cross-cutting improvements that users see immediately.
 > No data-model migrations, no breaking API changes, no new Django apps.
 
+> **Status:** ✅ **Implemented — 2026-06-22** (branch `feature/business-enhancements`, not yet merged to `main`).
+> All six requirements shipped. Two items exceeded the original plan (see notes in §3 and §4),
+> and four additional improvements landed beyond Phase 0 scope (see **Beyond Phase 0 Scope** at the end).
+
 ---
 
 ## Requirements Covered
@@ -68,11 +72,15 @@
   };
   ```
 
+### ✅ Implemented
+Shared helper `src/utils/futureDateWarning.ts` was created as recommended and wired into the
+Step 1 screens of all three modules (e.g. `src/screens/mandiArrival/Step1_MandiDetails.tsx`).
+
 ### Acceptance Criteria
-- [ ] Future dates are selectable in all three modules.
-- [ ] Warning popup appears when a future date is chosen.
-- [ ] User can dismiss the warning and revert, or acknowledge and proceed.
-- [ ] No validation errors on submission with a future date.
+- [x] Future dates are selectable in all three modules.
+- [x] Warning popup appears when a future date is chosen.
+- [x] User can dismiss the warning and revert, or acknowledge and proceed.
+- [x] No validation errors on submission with a future date.
 
 ---
 
@@ -126,12 +134,17 @@
 - New: Also call `getMandiArrivals(1)` and `getProductDemos(1)` (if list endpoints exist).
 - Merge server results with local pending records, same as current logic but across all modules.
 
+### ✅ Implemented
+`src/screens-v2/HomeScreen.tsx` now renders a unified "RECENT ACTIVITIES" feed merging all
+three WatermelonDB tables, sorted by date, with module badges, sync status, and tap-through
+navigation.
+
 ### Acceptance Criteria
-- [ ] Section title reads "RECENT ACTIVITIES".
-- [ ] Feed shows entries from all three modules intermixed, sorted by date descending.
-- [ ] Each card displays: module icon, farmer/mandi name, date, location, crop, sync status.
-- [ ] Tapping a card navigates to the correct detail screen for that module.
-- [ ] Works offline (WatermelonDB first) and enriches when online.
+- [x] Section title reads "RECENT ACTIVITIES".
+- [x] Feed shows entries from all three modules intermixed, sorted by date descending.
+- [x] Each card displays: module icon, farmer/mandi name, date, location, crop, sync status.
+- [x] Tapping a card navigates to the correct detail screen for that module.
+- [x] Works offline (WatermelonDB first) and enriches when online.
 
 ---
 
@@ -169,10 +182,17 @@
   - `fps-mandi-arrivals-*.csv` → `fps-market-intelligence-*.csv` (optional rename)
   - `fps-product-demos-*.csv` → `fps-product-performance-*.csv` (optional rename)
 
+### ✅ Implemented — with a naming-convention change
+The adopted convention is **"… Module"** — `Crop Intelligence Module`, `Market Intelligence
+Module`, `Product Performance Module` (`5883df7`), not the bare names listed in the table
+above. Applied across the admin portal (e.g. `admin-portal/src/components/layout/Sidebar.tsx`)
+and the mobile app. Mobile navigation was also consolidated: Crop Intelligence entry points
+collapse to Visits (`848a7f7`) and Market Intelligence entry points into a hub (`ecd05b2`).
+
 ### Acceptance Criteria
-- [ ] All user-facing strings in the mobile app use the new module names.
-- [ ] Admin portal sidebar, page headers, and breadcrumbs use new names.
-- [ ] No user-visible references to "Crop Monitoring", "Mandi Arrival", or "Product Demo" remain.
+- [x] All user-facing strings in the mobile app use the new module names.
+- [x] Admin portal sidebar, page headers, and breadcrumbs use new names.
+- [x] No user-visible references to "Crop Monitoring", "Mandi Arrival", or "Product Demo" remain.
 
 ---
 
@@ -232,14 +252,20 @@
    - Add a share icon button (lucide `Share2` icon) to the header/top-right.
    - On press, call `shareReviewDetails()` with the current form data.
 
-#### Fast-Follow (not in Phase 0 scope)
-- **Option A — Image card:** Use `react-native-view-shot` to capture the review screen as a PNG, then share the image. This can be added in a follow-up PR.
+#### Fast-Follow (not in Phase 0 scope) — ✅ also delivered
+- **Option A — Image card:** Delivered, not deferred. `7e366da` adds `react-native-view-shot`
+  with `ShareReceiptCard.tsx` + `useReceiptShare.tsx` + `ShareIconButton.tsx`, enabling
+  **image + text** sharing everywhere (review, list, and detail screens for all three modules).
+
+### ✅ Implemented
+Shared utilities `src/utils/shareEntry.ts` and `src/utils/shareReviewDetails.ts` plus the
+share components above; share entry points wired across all three modules.
 
 ### Acceptance Criteria
-- [ ] Share button visible on all three Review Detail screens.
-- [ ] Tapping Share opens the OS share sheet with a formatted text summary.
-- [ ] Shared text includes: module name, farmer/market name, date, location, crop details, observations.
-- [ ] Works on both Android share sheet and clipboard.
+- [x] Share button visible on all three Review Detail screens.
+- [x] Tapping Share opens the OS share sheet with a formatted text summary.
+- [x] Shared text includes: module name, farmer/market name, date, location, crop details, observations.
+- [x] Works on both Android share sheet and clipboard.
 
 ---
 
@@ -272,11 +298,16 @@
 
 4. **Update progress bar** to reflect 4 steps instead of 5.
 
+### ✅ Implemented
+`src/screens/mandiArrival/Step4_PhotosLocation.tsx` combines photos + optional location; the
+wizard and `useMandiArrivalForm.ts` reduced to 4 steps. (Note: the old `Step4_Photos.tsx` and
+`Step5_Location.tsx` files still linger in the tree as dead code — candidate for cleanup.)
+
 ### Acceptance Criteria
-- [ ] Market Intelligence wizard shows 4 steps (was 5).
-- [ ] Step 4 includes both Photos and Location sections.
-- [ ] Location is optional.
-- [ ] Existing data integrity is maintained — no schema changes needed (GPS fields already exist on `MandiArrival` model).
+- [x] Market Intelligence wizard shows 4 steps (was 5).
+- [x] Step 4 includes both Photos and Location sections.
+- [x] Location is optional.
+- [x] Existing data integrity is maintained — no schema changes needed (GPS fields already exist on `MandiArrival` model).
 
 ---
 
@@ -297,10 +328,28 @@
 
 4. **CSV Export:** Verify `remark` column exists in `admin_portal/views.py` → `ProductDemoExportView`. *(Currently present in export — column "Remark" at position index 19.)*
 
+### ✅ Implemented
+`remark` is surfaced on the Product Performance review and detail screens, in the admin-portal
+demos table (as expandable observation/remark rows, `d3f666c`), and in the CSV export.
+
 ### Acceptance Criteria
-- [ ] Remarks visible on Product Performance Review screen.
-- [ ] Remarks visible on Product Performance Detail screen (mobile + admin).
-- [ ] Remarks exported in CSV.
+- [x] Remarks visible on Product Performance Review screen.
+- [x] Remarks visible on Product Performance Detail screen (mobile + admin).
+- [x] Remarks exported in CSV.
+
+---
+
+## Beyond Phase 0 Scope
+
+These shipped on `feature/business-enhancements` alongside Phase 0 but were not part of the
+original plan:
+
+| Commit | Change |
+|--------|--------|
+| `524da4e` | Offline upload made **idempotent** against duplicate records — backend `crops`/`mandi`/`product_demo` views + `src/sync/syncService.ts` |
+| `ecd05b2` | Market Intelligence entry points consolidated into a **hub** (`src/screens-v2/MarketIntelligenceHubScreen.tsx`) |
+| `848a7f7` | Crop Intelligence Module entry points consolidated to **Visits** |
+| `d3f666c` | Admin portal: **expandable** observation/remark rows on the demos table |
 
 ---
 

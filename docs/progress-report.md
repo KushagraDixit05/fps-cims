@@ -1,7 +1,28 @@
 # Farm Prosperity Solutions (FPS) — Progress Report
 
-> **Last updated:** 19 June 2026
+> **Last updated:** 22 June 2026
 > **Overall status:** Phases 0–4 (partial) complete · Admin Portal live · Agri Intelligence Map live · Cloud deployed on Render + Vercel · Release APK **v1.4** distributed · **Production-critical stabilization pass applied**
+
+---
+
+## Changes since 19 June 2026
+
+> On branch `feature/business-enhancements` (**not yet merged to `main`**).
+
+- **Enhancement Phase 0 (Quick Wins) complete** — all six requirements shipped (future-date
+  guard, "Recent Activities" home feed, module-naming standardization, share, Market
+  Intelligence step merge, surfaced Product Performance remarks). Details:
+  [enhancement-phases/PHASE-0-Quick-Wins.md](enhancement-phases/PHASE-0-Quick-Wins.md).
+  - Two items exceeded the plan: **share now does image + text** everywhere (not just text),
+    and module naming adopted the **"… Module"** convention (`Crop Intelligence Module`, etc.).
+- **Beyond Phase 0 scope (same branch):**
+  - Offline upload made **idempotent** against duplicate records (backend views + `syncService.ts`).
+  - Market Intelligence entry points consolidated into a **hub**; Crop Intelligence entry
+    points consolidated to **Visits**.
+  - Admin portal: **expandable** observation/remark rows on the demos table.
+- Enhancement Phases 1–2 already implemented earlier on this branch (additive fields, farmer
+  identity & profiling). Pending: Phases 3 (crop-wise market intel), 4 (editable submissions —
+  deferred to RBAC), 5 (master data & reports).
 
 ---
 
