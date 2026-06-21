@@ -54,13 +54,13 @@ export default function DashboardPage() {
 
       <SummaryStrip />
 
-      <SectionLabel>Crop Intelligence</SectionLabel>
+      <SectionLabel>Crop Intelligence Module</SectionLabel>
       <CropIntelligenceSection days={days} />
 
-      <SectionLabel>Market Intelligence</SectionLabel>
+      <SectionLabel>Market Intelligence Module</SectionLabel>
       <MarketIntelligenceSection days={days} />
 
-      <SectionLabel>Product Performance</SectionLabel>
+      <SectionLabel>Product Performance Module</SectionLabel>
       <ProductPerformanceSection days={days} />
 
       <SectionLabel>Recent Activities</SectionLabel>

@@ -8,7 +8,7 @@ import { formatRelative } from "@/lib/utils";
 const MODULE_CONFIG = {
   crops: { label: "Crop Intel", icon: Sprout, color: "#1A4A2E", bg: "#E1F2E8" },
   mandi: { label: "Market Intel", icon: TrendingUp, color: "#C8900A", bg: "#FEF3DA" },
-  product_demo: { label: "Product Demo", icon: FlaskConical, color: "#185FA5", bg: "#E6F1FB" },
+  product_demo: { label: "Product Performance Module", icon: FlaskConical, color: "#185FA5", bg: "#E6F1FB" },
 } as const;
 
 export function ActivityFeed() {

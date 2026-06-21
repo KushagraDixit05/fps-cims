@@ -158,7 +158,7 @@ export default function ApprovalsPage() {
             <SelectItem value="all">All Modules</SelectItem>
             <SelectItem value="crops">Crops</SelectItem>
             <SelectItem value="mandi">Mandi</SelectItem>
-            <SelectItem value="product_demo">Product Demo</SelectItem>
+            <SelectItem value="product_demo">Product Performance Module</SelectItem>
           </SelectContent>
         </Select>
       </div>

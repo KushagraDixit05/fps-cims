@@ -51,9 +51,9 @@ export default function AnalyticsPage() {
 
       <Tabs defaultValue="crop">
         <TabsList className="flex-wrap h-auto gap-1">
-          <TabsTrigger value="crop">Crop Intelligence</TabsTrigger>
-          <TabsTrigger value="market">Market Intelligence</TabsTrigger>
-          <TabsTrigger value="product">Product Performance</TabsTrigger>
+          <TabsTrigger value="crop">Crop Intelligence Module</TabsTrigger>
+          <TabsTrigger value="market">Market Intelligence Module</TabsTrigger>
+          <TabsTrigger value="product">Product Performance Module</TabsTrigger>
           <TabsTrigger value="executive">Executive Performance</TabsTrigger>
           <TabsTrigger value="geographic">Geographic Insights</TabsTrigger>
         </TabsList>

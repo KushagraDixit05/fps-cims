@@ -18,9 +18,9 @@ interface PaletteItem {
 
 const STATIC_ITEMS: PaletteItem[] = [
   // Modules
-  { id: 'visit',   type: 'module',   label: 'Crop Intelligence',   sub: 'Module' },
-  { id: 'demo',    type: 'module',   label: 'Product Performance', sub: 'Module' },
-  { id: 'mandi',   type: 'module',   label: 'Market Intelligence', sub: 'Module' },
+  { id: 'visit',   type: 'module',   label: 'Crop Intelligence Module',   sub: 'Field Module' },
+  { id: 'demo',    type: 'module',   label: 'Product Performance Module', sub: 'Field Module' },
+  { id: 'mandi',   type: 'module',   label: 'Market Intelligence Module', sub: 'Field Module' },
   // Crops
   { id: 'Chilli',  type: 'crop',     label: 'Chilli',             sub: 'Crop' },
   { id: 'Cotton',  type: 'crop',     label: 'Cotton',             sub: 'Crop' },

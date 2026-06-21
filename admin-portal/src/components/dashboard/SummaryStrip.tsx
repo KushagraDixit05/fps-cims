@@ -57,7 +57,7 @@ export function SummaryStrip() {
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <KPICard
-            label="Crop Intelligence"
+            label="Crop Intelligence Module"
             value={data.current.crop_entries}
             subtext={`${data.all_time.crop_entries} all time`}
             icon={Sprout}
@@ -67,7 +67,7 @@ export function SummaryStrip() {
             index={0}
           />
           <KPICard
-            label="Market Intelligence"
+            label="Market Intelligence Module"
             value={data.current.market_entries}
             subtext={`${data.all_time.market_entries} all time`}
             icon={TrendingUp}
@@ -77,7 +77,7 @@ export function SummaryStrip() {
             index={1}
           />
           <KPICard
-            label="Product Performance"
+            label="Product Performance Module"
             value={data.current.product_demos}
             subtext={`${data.all_time.product_demos} all time`}
             icon={FlaskConical}

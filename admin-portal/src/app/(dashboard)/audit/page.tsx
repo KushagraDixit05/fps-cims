@@ -177,7 +177,7 @@ export default function AuditPage() {
             <SelectItem value="accounts">Accounts</SelectItem>
             <SelectItem value="crops">Crops</SelectItem>
             <SelectItem value="mandi">Mandi</SelectItem>
-            <SelectItem value="product_demo">Product Demo</SelectItem>
+            <SelectItem value="product_demo">Product Performance Module</SelectItem>
             <SelectItem value="workflow">Workflow</SelectItem>
           </SelectContent>
         </Select>

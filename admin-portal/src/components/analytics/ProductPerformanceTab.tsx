@@ -134,7 +134,7 @@ export function ProductPerformanceTab({ days }: Props) {
       {/* Product rankings */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-[15px]">Product Performance Rankings</CardTitle>
+          <CardTitle className="text-[15px]">Product Performance Module Rankings</CardTitle>
           <p className="text-xs text-fps-muted">Demos and completions per product</p>
         </CardHeader>
         <CardContent>
