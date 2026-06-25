@@ -13,7 +13,7 @@ Audited against the active `feature/RBAC` branch (→ `main`). The unmerged `fea
 | Phase | Status | % | Headline |
 |-------|--------|---|----------|
 | 0 — Prerequisites & Setup | ✅ Done | 100% | Redis (compose) + Celery app + `django-simple-history` + `token_blacklist` wired. `SIMPLE_JWT`: 12h access (deliberate), `BLACKLIST_AFTER_ROTATION=True`. |
-| 1 — Database Schema | 🟡 Partial | ~15% | Only `User` field extensions + `approval_status` columns. No Role/Permission/Region/Device/workflow/audit tables. |
+| 1 — Database Schema | ✅ Done | 100% | Full relational core created and **applied**. `accounts/0005`–`0009` + `workflow/0001`–`0002` + `audit/0001` all `[X]`. 48 permissions, 7 roles, 5 regions, 3 workflows seeded; all users backfilled. Two remediation migrations added (0008, 0009) to close schema gaps left by the obsolete branch. |
 | 2 — Permission Engine | 🔄 Done differently | ~10% | Coarse `IsStaffUser` + per-view owner-filtering. JWT carries `role`, not a `perms` claim. No PermissionService/cache. |
 | 3 — Approval Workflow | 🟡 Partial | ~10% | `approval_status`/`approved_at` fields only. No engine, no transition APIs, no escalation. `workflow/` app empty. |
 | 4 — Audit Engine | 🔄 Done differently | ~15% | Read-time **synthesized** pseudo-audit in `admin_portal`. No `AuditLog` table, no async writes, no immutability. `audit/` app empty. |
@@ -23,8 +23,8 @@ Audited against the active `feature/RBAC` branch (→ `main`). The unmerged `fea
 | 8 — Hardening & Testing | ⛔ Not started | ~0% | No RBAC test suite, security review, perf testing, or Swagger. |
 
 ### Critical cross-cutting deviations
-1. **No Role/Permission tables.** The "role" is still the original 3-value CharField (`field_executive`/`admin`/`viewer`) — the "seed, not architecture" starting point this plan set out to replace.
-2. **Permissions are coarse role-based, not ABAC-lite.** JWT carries `role`, not `perms`.
+1. ~~**No Role/Permission tables.**~~ **Resolved (Phase 1).** Role/Permission/RolePermission/UserPermission/Region/UserRegion/Device tables now exist; `User.primary_role` is a real FK (the legacy 3-value `role` CharField is retained as a one-sprint fallback). 48 permissions + 7 roles are seeded and existing users are backfilled.
+2. **Permissions are coarse role-based, not ABAC-lite.** JWT carries `role`, not `perms`. *(The data layer to support `perms` resolution now exists; wiring it into the JWT/engine is Phase 2.)*
 3. **Audit is read-time synthesis**, not an append-only engine.
 4. **Frontend is ahead of its backend.** The admin portal's Roles, Permissions, and Approvals pages call `/api/admin/roles|permissions|approvals` — endpoints that **do not exist** on this branch. These pages are non-functional against the live API.
 5. **Redis/Celery infrastructure now exists (Phase 0 complete)** but nothing yet *uses* it — no Django cache layer is wired (Phase 2) and no async tasks are dispatched (Phases 3–4). The broker + worker boot cleanly; the consumers are still to come.
@@ -93,32 +93,67 @@ connects to `redis://127.0.0.1:6379/0` and reports `ready` with no errors; `mana
 ---
 
 ## Phase 1 — Database Schema
-**Status: 🟡 Partial — ~15% complete**
+**Status: ✅ Done — 100% complete (implemented 2026-06-25, verified & remediated 2026-06-25)**
 **Duration: 3–4 days**
 
 Create the new models. No logic yet — just the data structures.
 
-> **Implementation note:** Only the `User` extensions and the per-module `approval_status`/`approved_at` columns landed. The relational core (Role, Permission, UserPermission, Region, Device, workflow, audit tables) was never created on this branch. Critically, `primary_role_id` exists on `User` as a **stub `UUIDField`** that does not point at any `Role` table — the serializer's `get_primary_role()` always returns `None`. The original `role` CharField remains the real role.
+> **Implementation note (original commit — 2026-06-25):** The model code was written and migrations
+> were authored in the `feature/RBAC` branch commit `0509fd8`. However, those migrations
+> (`accounts/0005`–`0007`, `workflow/0002`) **had never been applied** to the development
+> database — the tables already existed from the now-obsolete `feature/rbac-implementation`
+> branch, causing Django to report `[X] 0001_initial` for `audit/workflow` while the main
+> accounts RBAC migrations showed `[ ]`.
+>
+> **Remediation (this session):** All four unapplied migrations were fake-applied
+> (`--fake`) to register their existence in the migration history since the schema was
+> already present. A new remediation migration `accounts/0008_rbac_schema_gaps` was
+> authored and applied to close the actual gaps that the obsolete-branch tables were missing:
+>
+> | Gap | Action |
+> |-----|--------|
+> | `accounts_user.updated_at` column missing | Added via `ALTER TABLE` |
+> | `GIN idx_user_districts` missing | Created |
+> | `idx_userperm_expires` partial index missing | Created |
+> | `uniq_role_permission` UNIQUE constraint missing | Added |
+> | `uniq_user_permission` UNIQUE constraint missing | Added |
+> | `ck_userperm_effect` CHECK constraint missing | Added |
+> | `uniq_user_region` UNIQUE constraint missing | Added |
+> | `uniq_user_device` UNIQUE constraint missing | Added |
+> | 5 Region records not seeded | Seeded |
+> | `viewer` Role missing (only 6/7 roles existed) | Seeded |
+> | 1 user with `primary_role=NULL` | Backfilled |
+>
+> A second migration `accounts/0009_align_region_district_taluka_nonnull` was generated
+> automatically because the `Region` model declared `district`/`taluka` as `null=True,
+> blank=True` but the DB columns (created by the obsolete branch) are `NOT NULL`. The
+> model was corrected to `blank=True, default=''` (matching the DB), and the migration
+> records the alignment. `manage.py check` and `makemigrations --check` are both clean.
+>
+> **Final verified state:** 7 roles (field_executive/checker/regional_head/manager/admin/super_admin/viewer),
+> 48 permissions, 5 regions (MH/MP/MH-NAN/MH-LAT/MP-KHG), 3 approval-workflow templates,
+> all 4 users backfilled with `primary_role`. All indexes and constraints present.
+> `migrate --plan` reports nothing to apply.
 
 ### Tasks
 
-- [ ] **Create `accounts/models/role.py`** — `Role`, `RolePermission` — not created.
-- [ ] **Create `accounts/models/permission.py`** — `Permission` catalogue — not created.
-- [ ] **Create `accounts/models/user_permission.py`** — `UserPermission` — not created.
-- [ ] **Create `accounts/models/region.py`** — `Region`, `UserRegion` — not created.
-- [~] **Extend `accounts/models/user.py`** — *Partial.* `accounts` still uses a single `models.py` (not a models package). Added via `0003`/`0004`: `employee_id`, `profile_photo`, `state`, `districts` (JSON), `reporting_to` (self-FK), `deactivated_at`/`deactivated_by`, `created_by`, `last_login_device`/`last_login_ip`. **`primary_role` is a stub UUID, not an FK to `Role`.** Old `role` CharField retained as the live role.
-- [ ] **Create `workflow/` app models** — `ApprovalWorkflow`, `ApprovalInstance`, `ApprovalAction` — app dir exists but is empty (no `models.py`).
-- [ ] **Create `audit/` app** — `AuditLog` — app dir exists but is empty (no `models.py`).
-- [ ] **Create `accounts/models/device.py`** — `DeviceRegistration`, `RefreshTokenBlacklist` — not created.
-- [~] **Write and run migrations** — only `accounts` (0003/0004) and the `approval_status`/`approved_at` additions on crops/mandi/product_demo exist.
-- [ ] **Write data migration** — seed preset `Role` objects and `Permission` catalogue — not done (no tables to seed).
-- [ ] **Backfill** — set `primary_role_id` from old `role` CharField — not done.
-- [ ] **Add all indexes** as defined in schema doc — not done.
-- [ ] **Register all new models in `admin.py`** — no new models to register.
+- [x] **Create `accounts/models/role.py`** — `Role`, `RolePermission`.
+- [x] **Create `accounts/models/permission.py`** — `Permission` catalogue (48 codenames).
+- [x] **Create `accounts/models/user_permission.py`** — `UserPermission` (allow/deny + expiry + CHECK constraint).
+- [x] **Create `accounts/models/region.py`** — `Region`, `UserRegion`.
+- [x] **Extend `accounts/models/user.py`** — `accounts/models.py` converted to a package. `primary_role` is now a real FK to `Role` (`on_delete=RESTRICT`, `db_column='primary_role_id'`); `updated_at` added; `Meta.indexes` for role/reporting/state/active + GIN on `districts`. Legacy `role` CharField retained.
+- [x] **Create `workflow/` app models** — `ApprovalWorkflow`, `ApprovalInstance` (GenericFK + status CHECK + partial approver index), `ApprovalAction` (action CHECK).
+- [x] **Create `audit/` app** — `AuditLog` (denormalised actor, all 5 indexes incl. `created_at DESC`).
+- [x] **Create `accounts/models/device.py`** — `DeviceRegistration`, `RefreshTokenBlacklist`.
+- [x] **Write and apply migrations** — `accounts/0005` (fake-applied; schema from obsolete branch), `workflow/0001`, `audit/0001` real; `accounts/0008` (remediation — adds missing column/indexes/constraints); `accounts/0009` (model-DB alignment for Region nullable fields).
+- [x] **Write data migration** — `accounts/0006_seed_rbac_catalog` (fake-applied; partial data existed; 0008 completed seeding of regions + viewer role) and `workflow/0002_seed_workflows` (fake-applied; data already present).
+- [x] **Backfill** — `accounts/0007_backfill_primary_role` (fake-applied; 0008 completed backfill for the 1 remaining NULL user).
+- [x] **Add all indexes** as defined in schema doc — done (0008 adds the missing GIN + partial index).
+- [x] **Register all new models in `admin.py`** — `accounts`, `workflow`, `audit` admin registered; `AuditLog`/`ApprovalAction` are read-only to honour append-only intent.
 
 ### Deliverable
-`python manage.py migrate` runs cleanly. All preset roles and permissions exist in the DB. Existing users have `primary_role_id` set.
-*Status: not met — no Role/Permission tables exist.*
+`python manage.py migrate` runs cleanly. All preset roles and permissions exist in the DB. Existing users have `primary_role` set.
+*Status: **met** (verified 2026-06-25 after remediation). 48 permissions, 7 roles (incl. backward-compat `viewer`), 3 approval workflows, 5 regions seeded; all migrations `[X]`; `manage.py check` and `makemigrations --check` clean. See `01-DATABASE-SCHEMA.md` and `03-PRESET-ROLES.md` for the as-built details and deviations.*
 
 ---
 
@@ -338,7 +373,7 @@ Phase 0 (Infrastructure)
 ```
 Phase 7 (Admin Portal UI) ── DONE (Roles/Permissions/Approvals pages ORPHANED) ┐
                                                                                 │ unblocks
-Phase 0 (Infra)  ── DONE ──► Phase 1 (DB Schema) ── TODO ──► Phase 2 (Engine) ──┤
+Phase 0 (Infra)  ── DONE ──► Phase 1 (DB Schema) ── DONE ──► Phase 2 (Engine) ──┤
                                        │                                        │
                                        ├──► Phase 3 (Approval) ── TODO ─────────┤
                                        ├──► Phase 4 (Audit)    ── TODO          │
@@ -358,7 +393,7 @@ Completing the **Phase 5 roles/permissions/approvals APIs** (which requires Phas
 | Phase | Status | % | Primary remaining work |
 |-------|--------|---|------------------------|
 | 0 — Prerequisites | ✅ Done | 100% | Complete. (JWT kept at 12h by decision; beat schedule deferred to Phase 3.) |
-| 1 — DB Schema | 🟡 Partial | ~15% | Create Role/Permission/UserPermission/Region/Device + workflow + audit tables; real `primary_role` FK; seed + backfill. |
+| 1 — DB Schema | ✅ Done | 100% | All migrations applied (`accounts/0005`–`0009`, `workflow/0001`–`0002`, `audit/0001`). 48 perms / 7 roles / 5 regions / 3 workflows seeded; all 4 users backfilled. Two remediation migrations (0008, 0009) closed schema gaps from obsolete branch. |
 | 2 — Permission Engine | 🔄 Differently | ~10% | PermissionService, ABAC resolution, `perms` JWT claim, `HasFPSPermission`, cache invalidation. |
 | 3 — Approval Workflow | 🟡 Partial | ~10% | ApprovalEngine + state machine, transition APIs, signals, escalation. |
 | 4 — Audit Engine | 🔄 Differently | ~15% | Real `AuditLog` table, async writes, full instrumentation, immutability (replace synthesis). |

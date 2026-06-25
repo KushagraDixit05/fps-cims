@@ -31,14 +31,14 @@ Audited against the active `feature/RBAC` branch (→ `main`). The unmerged `fea
 
 **What exists today is essentially the "seed, not architecture" starting point this plan set out to replace**, plus a largely-complete admin UI:
 
-- **Roles/permissions:** still the original 3-value `role` CharField (`field_executive`/`admin`/`viewer`). No `Role`/`Permission`/`UserPermission`/`Region` tables. Authorization is coarse (`IsStaffUser` + per-view owner-filtered querysets), **not** the ABAC-lite model below.
+- **Roles/permissions:** Phase 1 complete — `Role`/`Permission`/`RolePermission`/`UserPermission`/`Region`/`UserRegion`/`DeviceRegistration`/`RefreshTokenBlacklist` tables all exist and are seeded (48 permissions, 7 roles, 5 regions). `User.primary_role` is a real FK to `accounts_role`. Authorization **logic** is still coarse (`IsStaffUser` + per-view owner-filtered querysets) — that is Phase 2.
 - **JWT:** carries `role`/`is_staff`/`is_superuser`, **not** a `perms` claim. Mobile reads role for display only.
 - **Approval workflow:** only `approval_status`/`approved_at` fields exist; no engine, no maker-checker, no APIs.
 - **Audit:** **synthesized on read** from submission tables — no persistent, immutable audit log.
 - **Infrastructure:** **Phase 0 complete** — Redis (docker-compose), a Celery app (`fps_backend/celery.py`), `django-simple-history`, and the JWT `token_blacklist` app are now wired in. Nothing yet *consumes* them (no cache layer or async tasks until Phases 2–4), but the broker + worker boot cleanly.
 - **Admin portal (Next.js 16):** largely built. Users, Analytics, and (pseudo-)Audit are wired to real APIs. **Roles, Permissions, and Approvals pages are orphaned** — they call `/api/admin/roles|permissions|approvals`, which do not exist on this branch.
 
-**Net:** the frontend is ahead of its backend. The current priority is building the backend RBAC engine (DB schema → permission engine → admin APIs) to match the existing UI.
+**Net:** Phase 0 and Phase 1 (DB schema) are complete. The next priority is building the backend RBAC engine (permission engine → approval workflow → admin APIs) to match the existing UI.
 
 ---
 
@@ -120,9 +120,9 @@ Permissions are enforced at three layers:
 
 | File | Contents | Status (2026-06-25) |
 |------|----------|---------------------|
-| `01-DATABASE-SCHEMA.md` | All tables, fields, indexes, relationships | 🟡 Partial — only User extensions + `approval_status` |
+| `01-DATABASE-SCHEMA.md` | All tables, fields, indexes, relationships | ✅ Built (Phase 1 complete) |
 | `02-PERMISSION-ENGINE.md` | How permissions are stored, resolved, cached | 🔄 Done differently — coarse role/owner gating |
-| `03-PRESET-ROLES.md` | Recommended roles with full permission sets | ⛔ Not started — roles are a 3-value CharField |
+| `03-PRESET-ROLES.md` | Recommended roles with full permission sets | ✅ Built (Phase 1 — 7 roles seeded with permission matrix) |
 | `04-BACKEND-ARCHITECTURE.md` | Django apps, DRF classes, middleware, services | 🟡 Partial — `accounts`/`admin_portal` real; `workflow`/`audit` empty |
 | `05-APPROVAL-WORKFLOW.md` | Maker-checker lifecycle, state machine, engine | 🟡 Partial — status fields only, no engine |
 | `06-ADMIN-PANEL.md` | Admin portal pages, flows, API strategy, stack | 🟡 Mostly built — roles/perms/approvals orphaned |
