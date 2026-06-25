@@ -2,14 +2,13 @@
 
 How permissions are defined, resolved, cached, and delivered to mobile clients.
 
-> **Status (2026-06-25): 🔄 Done differently.** The design below is the **target engine**; it is not built. Authorization today is coarse and role-based. See *Implementation Notes*.
+> **Status (2026-06-26): ✅ Built.** The permission engine, caching, JWT embedding, and DRF permission classes described below are fully implemented in Phase 2.
 
 ## Implementation Notes (current state)
 
-- **No permission catalogue, no `PermissionService`, no ABAC resolution, no override layer, no Redis cache.**
-- Enforcement is two-layered: `admin_portal/permissions.py::IsStaffUser` (admin endpoints) + owner-scoped `get_queryset()` in `crops`/`mandi`/`product_demo` views (field data).
-- JWT (`accounts/token_serializers.py::CustomTokenObtainPairSerializer`) embeds `role`, `is_staff`, `is_superuser`, `email`, `full_name` — **not** a `perms` list. Clients cannot resolve fine-grained permissions offline.
-- The `can_<verb>_<subject>` codenames and evaluation order in this doc are aspirational; nothing reads them.
+- **Permission catalogue, `PermissionService`, ABAC resolution, override layer, and Redis cache** are fully implemented in `accounts.services.permission_service`. Cache invalidation runs via Django signals.
+- **Enforcement:** `accounts.permissions.HasFPSPermission` operates via JWT fast-path or DB fallback. `RegionScopedQuerysetMixin` handles object-level regional filtering. The existing `IsStaffUser` and owner-scoped `get_queryset()` are temporarily retained as defense-in-depth until the mobile client is fully updated.
+- **JWT:** `CustomTokenObtainPairSerializer` now embeds the resolved `perms` list alongside `role_id`, `state`, and `districts`.
 
 ---
 

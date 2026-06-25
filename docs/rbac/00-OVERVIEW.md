@@ -21,18 +21,19 @@ As FPS scales to multiple states, regional teams, verification workflows, and ev
 
 This document is the top-level architecture overview. Detailed implementation lives in numbered sibling documents.
 
-> **Status (2026-06-25):** This document describes the **target architecture**. Most of it is **not yet built**. See §1a below and the status banners on each sibling doc; the authoritative status matrix lives in `11-IMPLEMENTATION-PHASES.md`.
+> **Status (2026-06-26):** Phase 1 (Schema) and Phase 2 (Permission Engine) are now complete. The architecture described below for permissions is live. Approvals and Audit are still pending. See the authoritative status matrix in `11-IMPLEMENTATION-PHASES.md`.
 
 ---
 
-## 1a. Implementation Status (2026-06-25)
+## 1a. Implementation Status (2026-06-26)
 
 Audited against the active `feature/RBAC` branch (→ `main`). The unmerged `feature/rbac-implementation` branch is experimental/obsolete and is **not** counted.
 
-**What exists today is essentially the "seed, not architecture" starting point this plan set out to replace**, plus a largely-complete admin UI:
+**Phases 1 (Schema) and 2 (Permission Engine) are fully built and integrated:**
 
-- **Roles/permissions:** Phase 1 complete — `Role`/`Permission`/`RolePermission`/`UserPermission`/`Region`/`UserRegion`/`DeviceRegistration`/`RefreshTokenBlacklist` tables all exist and are seeded (48 permissions, 7 roles, 5 regions). `User.primary_role` is a real FK to `accounts_role`. Authorization **logic** is still coarse (`IsStaffUser` + per-view owner-filtered querysets) — that is Phase 2.
-- **JWT:** carries `role`/`is_staff`/`is_superuser`, **not** a `perms` claim. Mobile reads role for display only.
+- **Roles/permissions:** Phase 1 complete — `Role`/`Permission`/`RolePermission`/`UserPermission`/`Region`/`UserRegion`/`DeviceRegistration`/`RefreshTokenBlacklist` tables all exist and are seeded (48 permissions, 7 roles, 5 regions). `User.primary_role` is a real FK to `accounts_role`.
+- **Permission Engine:** Phase 2 complete — `PermissionService` resolves ABAC-lite rules with Redis caching. DRF classes (`HasFPSPermission`, `OwnEntryOrCheckerPermission`) and mixins (`RegionScopedQuerysetMixin`) are in place.
+- **JWT:** embeds `perms` (sorted list), `role_id`, `state`, and `districts`.
 - **Approval workflow:** only `approval_status`/`approved_at` fields exist; no engine, no maker-checker, no APIs.
 - **Audit:** **synthesized on read** from submission tables — no persistent, immutable audit log.
 - **Infrastructure:** **Phase 0 complete** — Redis (docker-compose), a Celery app (`fps_backend/celery.py`), `django-simple-history`, and the JWT `token_blacklist` app are now wired in. Nothing yet *consumes* them (no cache layer or async tasks until Phases 2–4), but the broker + worker boot cleanly.
@@ -118,10 +119,10 @@ Permissions are enforced at three layers:
 
 ## 4. Document Index
 
-| File | Contents | Status (2026-06-25) |
+| File | Contents | Status (2026-06-26) |
 |------|----------|---------------------|
 | `01-DATABASE-SCHEMA.md` | All tables, fields, indexes, relationships | ✅ Built (Phase 1 complete) |
-| `02-PERMISSION-ENGINE.md` | How permissions are stored, resolved, cached | 🔄 Done differently — coarse role/owner gating |
+| `02-PERMISSION-ENGINE.md` | How permissions are stored, resolved, cached | ✅ Built (Phase 2 complete) |
 | `03-PRESET-ROLES.md` | Recommended roles with full permission sets | ✅ Built (Phase 1 — 7 roles seeded with permission matrix) |
 | `04-BACKEND-ARCHITECTURE.md` | Django apps, DRF classes, middleware, services | 🟡 Partial — `accounts`/`admin_portal` real; `workflow`/`audit` empty |
 | `05-APPROVAL-WORKFLOW.md` | Maker-checker lifecycle, state machine, engine | 🟡 Partial — status fields only, no engine |

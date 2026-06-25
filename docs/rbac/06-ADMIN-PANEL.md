@@ -1,6 +1,6 @@
 # Admin Panel Architecture
 
-> **Status (2026-06-25): 🟡 Mostly built (UI ahead of backend).** The portal is live, but several pages call backend endpoints that do not exist. See *Implementation Notes*.
+> **Status (2026-06-26): 🟡 Mostly built (Approvals pending).** The portal is live, and Phase 2 un-orphaned the Roles and Permissions pages. See *Implementation Notes*.
 
 ## Implementation Notes (current state)
 
@@ -12,8 +12,8 @@ Built with **Next.js 16** (this doc says 15), shadcn/ui, Tailwind, TanStack Quer
 | User Management | ✅ built + wired (`/api/admin/users/*`) |
 | Analytics | ✅ built + wired (`/api/admin/analytics/*`) |
 | Audit Log Viewer | ✅ built + wired, but reads **synthesized** audit (see `08`) |
-| Role Management | 🟡 UI built, **orphaned** — calls missing `/api/admin/roles/*` |
-| Permission Management | 🟡 UI built, **orphaned** — calls missing `/api/admin/permissions/`, `/api/admin/user-permissions/` |
+| Role Management | ✅ built + wired (`/api/admin/roles/*`) |
+| Permission Management | ✅ built + wired (`/api/admin/permissions/`, `/api/admin/user-permissions/`) |
 | Approval Queue | 🟡 UI built, **orphaned** — calls missing `/api/admin/approvals/*` |
 | Region Management | ⛔ not built |
 | Sync Monitor | ⛔ not built |
