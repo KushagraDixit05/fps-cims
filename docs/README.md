@@ -40,13 +40,20 @@ the repo-root [README.md](../README.md). Start here to find a specific doc.
 |---|---|
 | [agri-intelligence-map/FULL-SPEC.md](agri-intelligence-map/FULL-SPEC.md) | Complete spec — architecture, layers, API design, PostGIS queries, frontend components, deployment. Merged to `main` on 19 June 2026. |
 
-## RBAC (feature/rbac-implementation)
+## RBAC (feature/RBAC)
 
 The [rbac/](rbac/) folder holds the 12-doc RBAC architecture (overview, database schema,
 permission engine, preset roles, backend, approval workflow, admin panel, mobile
-integration, audit, security, scalability, implementation phases). The backend engine
-lives on the `feature/rbac-implementation` branch; the admin-portal Roles/Permissions/
-Approvals/Audit pages exist on `main` as frontend.
+integration, audit, security, scalability, implementation phases).
+
+**Current status (26 June 2026):**
+- **Phase 0** ✅ — Redis, Celery, `django-simple-history`, `token_blacklist` wired
+- **Phase 1** ✅ — DB schema complete and applied; 7 roles / 48 permissions / 5 regions / 3 workflows seeded; all migrations `[X]`
+- **Phase 2** ⛔ — Permission engine (`PermissionService`, ABAC resolution, `perms` JWT claim) — **next up**
+- **Phases 3–5** ⛔ — Approval workflow engine, Audit engine, Admin APIs — not started
+
+The active branch is **`feature/RBAC`**. The `feature/rbac-implementation` branch is **obsolete — do not use it**.
+The admin-portal Roles/Permissions/Approvals/Audit pages exist on `main` as frontend but are currently **orphaned** (the backend APIs they call do not yet exist).
 
 ## Enhancement Phases (feature roadmap)
 

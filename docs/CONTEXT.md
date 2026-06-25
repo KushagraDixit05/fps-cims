@@ -41,8 +41,15 @@
 ```
 fps/
 ├── backend/                        ← Django project
-│   ├── accounts/                   ← Custom user model, JWT auth, registration
-│   │   ├── models.py               ← Custom User (role + region + phone_number)
+│   ├── accounts/                   ← Custom user model, JWT auth, RBAC tables
+│   │   ├── models/                 ← Model package (refactored from single models.py)
+│   │   │   ├── __init__.py         ← Re-exports all models (backward-compat)
+│   │   │   ├── user.py             ← Custom User (role + primary_role FK + region + phone_number + RBAC fields)
+│   │   │   ├── role.py             ← Role, RolePermission
+│   │   │   ├── permission.py       ← Permission catalogue (48 codenames)
+│   │   │   ├── user_permission.py  ← UserPermission (allow/deny + expiry + CHECK constraint)
+│   │   │   ├── region.py           ← Region, UserRegion
+│   │   │   └── device.py           ← DeviceRegistration, RefreshTokenBlacklist
 │   │   ├── serializers.py          ← UserProfileSerializer, RegisterSerializer
 │   │   ├── views.py                ← MeView (GET), RegisterView (POST auto-login)
 │   │   └── urls.py                 ← /me/ and /register/
@@ -253,10 +260,15 @@ fps/
 | **Product Demo Module** | ✅ **Done** | Full 4-step wizard (backend + mobile) — new `product_demo` Django app, before/after split + multi-variety (schema v6/v7) |
 | **Phase 3 — Offline Sync** | ✅ **Done** | WatermelonDB **schema v8**, write operations per module, background auto-sync, sync dashboard |
 | **Phase 4 — UI Redesign** | 🔄 **In Progress** | Design system, new auth flow (Splash/Welcome/Login/Signup), redesigned Home, drawer nav — active via AppNavigatorV2 |
-| **Admin Portal** | ✅ **Done** | Next.js 16 at `admin-portal/`; Dashboard, Analytics, Users, Roles, Permissions, Approvals, Audit, Field Data (Visits/Mandi/Demos) with CSV export |
+| **Admin Portal** | ✅ **Done** | Next.js 16 at `admin-portal/`; Dashboard, Analytics, Users, Roles, Permissions, Approvals, Audit, Field Data (Visits/Mandi/Demos) with CSV export. Roles/Permissions/Approvals pages are **orphaned** (call pending Phase 5 APIs). |
+| **Agri Intelligence Map** | ✅ **Merged** | Geospatial command-center (MapLibre + deck.gl + Django `geo` app) — merged to `main`. |
 | **Cloud Deployment** | ✅ **Done** | Dockerized backend on Render, PostgreSQL+PostGIS, auto-migrate/seed, release APK (app v1.4) distributed |
-| **RBAC (permission engine)** | 🧪 **On branch** | Architecture documented (`docs/rbac/`); backend engine on `feature/rbac-implementation`. Admin-portal Roles/Permissions/Approvals/Audit pages exist on `main` as frontend. |
-| **Agri Intelligence Map** | 🧪 **On branch** | Geospatial command-center (MapLibre + deck.gl + Django `geo` app) on `feature/agri-intelligence-map`. **Not merged to `main`.** |
+| **RBAC Phase 0** | ✅ **Done** | Redis, Celery, `django-simple-history`, `token_blacklist` wired. On `feature/RBAC`. |
+| **RBAC Phase 1** | ✅ **Done** | DB schema complete and applied — 7 roles / 48 permissions / 5 regions / 3 workflows / all users backfilled. Migrations `0005`–`0009` all `[X]`. On `feature/RBAC`. |
+| **RBAC Phase 2** | ⛔ **Not started** | Permission engine — `PermissionService`, ABAC resolution, `perms` JWT claim, `HasFPSPermission`. On `feature/RBAC`. |
+| **RBAC Phase 3** | ⛔ **Not started** | Approval workflow engine — state machine, transition APIs, escalation. On `feature/RBAC`. |
+| **RBAC Phase 4** | ⛔ **Not started** | Audit engine — persistent append-only `AuditLog` writes. On `feature/RBAC`. |
+| **RBAC Phase 5** | ⛔ **Not started** | Admin Portal APIs — roles/permissions/regions/approvals CRUD (will un-orphan admin portal pages). On `feature/RBAC`. |
 
 ---
 
@@ -267,8 +279,10 @@ fps/
 # Terminal 1 — Backend
 cd "/media/kushagra/crucial/FPS internship/fps/backend"
 docker compose up -d
-source venv/bin/activate
-python manage.py runserver 0.0.0.0:8000
+# Either activate the venv:
+source venv/bin/activate && python manage.py runserver 0.0.0.0:8000
+# ...or call the venv Python directly (no activation needed):
+venv/bin/python manage.py runserver 0.0.0.0:8000
 
 # Terminal 2 — Metro
 cd "/media/kushagra/crucial/FPS internship/fps/mobile/FarmProsperity"
@@ -427,10 +441,50 @@ All endpoints (except auth) require: `Authorization: Bearer <access_token>`
 
 ## Key Django Models
 
-### `accounts.User`
-- `role`: `field_executive` | `admin` | `viewer`
-- `region`: string (e.g. "Nanded", "Guntur")
+### `accounts.User` (extends AbstractUser, BigAutoField PK)
+- `role`: `field_executive` | `admin` | `viewer` | `checker` | `regional_head` | `manager` | `super_admin` (legacy CharField — retained as one-sprint fallback)
+- `primary_role`: FK → `accounts.Role` (`on_delete=RESTRICT`; `null=True` during migration window) — **authoritative RBAC role**
+- `region`: string (legacy freeform field)
 - `phone_number`: optional string
+- `employee_id`: optional unique string
+- `state`, `districts` (JSONField): geographic scope fields
+- `reporting_to`: self-FK for hierarchy
+- `created_by`, `deactivated_by`: self-FKs for audit trail
+- `deactivated_at`, `deactivation_reason`: soft-delete fields
+- `last_login_device`, `last_login_ip`: security tracking
+- `profile_photo`: URL/path string
+- `updated_at`: auto-now timestamp
+
+### `accounts.Role` (UUID PK)
+- `code`: unique slug (field_executive/checker/regional_head/manager/admin/super_admin/viewer)
+- `name`, `description`: display fields
+- `is_preset`: boolean (preset roles cannot be deleted)
+- 7 preset roles seeded; full permission matrix via `RolePermission`
+
+### `accounts.Permission` (UUID PK)
+- `codename`: unique slug (e.g. `can_submit_crop_entries`)
+- `name`, `description`: display fields
+- `module`: which app this permission belongs to
+- 48 permissions seeded across 6 modules
+
+### `accounts.Region` (UUID PK)
+- `code`, `name`, `state`, `district`, `taluka`: geographic hierarchy
+- `parent`: self-FK (state → district → taluka tree)
+- `is_active`: boolean
+- 5 regions seeded (MH, MP, MH-NAN, MH-LAT, MP-KHG)
+
+### `workflow.ApprovalWorkflow`
+- `name`, `module`, `model_name`: identifies what is being approved
+- `approver_role_codes`: list of roles that can approve
+- `escalation_hours`: auto-escalation threshold
+- 3 templates seeded (Crop Visit, Mandi Arrival, Product Demo)
+
+### `audit.AuditLog` (UUID PK)
+- `action`: created/updated/deleted/approved/rejected/exported
+- `actor_id`, `actor_name`, `actor_role`: denormalised for immutability
+- `content_type` / `object_id`: generic FK to any record
+- `changes`: JSONField diff
+- `ip_address`, `user_agent`: security metadata
 
 ### `crops.FarmerVisit` (UUID PK)
 - `executive` → FK to User

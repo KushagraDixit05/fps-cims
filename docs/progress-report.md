@@ -1,11 +1,29 @@
 # Farm Prosperity Solutions (FPS) — Progress Report
 
-> **Last updated:** 22 June 2026
-> **Overall status:** Phases 0–4 (partial) complete · Admin Portal live · Agri Intelligence Map live · Cloud deployed on Render + Vercel · Release APK **v1.4** distributed · **Production-critical stabilization pass applied**
+> **Last updated:** 26 June 2026
+> **Overall status:** Phases 0–4 (partial) complete · RBAC Phase 1 (DB schema) complete on `feature/RBAC` · Admin Portal live · Agri Intelligence Map live · Cloud deployed on Render + Vercel · Release APK **v1.4** distributed · **Production-critical stabilization pass applied**
+
+---
+
+## Changes since 25 June 2026
+
+> On branch `feature/RBAC` (active RBAC development branch).
+
+- **RBAC Phase 1 (Database Schema) — verified complete and fully applied.** A comprehensive audit discovered that although Phase 1 model code had been authored, the four core migrations (`accounts/0005`–`0007`, `workflow/0002`) had **never been applied** to the development database (tables existed from the now-obsolete `feature/rbac-implementation` branch, causing Django's `migrate` to fail with `DuplicateTable` errors).
+  - All four migrations fake-applied (`--fake`) to register them in migration history.
+  - New remediation migration `accounts/0008_rbac_schema_gaps` closes all schema gaps the obsolete branch left behind: adds missing `accounts_user.updated_at` column, GIN `idx_user_districts` index, `idx_userperm_expires` partial index, and five missing UNIQUE/CHECK constraints (`uniq_role_permission`, `uniq_user_permission`, `uniq_user_region`, `uniq_user_device`, `ck_userperm_effect`).
+  - Seeds the 5 missing Regions (MH, MP, MH-NAN, MH-LAT, MP-KHG) and the missing `viewer` Role (6 of 7 roles had existed).
+  - Backfills `primary_role` for the one user still NULL after the earlier migration.
+  - Migration `accounts/0009_align_region_district_taluka_nonnull` aligns `Region.district`/`.taluka` model fields (were `null=True`) with the actual DB columns (`NOT NULL`) by switching to `blank=True, default=''`.
+  - `manage.py check` → 0 issues · `makemigrations --check` → No changes detected · All migrations `[X]`.
+  - **Final verified DB state:** 7 roles / 48 permissions / 5 regions / 3 approval workflows / all 4 users backfilled with `primary_role`.
+- **Documentation updated:** `docs/rbac/11-IMPLEMENTATION-PHASES.md` Phase 1 section now documents the full audit trail. `docs/rbac/00-OVERVIEW.md`, `docs/README.md`, `docs/CONTEXT.md`, `docs/progress-report.md`, and root `README.md` updated.
+- **`feature/rbac-implementation` branch is obsolete.** The active RBAC branch is `feature/RBAC`. Do not use `feature/rbac-implementation`.
 
 ---
 
 ## Changes since 19 June 2026
+
 
 > On branch `feature/business-enhancements` (**not yet merged to `main`**).
 
@@ -38,7 +56,7 @@
 - **`next.config.ts` updated** — added `transpilePackages` for deck.gl/luma.gl/math.gl suite to fix Turbopack production build hang on Vercel.
 
 **On feature branches (not merged to `main`):**
-- `feature/rbac-implementation` — full RBAC permission engine (architecture in `docs/rbac/`). The DB columns for RBAC fields now exist on `main` (via `0004_add_rbac_fields`); enforcement logic remains on this branch.
+- `feature/RBAC` — RBAC implementation (Phase 1 DB schema complete; Phase 2 permission engine next). The DB columns for RBAC fields exist on `feature/RBAC` via migrations `accounts/0005`–`0009`. The `feature/rbac-implementation` branch is **obsolete** — do not use it.
 
 ---
 

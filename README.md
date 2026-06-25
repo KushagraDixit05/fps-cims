@@ -62,8 +62,8 @@ Upstream, regional managers and analysts consume the synced data through a web a
 | Module | Status | Branch | Details |
 |---|---|---|---|
 | **UI Redesign (Phase 4)** | 🔄 Active | `main` | New design system, auth flow v2, drawer nav — screens-v2 active; remaining screens in progress |
-| **RBAC** | 🧪 Feature branch | `feature/rbac-implementation` | Full permission engine (ABAC-lite), 6 preset roles, maker-checker approval workflow, 12-doc architecture |
-| **Agri Intelligence Map** | 🧪 Feature branch | `feature/agri-intelligence-map` | Geospatial command-center (MapLibre + deck.gl), PostGIS backend, India-only geographic confinement |
+| **RBAC — Permission Engine** | 🔄 In progress | `feature/RBAC` | Phase 1 (DB schema) complete — 7 roles, 48 permissions, 5 regions, 3 approval workflows seeded. Phase 2 (permission engine) next. |
+| **Agri Intelligence Map** | ✅ Merged | `main` | Geospatial command-center (MapLibre + deck.gl), PostGIS backend, India-only geographic confinement |
 
 ---
 
@@ -257,8 +257,8 @@ FPS uses a **Render deployment blueprint** (`render.yaml`) targeting the Singapo
 |---|---|---|
 | **v1.0 – v1.4** | ✅ Shipped | Core field-data modules (crop, mandi, demo), offline sync engine, admin portal, production hardening |
 | **v1.5** | 🔄 In progress | Phase 4 UI redesign — new design system, redesigned auth flow and all module screens |
-| **v2.0** | 🧪 Planned | Full RBAC engine — 6 preset roles, ABAC-lite permissions in JWT, maker-checker approval workflow |
-| **v2.1** | 🧪 Planned | Agri Intelligence geospatial map — district/village heat maps, crop coverage overlays (MapLibre + deck.gl) |
+| **v2.0** | 🔄 In progress | RBAC engine — Phase 1 (DB schema) ✅ done; Phase 2 (permission engine + `perms` JWT claim) in progress on `feature/RBAC` |
+| **v2.1** | ✅ Merged | Agri Intelligence geospatial map — district/village heat maps, crop coverage overlays (MapLibre + deck.gl) |
 
 ---
 
