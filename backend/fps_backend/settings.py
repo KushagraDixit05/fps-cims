@@ -89,6 +89,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # Phase 2: attaches _fps_request_id + _fps_actor_ip to every request for
+    # audit context (Phase 4 will dispatch async AuditLog writes from here).
+    'accounts.middleware.AuditContextMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -258,6 +261,27 @@ SIMPLE_JWT = {
     # them (requires the token_blacklist app, added in INSTALLED_APPS above).
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# ---------------------------------------------------------------------------
+# Redis Django cache — Phase 2 Permission Engine.
+# Uses DB 1 to keep the cache namespace separate from Celery's broker (DB 0).
+# django-redis is already in requirements.txt (installed in Phase 0).
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            # Connection pool settings tuned for a small deployment.
+            'CONNECTION_POOL_KWARGS': {'max_connections': 20},
+            # Silently ignore Redis connection errors so a Redis outage
+            # degrades gracefully to DB lookups rather than a 500.
+            'IGNORE_EXCEPTIONS': True,
+        },
+        'KEY_PREFIX': 'fps',
+        'TIMEOUT': 300,  # default TTL matches PermissionService.CACHE_TTL
+    }
 }
 
 # ---------------------------------------------------------------------------

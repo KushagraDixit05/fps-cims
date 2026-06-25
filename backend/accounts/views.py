@@ -52,3 +52,63 @@ class RegisterView(APIView):
             'user': profile.data,
         }, status=status.HTTP_201_CREATED)
 
+
+class ResetPasswordView(APIView):
+    """
+    Allows admin/staff users to set a new password for any user by ID.
+    POST /api/auth/reset-password/
+
+    Request body:
+        user_id   (required) — ID of the target user
+        password  (required) — new plain-text password (min 8 chars)
+
+    Requires: is_staff or is_superuser.
+    Invalidates all existing outstanding refresh tokens for the target user
+    after the password change to force re-authentication.
+
+    Phase 2 — Admin Portal APIs (Phase 5) will expose a dedicated admin
+    endpoint; this lives in accounts/ so it can also be called from Django Admin.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from django.contrib.auth import get_user_model
+        from rest_framework_simplejwt.token_blacklist.models import (
+            OutstandingToken, BlacklistedToken
+        )
+
+        if not (request.user.is_staff or request.user.is_superuser):
+            return Response(
+                {'detail': 'Admin access required.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        user_id = request.data.get('user_id')
+        new_password = request.data.get('password', '')
+
+        if not user_id:
+            return Response({'detail': 'user_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(str(new_password)) < 8:
+            return Response(
+                {'detail': 'Password must be at least 8 characters.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        User = get_user_model()
+        try:
+            target = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        target.set_password(new_password)
+        target.save(update_fields=['password'])
+
+        # Blacklist all outstanding refresh tokens for the target user so they
+        # must re-authenticate with the new password.
+        outstanding = OutstandingToken.objects.filter(user=target)
+        for token in outstanding:
+            BlacklistedToken.objects.get_or_create(token=token)
+
+        return Response({
+            'detail': f'Password reset for {target.username}. All sessions invalidated.',
+        })
