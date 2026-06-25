@@ -12,5 +12,13 @@ services:
     volumes:
       - fps_postgres_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - fps_redis_data:/data
+
 volumes:
   fps_postgres_data:
+  fps_redis_data:

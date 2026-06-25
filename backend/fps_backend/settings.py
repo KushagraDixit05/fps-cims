@@ -65,6 +65,9 @@ INSTALLED_APPS = [
     'django_filters',
     'cloudinary_storage',  # durable media (photo) storage — see MEDIA config below
     'cloudinary',
+    'simple_history',  # model history (RBAC audit foundation — wired to models in Phase 4)
+    'django_celery_beat',  # DB-backed periodic task scheduler for Celery
+    'rest_framework_simplejwt.token_blacklist',  # refresh-token revocation / force-logout
 
     # FPS apps — order matters: accounts first (custom user model)
     'accounts',
@@ -243,9 +246,23 @@ AUTH_USER_MODEL = 'accounts.User'
 # JWT token settings
 from datetime import timedelta
 SIMPLE_JWT = {
+    # 12h access lifetime is the established project setting (RBAC docs suggest 8h
+    # for field use; we keep 12h deliberately — see docs/rbac/11-IMPLEMENTATION-PHASES.md).
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': False,
+    # Blacklist rotated refresh tokens so revocation / force-logout actually invalidates
+    # them (requires the token_blacklist app, added in INSTALLED_APPS above).
+    'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+# ---------------------------------------------------------------------------
+# Celery — async task layer (RBAC prerequisite). Broker/result backend are Redis.
+# In local dev the Redis container from docker-compose.yml serves these. No
+# periodic schedule is registered yet — the escalation beat task lands in Phase 3.
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+# Retain connection-retry-on-startup behavior (default flips in Celery 6).
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
