@@ -1,5 +1,17 @@
 # Audit System
 
+> **Status (2026-06-25): 🔄 Done differently.** There is no audit table; events are **synthesized on read**. See *Implementation Notes*.
+
+## Implementation Notes (current state)
+
+- The `audit/` app is empty. `admin_portal/views.py::_build_audit_events()` reconstructs an "audit feed" at request time by scanning submission tables (user registrations + the three submission types) and serves it via `/api/admin/audit/` and `/api/admin/audit/export/`.
+- Consequences vs the goals below:
+  - **Not immutable / not written** — nothing is persisted; it is recomputed each request.
+  - **Not comprehensive** — only `create`-type events; **no** logins, role/permission changes, approvals, updates, or deletes.
+  - **No async (Celery)** — synthesis is synchronous.
+  - **Missing fields** — `actor_ip`, `actor_device`, `changes`, and `request_id` are always empty.
+- `django-simple-history` is not installed; no DB immutability rules exist.
+
 ---
 
 ## 1. Design Goals

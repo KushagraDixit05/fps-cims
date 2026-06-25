@@ -1,5 +1,15 @@
 # Scalability Architecture
 
+> **Status (2026-06-25): ⛔ Not started.** None of the scalability machinery below is in place. See *Implementation Notes*.
+
+## Implementation Notes (current state)
+
+- **Redis available, but no cache layer yet** — Phase 0 added a Redis service (docker-compose) and points Celery at it, but Django `CACHES` is not configured, so there is still no permission cache. Wiring `CACHES` to Redis is Phase 2.
+- **Celery wired, but idle** — Phase 0 bootstrapped a Celery app (`fps_backend/celery.py`) that boots against Redis; no tasks are dispatched yet, so audit/notification writes remain synchronous until Phases 3–4.
+- **No partial/partition indexes** from this doc — most referenced tables (`accounts_role`, `workflow_approvalinstance`, `audit_auditlog`) don't exist yet.
+- Current querysets rely on Django defaults plus a few `select_related()` calls (e.g. `crops/views.py`). Optimization is premature until the Phase 1 schema lands.
+- Treat this entire document as **target architecture** to revisit once the RBAC data model and approval/audit engines exist.
+
 ---
 
 ## 1. Database Indexing Strategy

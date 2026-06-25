@@ -1,5 +1,16 @@
 # Backend Architecture
 
+> **Status (2026-06-25): 🟡 Partial.** The app layout exists, but two of the new apps are empty shells and the permission/middleware machinery is not built. See *Implementation Notes*.
+
+## Implementation Notes (current state)
+
+- **`accounts`** — real, extended: custom `User`, `CustomTokenObtainPairSerializer`, auth views (`/api/auth/login|refresh|register|me`). Still a single `models.py` (not the `models/` package this doc implies). No `Role`/`Permission`/`Region`/`Device` models.
+- **`admin_portal`** — real: user-management, analytics, and pseudo-audit views, gated by `IsStaffUser`. **No** roles/permissions/regions/approvals views.
+- **`workflow`** — ⛔ **empty shell** (directory exists; no `models.py`/`views.py`/`urls.py`).
+- **`audit`** — ⛔ **empty shell** (no models; audit is synthesized inside `admin_portal`).
+- **`crops`/`mandi`/`product_demo`** — existing; gained `approval_status`/`approved_at` fields and owner-filtered querysets.
+- **Not present:** `fps_backend/permissions.py`, `fps_backend/middleware.py` (no `AuditContextMiddleware`), and any global DRF permission classes beyond `IsStaffUser`.
+
 ---
 
 ## 1. Django App Structure

@@ -1,5 +1,22 @@
 # RBAC Database Schema
 
+> **Status (2026-06-25): 🟡 Partial.** The design below is the **target schema**. On the active `feature/RBAC` branch, none of the RBAC-specific tables exist yet. The only changes that landed are field additions to the existing `accounts_user` table and an `approval_status`/`approved_at` column on each submission model. See *Implementation Notes* below.
+
+## Implementation Notes (current state)
+
+**Created:**
+- `accounts_user` extensions (migrations `0003`/`0004`): `employee_id`, `profile_photo`, `state`, `districts` (JSON), `reporting_to` (self-FK), `created_by`, `deactivated_at`/`deactivated_by`, `deactivation_reason`, `last_login_device`, `last_login_ip`, and a **stub `primary_role_id` UUIDField** (not an FK — there is no `accounts_role` table to point at).
+- `approval_status` (CharField, default `'draft'`) and `approved_at` on `crops_farmervisit`, `mandi_mandiarrival`, `product_demo_productdemo`.
+
+**Not created (entire target relational core is absent):**
+- `accounts_role`, `accounts_rolepermission`, `accounts_permission`, `accounts_userpermission`
+- `accounts_region`, `accounts_userregion`
+- `accounts_deviceregistration`, refresh-token blacklist tables
+- `workflow_approvalworkflow`, `workflow_approvalinstance`, `workflow_approvalaction`
+- `audit_auditlog`
+
+No seed data for roles/permissions exists, and no explicit indexes from this doc were added. The live "role" is still the original 3-value `accounts_user.role` CharField.
+
 ---
 
 ## Design Principles

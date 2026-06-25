@@ -1,5 +1,25 @@
 # Admin Panel Architecture
 
+> **Status (2026-06-25): 🟡 Mostly built (UI ahead of backend).** The portal is live, but several pages call backend endpoints that do not exist. See *Implementation Notes*.
+
+## Implementation Notes (current state)
+
+Built with **Next.js 16** (this doc says 15), shadcn/ui, Tailwind, TanStack Query, Zustand.
+
+| Page | State |
+|------|-------|
+| Dashboard | ✅ built + wired |
+| User Management | ✅ built + wired (`/api/admin/users/*`) |
+| Analytics | ✅ built + wired (`/api/admin/analytics/*`) |
+| Audit Log Viewer | ✅ built + wired, but reads **synthesized** audit (see `08`) |
+| Role Management | 🟡 UI built, **orphaned** — calls missing `/api/admin/roles/*` |
+| Permission Management | 🟡 UI built, **orphaned** — calls missing `/api/admin/permissions/`, `/api/admin/user-permissions/` |
+| Approval Queue | 🟡 UI built, **orphaned** — calls missing `/api/admin/approvals/*` |
+| Region Management | ⛔ not built |
+| Sync Monitor | ⛔ not built |
+
+**Auth deviations:** localStorage Zustand store + client-side JWT decode (`store/authStore.ts`, `lib/api.ts`) — **not** the httpOnly-cookie / `aud: fps-admin` model below. `AuthGuard` enforces *logged-in only*; there are **no permission-based route guards** (any authenticated user can open every admin page). Only the audit-CSV export is role-gated. No Docker/Nginx config yet.
+
 ---
 
 ## 1. Stack Decision

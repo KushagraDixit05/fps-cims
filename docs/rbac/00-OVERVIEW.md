@@ -21,9 +21,30 @@ As FPS scales to multiple states, regional teams, verification workflows, and ev
 
 This document is the top-level architecture overview. Detailed implementation lives in numbered sibling documents.
 
+> **Status (2026-06-25):** This document describes the **target architecture**. Most of it is **not yet built**. See §1a below and the status banners on each sibling doc; the authoritative status matrix lives in `11-IMPLEMENTATION-PHASES.md`.
+
+---
+
+## 1a. Implementation Status (2026-06-25)
+
+Audited against the active `feature/RBAC` branch (→ `main`). The unmerged `feature/rbac-implementation` branch is experimental/obsolete and is **not** counted.
+
+**What exists today is essentially the "seed, not architecture" starting point this plan set out to replace**, plus a largely-complete admin UI:
+
+- **Roles/permissions:** still the original 3-value `role` CharField (`field_executive`/`admin`/`viewer`). No `Role`/`Permission`/`UserPermission`/`Region` tables. Authorization is coarse (`IsStaffUser` + per-view owner-filtered querysets), **not** the ABAC-lite model below.
+- **JWT:** carries `role`/`is_staff`/`is_superuser`, **not** a `perms` claim. Mobile reads role for display only.
+- **Approval workflow:** only `approval_status`/`approved_at` fields exist; no engine, no maker-checker, no APIs.
+- **Audit:** **synthesized on read** from submission tables — no persistent, immutable audit log.
+- **Infrastructure:** **Phase 0 complete** — Redis (docker-compose), a Celery app (`fps_backend/celery.py`), `django-simple-history`, and the JWT `token_blacklist` app are now wired in. Nothing yet *consumes* them (no cache layer or async tasks until Phases 2–4), but the broker + worker boot cleanly.
+- **Admin portal (Next.js 16):** largely built. Users, Analytics, and (pseudo-)Audit are wired to real APIs. **Roles, Permissions, and Approvals pages are orphaned** — they call `/api/admin/roles|permissions|approvals`, which do not exist on this branch.
+
+**Net:** the frontend is ahead of its backend. The current priority is building the backend RBAC engine (DB schema → permission engine → admin APIs) to match the existing UI.
+
 ---
 
 ## 2. System Architecture Diagram
+
+> ⚠️ **Target architecture.** The Permission Engine, Approval Engine, Audit Engine, and Redis cache shown below are **not yet implemented** (see §1a).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -97,40 +118,42 @@ Permissions are enforced at three layers:
 
 ## 4. Document Index
 
-| File | Contents |
-|------|----------|
-| `01-DATABASE-SCHEMA.md` | All tables, fields, indexes, relationships |
-| `02-PERMISSION-ENGINE.md` | How permissions are stored, resolved, cached |
-| `03-PRESET-ROLES.md` | Recommended roles with full permission sets |
-| `04-BACKEND-ARCHITECTURE.md` | Django apps, DRF classes, middleware, services |
-| `05-APPROVAL-WORKFLOW.md` | Maker-checker lifecycle, state machine, engine |
-| `06-ADMIN-PANEL.md` | Admin portal pages, flows, API strategy, stack |
-| `07-MOBILE-INTEGRATION.md` | Permission sync, navigation guards, offline handling |
-| `08-AUDIT-SYSTEM.md` | Audit tables, immutable logs, compliance |
-| `09-SECURITY.md` | JWT strategy, token management, attack mitigations |
-| `10-SCALABILITY.md` | Query optimization, caching, async processing |
-| `11-IMPLEMENTATION-PHASES.md` | Step-by-step delivery plan |
+| File | Contents | Status (2026-06-25) |
+|------|----------|---------------------|
+| `01-DATABASE-SCHEMA.md` | All tables, fields, indexes, relationships | 🟡 Partial — only User extensions + `approval_status` |
+| `02-PERMISSION-ENGINE.md` | How permissions are stored, resolved, cached | 🔄 Done differently — coarse role/owner gating |
+| `03-PRESET-ROLES.md` | Recommended roles with full permission sets | ⛔ Not started — roles are a 3-value CharField |
+| `04-BACKEND-ARCHITECTURE.md` | Django apps, DRF classes, middleware, services | 🟡 Partial — `accounts`/`admin_portal` real; `workflow`/`audit` empty |
+| `05-APPROVAL-WORKFLOW.md` | Maker-checker lifecycle, state machine, engine | 🟡 Partial — status fields only, no engine |
+| `06-ADMIN-PANEL.md` | Admin portal pages, flows, API strategy, stack | 🟡 Mostly built — roles/perms/approvals orphaned |
+| `07-MOBILE-INTEGRATION.md` | Permission sync, navigation guards, offline handling | ⛔ Not started (RBAC) — uses AsyncStorage, not WatermelonDB |
+| `08-AUDIT-SYSTEM.md` | Audit tables, immutable logs, compliance | 🔄 Done differently — synthesized pseudo-audit |
+| `09-SECURITY.md` | JWT strategy, token management, attack mitigations | 🟡 Partial — JWT/refresh real; aud-scope/blacklist/CSP absent |
+| `10-SCALABILITY.md` | Query optimization, caching, async processing | ⛔ Not started — no Redis/Celery/partitioning |
+| `11-IMPLEMENTATION-PHASES.md` | Step-by-step delivery plan **+ authoritative status matrix** | — (source of truth) |
 
 ---
 
 ## 5. Key Technology Decisions
 
+> **Adoption status (2026-06-25)** is annotated inline below. Several planned libraries were **never adopted**.
+
 ### Backend
-- **Django + DRF** — existing, extend in place
-- **`django-guardian`** — object-level permissions (evaluate; may replace with custom)
-- **Redis** — permission cache with user-scoped TTL
-- **Celery** — async audit writes, notification dispatch
-- **`django-simple-history`** — model change tracking (complements custom audit engine)
+- **Django + DRF** — ✅ adopted (existing, extended in place).
+- **`django-guardian`** — ⛔ not adopted (not installed).
+- **Redis** — ✅ adopted (Phase 0): docker-compose service + Celery broker. Django cache layer still pending (Phase 2).
+- **Celery** — ✅ adopted (Phase 0): app bootstrapped in `fps_backend/celery.py`, worker boots against Redis. No tasks dispatched yet (Phases 3–4).
+- **`django-simple-history`** — ✅ adopted (Phase 0): app registered. `HistoricalRecords` on models still pending (Phase 4).
 
 ### Admin Portal
-- **Next.js 15** — SSR, API routes, React Server Components
-- **Separate authentication scope** — admin JWT audience claim `aud: fps-admin`
-- **Deployed internally** — not public-facing
+- **Next.js 15** — 🔄 adopted as **Next.js 16** (SSR/App Router).
+- **Separate authentication scope** (`aud: fps-admin`) — ⛔ not adopted; the portal reuses the standard user JWT via a coarse `IsStaffUser` check.
+- **Deployed internally** — planned; no Docker/Nginx config yet.
 
 ### Mobile
-- **Permission claims in JWT** — zero extra round-trips offline
-- **WatermelonDB** — existing, no change to sync engine
-- **React Navigation guards** — screen-level gating
+- **Permission claims in JWT** — ⛔ not adopted; JWT carries `role` only, consumed for display.
+- **WatermelonDB** — 🔄 deviation: the app uses **AsyncStorage** for auth/cache (no WatermelonDB in the audited code).
+- **React Navigation guards** — ⛔ not adopted; navigation is binary logged-in/out.
 
 ### Rationale for NOT using django.contrib.auth permissions directly
 

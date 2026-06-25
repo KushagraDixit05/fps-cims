@@ -2,6 +2,15 @@
 
 How permissions are defined, resolved, cached, and delivered to mobile clients.
 
+> **Status (2026-06-25): 🔄 Done differently.** The design below is the **target engine**; it is not built. Authorization today is coarse and role-based. See *Implementation Notes*.
+
+## Implementation Notes (current state)
+
+- **No permission catalogue, no `PermissionService`, no ABAC resolution, no override layer, no Redis cache.**
+- Enforcement is two-layered: `admin_portal/permissions.py::IsStaffUser` (admin endpoints) + owner-scoped `get_queryset()` in `crops`/`mandi`/`product_demo` views (field data).
+- JWT (`accounts/token_serializers.py::CustomTokenObtainPairSerializer`) embeds `role`, `is_staff`, `is_superuser`, `email`, `full_name` — **not** a `perms` list. Clients cannot resolve fine-grained permissions offline.
+- The `can_<verb>_<subject>` codenames and evaluation order in this doc are aspirational; nothing reads them.
+
 ---
 
 ## 1. Permission Catalogue

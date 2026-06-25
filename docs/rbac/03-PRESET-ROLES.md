@@ -2,6 +2,14 @@
 
 Six roles cover the operational reality described by the business team. All roles are extensible — admins can add custom roles or override individual permissions per user.
 
+> **Status (2026-06-25): ⛔ Not started (as data).** These six roles do not exist as `Role` rows — there is no `Role` table. See *Implementation Notes*.
+
+## Implementation Notes (current state)
+
+- The backend's only roles are the **3-value `accounts_user.role` CharField**: `field_executive`, `admin`, `viewer`. Registration hard-codes new users to `field_executive`.
+- The six roles below (Super Admin, Admin, Manager, Regional Head, Checker, Field Executive) are **not seeded** and cannot be assigned, because no `Role`/`Permission` tables exist.
+- ⚠️ **Mismatch:** the admin portal frontend references a 6-role set (`super_admin`, `admin`, `regional_head`, `checker`, `field_executive`, `viewer`) that the backend can never issue in a JWT. Until the `Role` table lands, these are display-only labels.
+
 ---
 
 ## Role Hierarchy

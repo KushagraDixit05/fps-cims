@@ -2,6 +2,15 @@
 
 How RBAC manifests in the React Native app with WatermelonDB.
 
+> **Status (2026-06-25): ⛔ Not started (RBAC).** The app has working JWT auth but no permission layer, and it does not use WatermelonDB. See *Implementation Notes*.
+
+## Implementation Notes (current state)
+
+- **Auth works:** login, token refresh, and offline-first session restore (`src/store/authStore.tsx`, `src/api/client.ts`, `src/api/auth.ts`). The 401-refresh interceptor exists.
+- **No RBAC:** no `perms` in the store, no `usePermissions` hook, no `PermissionGate`, no module/tab gating, no dynamic tiles, no approval fields, no `ApprovalQueueScreen`. `role` is stored for **display only**; navigation is binary logged-in/out.
+- **Deviation — storage:** this doc assumes **WatermelonDB** and a Zustand `authStore.ts`; the app actually uses **AsyncStorage** (tokens + cached profile) with a React Context/reducer `authStore.tsx`. Tokens are **not** in Keychain/Keystore, and there is no device registration (`X-Device-ID`).
+- The code samples below should be treated as target design, not current code paths.
+
 ---
 
 ## 1. Permission Store

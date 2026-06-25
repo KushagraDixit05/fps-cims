@@ -1,5 +1,17 @@
 # Security Architecture
 
+> **Status (2026-06-25): 🟡 Partial.** Core JWT auth is real; several hardening measures below are not implemented. See *Implementation Notes*.
+
+## Implementation Notes (current state)
+
+- **Implemented:** JWT access/refresh via `djangorestframework-simplejwt`, refresh rotation, Bearer auth, the `/api/auth/*` endpoints. CORS configured.
+- **Deviations / not implemented:**
+  - Access-token lifetime is **12h** (this doc recommends 8h) — kept deliberately. As of Phase 0, the `token_blacklist` app **is** installed and `BLACKLIST_AFTER_ROTATION=True`, so rotated refresh tokens are now invalidated. The admin `force-logout` endpoint, however, is **still a no-op stub** — wiring it to `OutstandingToken.blacklist()` is Phase 5 work.
+  - **No `aud: fps-admin` scope** — the admin portal reuses the standard user token with a coarse `IsStaffUser` check.
+  - Refresh tokens are stored in **localStorage** (admin portal) / **AsyncStorage** (mobile), not httpOnly cookies / Keychain.
+  - No brute-force/rate-limiting, no CSP headers, no device binding implemented.
+  - Object-level / fine-grained permission checks do not exist (see `02`).
+
 ---
 
 ## 1. JWT Strategy

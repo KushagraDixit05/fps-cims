@@ -1,5 +1,14 @@
 # Approval Workflow Engine
 
+> **Status (2026-06-25): 🟡 Partial.** Only the data shape exists; the engine, state machine, and APIs below are **not built**. See *Implementation Notes*.
+
+## Implementation Notes (current state)
+
+- Each submission model (`FarmerVisit`, `MandiArrival`, `ProductDemo`) has an `approval_status` CharField (default `'draft'`) and `approved_at`. That is the full extent of implementation.
+- **No** `ApprovalWorkflow`/`ApprovalInstance`/`ApprovalAction` models, **no** `ApprovalEngine`, **no** transition APIs (`approve`/`reject`/`request-revision`/`resubmit`), **no** auto-create signals, **no** escalation, **no** data-locking. The `workflow/` app is empty.
+- Nothing moves a record out of `'draft'` via API; the state machine below is unrealized.
+- The only approval-aware code is the read-only `admin_portal` `ApprovalSLAView` (analytics). The admin portal's Approvals queue UI calls `/api/admin/approvals/*`, which **does not exist** (orphaned — see `06-ADMIN-PANEL.md`).
+
 ---
 
 ## 1. Why a Maker-Checker System
