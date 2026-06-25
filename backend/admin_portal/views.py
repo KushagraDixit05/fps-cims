@@ -165,14 +165,36 @@ class AdminReactivateView(APIView):
 
 
 class AdminForceLogoutView(APIView):
+    """
+    Blacklists all outstanding refresh tokens for a user, forcing them to
+    re-authenticate on their next API call.
+    POST /api/admin/users/<pk>/force-logout/
+
+    Phase 2: now a real implementation using the simplejwt token_blacklist app.
+    The user's existing access tokens will continue to work until they expire
+    (max 12h), but no new access tokens can be obtained without re-login.
+    """
     permission_classes = [IsAuthenticated, IsStaffUser]
 
     def post(self, request, pk):
+        from rest_framework_simplejwt.token_blacklist.models import (
+            OutstandingToken, BlacklistedToken
+        )
+
         User = get_user_model()
         if not User.objects.filter(pk=pk).exists():
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        # JWT blacklist not implemented; return 200 so the UI can proceed
-        return Response({'detail': 'Force logout acknowledged.'})
+
+        outstanding = OutstandingToken.objects.filter(user_id=pk)
+        blacklisted_count = 0
+        for token in outstanding:
+            _, created = BlacklistedToken.objects.get_or_create(token=token)
+            if created:
+                blacklisted_count += 1
+
+        return Response({
+            'detail': f'Force logout complete. {blacklisted_count} token(s) blacklisted.',
+        })
 
 
 # ── Farmer Visits ─────────────────────────────────────────────────────────────
@@ -1139,3 +1161,423 @@ class ExecutivePerformanceView(APIView):
             })
 
         return Response({'days': days, 'executives': executives})
+
+
+# ── Role Management APIs ──────────────────────────────────────────────────────
+# Phase 2 + Phase 5: these endpoints un-orphan the admin portal's Roles page.
+# Requires: IsStaffUser (is_staff or is_superuser).
+
+class RoleListCreateView(APIView):
+    """
+    GET  /api/admin/roles/        — list all roles (with permission/user counts)
+    POST /api/admin/roles/        — create a custom role
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def get(self, request):
+        from accounts.models.role import Role
+        from accounts.models.user_permission import UserPermission
+
+        roles = Role.objects.prefetch_related('role_permissions__permission').order_by('name')
+        data = []
+        User = get_user_model()
+        for role in roles:
+            user_count = User.objects.filter(primary_role=role).count()
+            perm_count = role.role_permissions.count()
+            data.append({
+                'id': str(role.id),
+                'name': role.name,
+                'code': role.code,
+                'description': role.description,
+                'is_preset': role.is_preset,
+                'is_active': role.is_active,
+                'created_at': role.created_at.isoformat(),
+                'updated_at': role.updated_at.isoformat(),
+                'permission_count': perm_count,
+                'user_count': user_count,
+            })
+        return Response(data)
+
+    def post(self, request):
+        from accounts.models.role import Role
+
+        name = request.data.get('name', '').strip()
+        code = request.data.get('code', '').strip()
+        description = request.data.get('description', '')
+
+        if not name or not code:
+            return Response(
+                {'detail': 'name and code are required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if Role.objects.filter(code=code).exists():
+            return Response(
+                {'detail': f'Role with code "{code}" already exists.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        role = Role.objects.create(
+            name=name, code=code, description=description, is_preset=False,
+        )
+        return Response({
+            'id': str(role.id),
+            'name': role.name,
+            'code': role.code,
+            'description': role.description,
+            'is_preset': role.is_preset,
+            'is_active': role.is_active,
+            'created_at': role.created_at.isoformat(),
+            'updated_at': role.updated_at.isoformat(),
+            'permission_count': 0,
+            'user_count': 0,
+        }, status=status.HTTP_201_CREATED)
+
+
+class RoleDetailView(APIView):
+    """
+    GET    /api/admin/roles/<id>/  — retrieve a single role
+    PATCH  /api/admin/roles/<id>/  — update a role (non-preset only for code changes)
+    DELETE /api/admin/roles/<id>/  — delete a custom role (preset roles are protected)
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def _get_role(self, role_id):
+        from accounts.models.role import Role
+        try:
+            return Role.objects.get(pk=role_id)
+        except (Role.DoesNotExist, Exception):
+            return None
+
+    def get(self, request, role_id):
+        role = self._get_role(role_id)
+        if not role:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        User = get_user_model()
+        return Response({
+            'id': str(role.id),
+            'name': role.name,
+            'code': role.code,
+            'description': role.description,
+            'is_preset': role.is_preset,
+            'is_active': role.is_active,
+            'created_at': role.created_at.isoformat(),
+            'updated_at': role.updated_at.isoformat(),
+            'permission_count': role.role_permissions.count(),
+            'user_count': User.objects.filter(primary_role=role).count(),
+        })
+
+    def patch(self, request, role_id):
+        role = self._get_role(role_id)
+        if not role:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if 'name' in request.data:
+            role.name = request.data['name']
+        if 'description' in request.data:
+            role.description = request.data['description']
+        if 'is_active' in request.data:
+            role.is_active = request.data['is_active']
+        # Preset roles cannot have their code changed
+        if 'code' in request.data and not role.is_preset:
+            from accounts.models.role import Role
+            new_code = request.data['code']
+            if Role.objects.filter(code=new_code).exclude(pk=role.pk).exists():
+                return Response({'detail': 'Code already in use.'}, status=status.HTTP_400_BAD_REQUEST)
+            role.code = new_code
+        role.save()
+        return Response({'detail': 'Role updated.', 'id': str(role.id)})
+
+    def delete(self, request, role_id):
+        role = self._get_role(role_id)
+        if not role:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if role.is_preset:
+            return Response(
+                {'detail': 'Preset roles cannot be deleted.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        role.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RolePermissionsView(APIView):
+    """
+    GET    /api/admin/roles/<id>/permissions/  — list permissions assigned to role
+    POST   /api/admin/roles/<id>/permissions/  — assign permissions to role
+                                                 body: { "permission_ids": ["uuid", ...] }
+    DELETE /api/admin/roles/<id>/permissions/  — remove permissions from role
+                                                 body: { "permission_ids": ["uuid", ...] }
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def _get_role(self, role_id):
+        from accounts.models.role import Role
+        try:
+            return Role.objects.get(pk=role_id)
+        except (Role.DoesNotExist, Exception):
+            return None
+
+    def get(self, request, role_id):
+        from accounts.models.role import RolePermission
+        from accounts.models.permission import Permission
+
+        role = self._get_role(role_id)
+        if not role:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        perm_ids = RolePermission.objects.filter(role=role).values_list('permission_id', flat=True)
+        perms = Permission.objects.filter(id__in=perm_ids).order_by('module', 'codename')
+        data = [
+            {
+                'id': str(p.id),
+                'codename': p.codename,
+                'label': p.label,
+                'module': p.module,
+                'category': p.category,
+                'description': p.description,
+                'is_active': p.is_active,
+            }
+            for p in perms
+        ]
+        return Response(data)
+
+    def post(self, request, role_id):
+        from accounts.models.role import Role, RolePermission
+        from accounts.models.permission import Permission
+        from accounts.services.permission_service import PermissionService
+
+        role = self._get_role(role_id)
+        if not role:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        permission_ids = request.data.get('permission_ids', [])
+        if not permission_ids:
+            return Response({'detail': 'permission_ids is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        perms = Permission.objects.filter(id__in=permission_ids, is_active=True)
+        created = 0
+        for perm in perms:
+            _, was_created = RolePermission.objects.get_or_create(
+                role=role, permission=perm,
+                defaults={'granted_by': request.user},
+            )
+            if was_created:
+                created += 1
+
+        # Invalidate cache for all users with this role
+        PermissionService.invalidate_cache_for_role(role.id)
+
+        return Response({'detail': f'{created} permission(s) added to role.'})
+
+    def delete(self, request, role_id):
+        from accounts.models.role import RolePermission
+        from accounts.services.permission_service import PermissionService
+
+        role = self._get_role(role_id)
+        if not role:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        permission_ids = request.data.get('permission_ids', [])
+        if not permission_ids:
+            return Response({'detail': 'permission_ids is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        deleted, _ = RolePermission.objects.filter(
+            role=role, permission_id__in=permission_ids
+        ).delete()
+
+        # Invalidate cache for all users with this role
+        PermissionService.invalidate_cache_for_role(role.id)
+
+        return Response({'detail': f'{deleted} permission(s) removed from role.'})
+
+
+# ── Permission Catalogue APIs ─────────────────────────────────────────────────
+
+class PermissionListView(APIView):
+    """
+    GET /api/admin/permissions/  — list all active permissions in the catalogue.
+    Grouped by module. Used by the admin portal's Permission Catalogue page.
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def get(self, request):
+        from accounts.models.permission import Permission
+
+        module_filter = request.query_params.get('module')
+        qs = Permission.objects.filter(is_active=True).order_by('module', 'codename')
+        if module_filter:
+            qs = qs.filter(module=module_filter)
+
+        data = [
+            {
+                'id': str(p.id),
+                'codename': p.codename,
+                'label': p.label,
+                'module': p.module,
+                'category': p.category,
+                'description': p.description,
+                'is_active': p.is_active,
+            }
+            for p in qs
+        ]
+        return Response(data)
+
+
+# ── User Permission Override APIs ─────────────────────────────────────────────
+
+class UserPermissionListCreateView(APIView):
+    """
+    GET  /api/admin/user-permissions/?user_id=<id>  — list overrides for a user
+    POST /api/admin/user-permissions/               — create an override
+         body: { user, permission (UUID), effect, reason, expires_at? }
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def get(self, request):
+        from accounts.models.user_permission import UserPermission
+
+        qs = UserPermission.objects.select_related('user', 'permission', 'granted_by')
+
+        user_id = request.query_params.get('user_id')
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+
+        data = [
+            {
+                'id': str(up.id),
+                'user': up.user_id,
+                'user_username': up.user.username,
+                'permission': str(up.permission_id),
+                'permission_codename': up.permission.codename,
+                'permission_label': up.permission.label,
+                'effect': up.effect,
+                'reason': up.reason,
+                'expires_at': up.expires_at.isoformat() if up.expires_at else None,
+                'granted_by': up.granted_by_id,
+                'created_at': up.created_at.isoformat(),
+            }
+            for up in qs
+        ]
+        return Response(data)
+
+    def post(self, request):
+        from accounts.models.user_permission import UserPermission
+        from accounts.models.permission import Permission
+        from accounts.services.permission_service import PermissionService
+        from django.utils.dateparse import parse_datetime
+
+        User = get_user_model()
+
+        user_id = request.data.get('user')
+        permission_id = request.data.get('permission')
+        effect = request.data.get('effect', '')
+        reason = request.data.get('reason', '')
+        expires_at_raw = request.data.get('expires_at')
+
+        if not user_id or not permission_id:
+            return Response({'detail': 'user and permission are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if effect not in ('allow', 'deny'):
+            return Response({'detail': 'effect must be "allow" or "deny".'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            target_user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            permission = Permission.objects.get(pk=permission_id, is_active=True)
+        except Permission.DoesNotExist:
+            return Response({'detail': 'Permission not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        expires_at = None
+        if expires_at_raw:
+            expires_at = parse_datetime(expires_at_raw)
+
+        up, created = UserPermission.objects.update_or_create(
+            user=target_user,
+            permission=permission,
+            defaults={
+                'effect': effect,
+                'reason': reason,
+                'granted_by': request.user,
+                'expires_at': expires_at,
+            },
+        )
+
+        # Immediately invalidate the user's permission cache
+        PermissionService.invalidate_cache(target_user.id)
+
+        return Response({
+            'id': str(up.id),
+            'user': up.user_id,
+            'user_username': up.user.username,
+            'permission': str(up.permission_id),
+            'permission_codename': up.permission.codename,
+            'permission_label': up.permission.label,
+            'effect': up.effect,
+            'reason': up.reason,
+            'expires_at': up.expires_at.isoformat() if up.expires_at else None,
+            'granted_by': up.granted_by_id,
+            'created_at': up.created_at.isoformat(),
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+class UserPermissionDetailView(APIView):
+    """
+    DELETE /api/admin/user-permissions/<id>/  — remove a user permission override
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def delete(self, request, up_id):
+        from accounts.models.user_permission import UserPermission
+        from accounts.services.permission_service import PermissionService
+
+        try:
+            up = UserPermission.objects.select_related('user').get(pk=up_id)
+        except UserPermission.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        user_id = up.user_id
+        up.delete()
+        PermissionService.invalidate_cache(user_id)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Admin Password Reset API ──────────────────────────────────────────────────
+
+class AdminResetPasswordView(APIView):
+    """
+    POST /api/admin/users/<pk>/reset-password/
+    Resets a user's password and blacklists all their outstanding tokens.
+    body: { "password": "new_password" }
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def post(self, request, pk):
+        from rest_framework_simplejwt.token_blacklist.models import (
+            OutstandingToken, BlacklistedToken
+        )
+
+        User = get_user_model()
+        try:
+            target = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        new_password = request.data.get('password', '')
+        if len(str(new_password)) < 8:
+            return Response(
+                {'detail': 'Password must be at least 8 characters.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        target.set_password(new_password)
+        target.save(update_fields=['password'])
+
+        # Blacklist all outstanding refresh tokens
+        outstanding = OutstandingToken.objects.filter(user=target)
+        for token in outstanding:
+            BlacklistedToken.objects.get_or_create(token=token)
+
+        return Response({'detail': f'Password reset for {target.username}. All sessions invalidated.'})

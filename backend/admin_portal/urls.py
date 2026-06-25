@@ -9,6 +9,11 @@ from .views import (
     AuditLogView, AuditExportView,
     SummaryView, CropIntelligenceView, MarketIntelligenceView,
     ProductPerformanceView, RecentActivitiesView, ExecutivePerformanceView,
+    # Phase 2 / Phase 5 — Role, Permission, and UserPermission management
+    RoleListCreateView, RoleDetailView, RolePermissionsView,
+    PermissionListView,
+    UserPermissionListCreateView, UserPermissionDetailView,
+    AdminResetPasswordView,
 )
 
 urlpatterns = [
@@ -31,14 +36,27 @@ urlpatterns = [
     path('analytics/executive-performance/', ExecutivePerformanceView.as_view()),
 
     # User management
-    path('users/',                       AdminUserListView.as_view()),
-    path('users/create/',                AdminUserCreateView.as_view()),
-    path('users/<int:pk>/',              AdminUserDetailView.as_view()),
-    path('users/<int:pk>/deactivate/',   AdminDeactivateView.as_view()),
-    path('users/<int:pk>/reactivate/',   AdminReactivateView.as_view()),
-    path('users/<int:pk>/force-logout/', AdminForceLogoutView.as_view()),
+    path('users/',                             AdminUserListView.as_view()),
+    path('users/create/',                      AdminUserCreateView.as_view()),
+    path('users/<int:pk>/',                    AdminUserDetailView.as_view()),
+    path('users/<int:pk>/deactivate/',         AdminDeactivateView.as_view()),
+    path('users/<int:pk>/reactivate/',         AdminReactivateView.as_view()),
+    path('users/<int:pk>/force-logout/',       AdminForceLogoutView.as_view()),
+    path('users/<int:pk>/reset-password/',     AdminResetPasswordView.as_view()),
 
     # Audit log
     path('audit/',        AuditLogView.as_view()),
     path('audit/export/', AuditExportView.as_view()),
+
+    # ── Phase 2 / Phase 5: Role management (un-orphans admin portal Roles page) ──
+    path('roles/',                              RoleListCreateView.as_view()),
+    path('roles/<str:role_id>/',               RoleDetailView.as_view()),
+    path('roles/<str:role_id>/permissions/',   RolePermissionsView.as_view()),
+
+    # ── Phase 2 / Phase 5: Permission catalogue ────────────────────────────────
+    path('permissions/', PermissionListView.as_view()),
+
+    # ── Phase 2 / Phase 5: User permission overrides ───────────────────────────
+    path('user-permissions/',          UserPermissionListCreateView.as_view()),
+    path('user-permissions/<str:up_id>/', UserPermissionDetailView.as_view()),
 ]
