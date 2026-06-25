@@ -90,6 +90,15 @@ DISTRICT_BLOCK_DATA: list[dict] = [
             'Ramtek', 'Savner', 'Umred',
         ],
     },
+    {
+        'name': 'Khargone',
+        'state': 'Madhya Pradesh',
+        'blocks': [
+            'Khargone', 'Bhikangaon', 'Gogawan', 'Jhirniya',
+            'Kasrawad', 'Maheshwar', 'Mandleshwar', 'Segaon',
+            'Barwah', 'Khetia', 'Bhagwanpura',
+        ],
+    },
 ]
 
 # ── Village data (linked to blocks) ─────────────────────────────────────────
@@ -116,6 +125,18 @@ VILLAGE_DATA: list[dict] = [
     { 'block': 'Sanwer',    'district': 'Indore', 'villages': ['Sanwer', 'Hatod', 'Nemawar', 'Jalud'] },
     { 'block': 'Mhow',      'district': 'Indore', 'villages': ['Mhow', 'Manpur', 'Khargone Rd', 'Khandwa Rd'] },
     { 'block': 'Depalpur',  'district': 'Indore', 'villages': ['Depalpur', 'Bardari', 'Kali Bildi', 'Pipaliya'] },
+    # Khargone
+    { 'block': 'Khargone',    'district': 'Khargone', 'villages': ['Khargone', 'Nandgaon', 'Chhota Barda', 'Badwani Rd'] },
+    { 'block': 'Bhikangaon',  'district': 'Khargone', 'villages': ['Bhikangaon', 'Anjad', 'Sathkheda', 'Bargaon'] },
+    { 'block': 'Gogawan',     'district': 'Khargone', 'villages': ['Gogawan', 'Borkhedi', 'Khirkiya', 'Sultanpur'] },
+    { 'block': 'Jhirniya',    'district': 'Khargone', 'villages': ['Jhirniya', 'Bediya', 'Sanawad', 'Nimad Rd'] },
+    { 'block': 'Kasrawad',    'district': 'Khargone', 'villages': ['Kasrawad', 'Mortakka', 'Chogawan', 'Kargawan'] },
+    { 'block': 'Maheshwar',   'district': 'Khargone', 'villages': ['Maheshwar', 'Mandleshwar', 'Navda', 'Navali'] },
+    { 'block': 'Mandleshwar', 'district': 'Khargone', 'villages': ['Mandleshwar', 'Khalwa', 'Balwada', 'Pipalkhuta'] },
+    { 'block': 'Segaon',      'district': 'Khargone', 'villages': ['Segaon', 'Dedtalai', 'Katkut', 'Sajanpur'] },
+    { 'block': 'Barwah',      'district': 'Khargone', 'villages': ['Barwah', 'Bhanpura', 'Talun', 'Mundi'] },
+    { 'block': 'Khetia',      'district': 'Khargone', 'villages': ['Khetia', 'Palsud', 'Asirgarh', 'Bhainsdehi Rd'] },
+    { 'block': 'Bhagwanpura', 'district': 'Khargone', 'villages': ['Bhagwanpura', 'Varla', 'Niwali', 'Tanda'] },
     # Nagpur
     { 'block': 'Katol',      'district': 'Nagpur', 'villages': ['Katol', 'Savner Rd', 'Rohna', 'Khairi'] },
     { 'block': 'Savner',     'district': 'Nagpur', 'villages': ['Savner', 'Kuhi', 'Tarsa', 'Navegaon'] },

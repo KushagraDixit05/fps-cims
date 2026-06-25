@@ -334,8 +334,8 @@ const MandiEntryFormScreen = () => {
             onChangeText={onChange}
             placeholder="Any additional notes…"
             multiline
-            numberOfLines={3}
-            style={{ minHeight: 80, textAlignVertical: 'top' }}
+            scrollEnabled
+            style={{ height: 80, textAlignVertical: 'top' }}
           />
         )}
       />

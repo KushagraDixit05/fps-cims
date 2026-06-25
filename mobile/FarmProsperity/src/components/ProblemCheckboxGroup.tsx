@@ -95,7 +95,7 @@ const ProblemCheckboxGroup = ({
             placeholder="Enter other problem..."
             placeholderTextColor={colors.textMuted}
             multiline
-            numberOfLines={2}
+            scrollEnabled
             textAlignVertical="top"
           />
         </View>
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textPrimary,
     backgroundColor: colors.surface,
-    minHeight: 60,
+    height: 70,
   },
   errorText: {
     marginTop: 6,

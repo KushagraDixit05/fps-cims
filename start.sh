@@ -41,12 +41,19 @@ open_terminal() {
 echo "🐍 Starting Django backend in a new window..."
 open_terminal "FPS Backend" "cd '$DIR/backend' && source venv/bin/activate && python manage.py runserver 0.0.0.0:8000"
 
-# 5. Mobile (Metro) — always force port 8081, never allow fallback to 8082
+# 5. Admin Portal (Next.js)
+echo "🖥️  Starting Admin Portal in a new window..."
+open_terminal "FPS Admin Portal" "cd '$DIR/admin-portal' && npm run dev"
+
+# 6. Mobile (Metro) — always force port 8081, never allow fallback to 8082
 echo "📱 Starting React Native Metro bundler in a new window..."
 open_terminal "FPS Metro Bundler" "cd '$DIR/mobile/FarmProsperity' && npm start -- --port 8081"
 
 echo "------------------------------------------------"
 echo "✅ Done! Services are opening in new terminal windows."
+echo ""
+echo "  🌐 Admin Portal:      http://localhost:3000"
+echo "  🐍 Django API:        http://localhost:8000"
 echo ""
 echo "To launch the Android app, run one of these commands:"
 echo "  👉 Physical Device:   cd mobile/FarmProsperity && npm run android:phone"

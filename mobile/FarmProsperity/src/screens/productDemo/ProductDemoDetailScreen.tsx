@@ -316,7 +316,8 @@ const ProductDemoDetailScreen = () => {
                 onChangeText={setObservations}
                 placeholder="Enter any additional observations (optional)"
                 multiline
-                numberOfLines={3}
+                scrollEnabled
+                style={{ height: 90, textAlignVertical: 'top' }}
               />
               <FormInput
                 label="Remark / Notes"
@@ -324,7 +325,8 @@ const ProductDemoDetailScreen = () => {
                 onChangeText={setRemark}
                 placeholder="Enter remark or notes (optional)"
                 multiline
-                numberOfLines={3}
+                scrollEnabled
+                style={{ height: 90, textAlignVertical: 'top' }}
                 error={formErrors.remark}
               />
 
