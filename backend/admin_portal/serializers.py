@@ -35,10 +35,14 @@ class AdminUserSerializer(serializers.ModelSerializer):
         return None
 
     def get_primary_role(self, obj):
-        return None
+        # Resolves from the real Role FK (Phase 1). Falls back to the legacy
+        # `role` CharField while code migrates off it.
+        if obj.primary_role_id:
+            return obj.primary_role.code
+        return obj.role or None
 
     def get_primary_role_id(self, obj):
-        return None
+        return str(obj.primary_role_id) if obj.primary_role_id else None
 
 
 class AdminUserCreateSerializer(serializers.ModelSerializer):

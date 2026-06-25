@@ -1,21 +1,26 @@
 # RBAC Database Schema
 
-> **Status (2026-06-25): 🟡 Partial.** The design below is the **target schema**. On the active `feature/RBAC` branch, none of the RBAC-specific tables exist yet. The only changes that landed are field additions to the existing `accounts_user` table and an `approval_status`/`approved_at` column on each submission model. See *Implementation Notes* below.
+> **Status (2026-06-25): ✅ Built (Phase 1 complete).** The target schema below is now implemented on the active `feature/RBAC` branch. All RBAC tables exist, indexes/constraints are in place, and seed data is loaded. A few field-level deviations from the SQL sketches are documented in *Implementation Notes*.
 
-## Implementation Notes (current state)
+## Implementation Notes (as built)
 
-**Created:**
-- `accounts_user` extensions (migrations `0003`/`0004`): `employee_id`, `profile_photo`, `state`, `districts` (JSON), `reporting_to` (self-FK), `created_by`, `deactivated_at`/`deactivated_by`, `deactivation_reason`, `last_login_device`, `last_login_ip`, and a **stub `primary_role_id` UUIDField** (not an FK — there is no `accounts_role` table to point at).
-- `approval_status` (CharField, default `'draft'`) and `approved_at` on `crops_farmervisit`, `mandi_mandiarrival`, `product_demo_productdemo`.
+**Created (Phase 1 — migrations `accounts/0005`–`0007`, `workflow/0001`–`0002`, `audit/0001`):**
+- `accounts_user` extensions remain; **`primary_role_id` is now a real FK** to `accounts_role` (`on_delete=RESTRICT`, reuses the existing `primary_role_id` column via `db_column`). Explicit indexes added: `idx_user_role`, `idx_user_reporting`, `idx_user_state`, `idx_user_active`, and the GIN index `idx_user_districts`. `updated_at` added.
+- `accounts_role`, `accounts_rolepermission`, `accounts_permission`, `accounts_userpermission` — created with their named indexes; `userpermission` carries the `effect IN ('allow','deny')` CHECK and a `UNIQUE(user, permission)`.
+- `accounts_region`, `accounts_userregion` — created (self-referential region hierarchy; `UNIQUE(user, region)` junction).
+- `accounts_deviceregistration`, `accounts_refreshtokenblacklist` — created.
+- `workflow_approvalworkflow`, `workflow_approvalinstance` (status CHECK + partial approver index + GenericForeignKey), `workflow_approvalaction` (action CHECK).
+- `audit_auditlog` — created with all five indexes incl. `created_at DESC`.
 
-**Not created (entire target relational core is absent):**
-- `accounts_role`, `accounts_rolepermission`, `accounts_permission`, `accounts_userpermission`
-- `accounts_region`, `accounts_userregion`
-- `accounts_deviceregistration`, refresh-token blacklist tables
-- `workflow_approvalworkflow`, `workflow_approvalinstance`, `workflow_approvalaction`
-- `audit_auditlog`
+**Seed data loaded:** 48 permissions, 7 roles (the 6 preset roles + a backward-compat `viewer`), their role→permission links, 3 approval-workflow templates, and 5 regions. Existing users were backfilled so `primary_role` is set from the legacy `role` CharField. `accounts/models.py` is now an `accounts/models/` package.
 
-No seed data for roles/permissions exists, and no explicit indexes from this doc were added. The live "role" is still the original 3-value `accounts_user.role` CharField.
+**Deviations from the SQL sketches in this doc (functionally equivalent):**
+- **`accounts_user.id` is a `BigAutoField` (integer), not UUID.** The live model extends Django's `AbstractUser`; changing the User PK is destructive and out of scope. All FKs *to* the user are therefore integer-based. New RBAC tables keep UUID PKs as designed.
+- **Junction tables (`accounts_rolepermission`, `accounts_userregion`) use Django's default integer PK plus a `UNIQUE` constraint** instead of a composite PK — functionally identical, idiomatic for Django.
+- **`accounts_user.assigned_region_ids UUID[]` was omitted** in favour of the relational `accounts_userregion` junction (the array was redundant). The denormalised `districts` JSON is retained for query speed.
+- **`accounts_refreshtokenblacklist`** overlaps `rest_framework_simplejwt.token_blacklist` (wired in Phase 0); it is kept because it carries a human-readable `reason`. It is consumed in later phases.
+- **Append-only enforcement** for `audit_auditlog` / `workflow_approvalaction` is at the app/admin layer for now; DB-level immutability rules land in Phase 4/8.
+- **Unique columns** (`role.code`, `permission.codename`, `region.code`) rely on their UNIQUE index rather than a second redundant named index.
 
 ---
 

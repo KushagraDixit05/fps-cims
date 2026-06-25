@@ -8,7 +8,9 @@ class Migration(migrations.Migration):
     """
     dependencies = [
         ('crops', '0005_farmervisit_uniq_farmervisit_executive_local_id'),
-        ('product_demo', '0001_initial'),
+        # Depends on the migration that adds approval_status (referenced in the
+        # partial index below), not just product_demo's initial schema.
+        ('product_demo', '0002_productdemo_approval_status'),
         ('mandi', '0007_mandi_location'),
     ]
 

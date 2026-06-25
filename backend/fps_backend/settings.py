@@ -60,6 +60,7 @@ INSTALLED_APPS = [
 
     # Third-party
     'django.contrib.gis',
+    'django.contrib.postgres',  # ArrayField / GIN indexes for RBAC models
     'rest_framework',
     'corsheaders',
     'django_filters',
@@ -76,6 +77,8 @@ INSTALLED_APPS = [
     'product_demo',
     'admin_portal',
     'geo',
+    'workflow',  # RBAC approval workflow (maker-checker state machine)
+    'audit',     # RBAC immutable audit trail
 ]
 
 MIDDLEWARE = [
