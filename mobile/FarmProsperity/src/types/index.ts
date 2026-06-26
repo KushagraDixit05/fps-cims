@@ -11,9 +11,19 @@ export interface User {
   full_name: string;
   first_name: string;
   last_name: string;
-  role: 'field_executive' | 'admin' | 'viewer';
+  /** All 7 preset roles that the backend can issue. */
+  role: 'field_executive' | 'checker' | 'regional_head' | 'manager' | 'admin' | 'super_admin' | 'viewer';
   region: string;
   phone_number?: string;
+  // ── RBAC fields decoded from the JWT access token (Phase 6) ──────────────
+  /** Sorted list of permission codenames from the JWT `perms` claim. */
+  perms?: string[];
+  /** UUID of the user's primary Role row (JWT `role_id` claim). */
+  role_id?: string;
+  /** State code from the JWT `state` claim (e.g. "MH"). */
+  state?: string;
+  /** District codes from the JWT `districts` claim (e.g. ["MH-NAN"]). */
+  districts?: string[];
 }
 
 // ─── Geography ───────────────────────────────────────────────────────────────

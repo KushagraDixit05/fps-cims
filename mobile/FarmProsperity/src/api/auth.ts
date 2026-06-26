@@ -5,6 +5,7 @@
 import apiClient, { STORAGE_KEYS } from './client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User } from '../types';
+import { decodeJWTPayload } from '../utils/jwt';
 
 export interface LoginResponse {
   access: string;
@@ -88,5 +89,17 @@ export const hasAccessToken = async (): Promise<boolean> => {
 export const storeTokens = async (access: string, refresh: string): Promise<void> => {
   await AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, access);
   await AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refresh);
+};
+
+/**
+ * Decode the stored access token and return the `perms` claim (RBAC Phase 6).
+ * Returns an empty array if the token is missing, expired, or has no perms claim.
+ * The caller should not block the UX on this — perms are a best-effort enhancement.
+ */
+export const getStoredPerms = async (): Promise<string[]> => {
+  const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  if (!token) return [];
+  const payload = decodeJWTPayload(token);
+  return Array.isArray(payload?.perms) ? (payload.perms as string[]) : [];
 };
 

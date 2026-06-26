@@ -1,6 +1,7 @@
 /**
  * SidebarContent (v2)
  * Drawer nav with lucide icons throughout.
+ * Phase 6: NAV_ITEMS filtered by permission codenames from the JWT.
  */
 
 import React from 'react';
@@ -15,9 +16,10 @@ import {
 } from 'react-native';
 import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { useAuth } from '../store/authStore';
+import { usePermissions } from '../hooks/usePermissions';
 import AppIcon from '../components/AppIcon';
 import {
-  Home, Leaf, Store, BarChart2,
+  Home, Leaf, Store, BarChart2, ClipboardList,
   User, LogOut, RefreshCw, MapPin,
   IconStroke,
 } from '../utils/icons';
@@ -26,23 +28,34 @@ type NavItem = {
   icon: React.ComponentType<any>;
   label: string;
   screen: string;
+  /** Permission codenames required (OR logic). Absent = always show. */
+  requiredPerms?: string[];
 };
 
-const NAV_ITEMS: NavItem[] = [
-  { icon: Home,      label: 'Home',                 screen: 'Home' },
-  { icon: Leaf,      label: 'Crop Intelligence Module',    screen: 'Crops' },
-  { icon: Store,     label: 'Market Intelligence Module',  screen: 'Mandi' },
-  { icon: BarChart2, label: 'Reports',              screen: 'Reports' },
+const ALL_NAV_ITEMS: NavItem[] = [
+  { icon: Home,          label: 'Home',                            screen: 'Home' },
+  { icon: Leaf,          label: 'Crop Intelligence Module',        screen: 'Crops',         requiredPerms: ['can_access_crop_module'] },
+  { icon: Store,         label: 'Market Intelligence Module',      screen: 'Mandi',         requiredPerms: ['can_access_mandi_module'] },
+  { icon: ClipboardList, label: 'Approval Queue',                  screen: 'ApprovalQueue', requiredPerms: ['can_approve_crop_visit', 'can_approve_mandi_arrival', 'can_approve_product_demo'] },
+  { icon: BarChart2,     label: 'Reports',                         screen: 'Reports',       requiredPerms: ['can_view_own_analytics', 'can_view_team_analytics', 'can_view_all_analytics'] },
 ];
 
 const SidebarContent = (props: DrawerContentComponentProps) => {
   const { navigation, state } = props;
   const { user, logout } = useAuth();
+  const { can, perms } = usePermissions();
 
   const activeRouteName = state.routes[state.index]?.name ?? 'Home';
   const displayName = user ? user.first_name || user.username : 'User';
 
-  const TAB_SCREENS = new Set(['Home', 'Crops', 'Mandi', 'Reports']);
+  const TAB_SCREENS = new Set(['Home', 'Crops', 'Mandi', 'Reports', 'ApprovalQueue']);
+
+  // Fail-open when perms not yet loaded — show all items.
+  const visibleItems = perms.length === 0
+    ? ALL_NAV_ITEMS
+    : ALL_NAV_ITEMS.filter(item =>
+        !item.requiredPerms || item.requiredPerms.some(p => can(p)),
+      );
 
   const navigateTo = (screen: string) => {
     navigation.closeDrawer();
@@ -79,9 +92,9 @@ const SidebarContent = (props: DrawerContentComponentProps) => {
         </View>
       </View>
 
-      {/* ── Nav Items ── */}
+      {/* ── Nav Items (permission-filtered) ── */}
       <ScrollView style={styles.navSection} showsVerticalScrollIndicator={false}>
-        {NAV_ITEMS.map(({ icon, label, screen }) => {
+        {visibleItems.map(({ icon, label, screen }) => {
           const isActive = activeRouteName === screen;
           return (
             <TouchableOpacity

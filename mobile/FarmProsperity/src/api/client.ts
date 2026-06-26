@@ -3,6 +3,8 @@
  *
  * Features:
  *  - Automatically attaches Bearer token from AsyncStorage to every request.
+ *  - Attaches a stable X-Device-ID header so the backend can correlate audit
+ *    logs and sync events to a specific device (Phase 6).
  *  - Handles 401 responses by refreshing the access token and retrying.
  *  - Clears tokens and forces re-login if refresh also fails.
  */
@@ -44,7 +46,30 @@ export const STORAGE_KEYS = {
   // offline (no /auth/me/ round-trip) so field execs are never kicked to the
   // Login screen just because the device has no signal at startup.
   CACHED_USER: 'cached_user',
+  // Stable device identifier generated on first launch (Phase 6).
+  // Sent as X-Device-ID on every request so the backend can record which
+  // device made each API call in the audit log and DeviceSyncLog.
+  DEVICE_ID: 'fps_device_id',
 } as const;
+
+// ─── Device ID ───────────────────────────────────────────────────────────────
+
+/**
+ * Return the persisted device ID, generating a new UUID v4-like string on
+ * first launch.  The value never changes for the lifetime of the app install,
+ * which matches what the backend's DeviceRegistration / AuditLog expect.
+ */
+async function getOrCreateDeviceId(): Promise<string> {
+  let id = await AsyncStorage.getItem(STORAGE_KEYS.DEVICE_ID);
+  if (!id) {
+    id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+      const r = (Math.random() * 16) | 0;
+      return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+    });
+    await AsyncStorage.setItem(STORAGE_KEYS.DEVICE_ID, id);
+  }
+  return id;
+}
 
 // ─── Axios Instance ───────────────────────────────────────────────────────────
 const apiClient = axios.create({
@@ -53,12 +78,18 @@ const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ─── Request Interceptor: Attach token ───────────────────────────────────────
+// ─── Request Interceptor: Attach token + device ID ───────────────────────────
 apiClient.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    const [token, deviceId] = await Promise.all([
+      AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
+      getOrCreateDeviceId(),
+    ]);
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (config.headers) {
+      config.headers['X-Device-ID'] = deviceId;
     }
     return config;
   },

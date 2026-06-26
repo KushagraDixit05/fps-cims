@@ -5,6 +5,7 @@
  *   after returning from CropMonitoringFormScreen)
  * - Two-phase load: WatermelonDB first (instant, offline-safe), then API (authoritative)
  * - Pending visits (unsynced) show an amber "Pending" badge
+ * - Phase 6: ACTION_TILES filtered by permission; Approval Queue tile for checkers
  */
 
 import React, { useState, useCallback } from 'react';
@@ -14,10 +15,10 @@ import {
 } from 'react-native';
 import { useNavigation, DrawerActions, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import { Q } from '@nozbe/watermelondb';
 
 import { getVisitSummary, getFarmerVisits } from '../api/cropMonitoring';
 import { useAuth } from '../store/authStore';
+import { usePermissions } from '../hooks/usePermissions';
 import database from '../database';
 import { FarmerVisitModel } from '../database/models/FarmerVisitModel';
 import { MandiArrivalModel } from '../database/models/MandiArrivalModel';
@@ -26,8 +27,8 @@ import type { FarmerVisitSummary } from '../types/cropMonitoring';
 import type { RootStackParamList } from '../navigation/types';
 import AppIcon from '../components/AppIcon';
 import {
-  Menu, MapPin, Leaf, Store, Map, BarChart2,
-  Sprout, ArrowRight, ChevronRight, Package, IconStroke,
+  Menu, MapPin, Leaf, Store, BarChart2,
+  Sprout, ArrowRight, ChevronRight, Package, ClipboardList, IconStroke,
 } from '../utils/icons';
 
 type Nav = StackNavigationProp<RootStackParamList>;
@@ -42,13 +43,42 @@ type ActionTile = {
   sub: string;
   screen: string;
   badge?: string;
+  /** Permission codenames required to show this tile (OR logic). Empty = always show. */
+  requiredPerms?: string[];
 };
 
-const ACTION_TILES: ActionTile[] = [
-  { bg: '#E1F2E8', icon: Leaf,      iconColor: '#1A4A2E', title: 'Crop Intelligence Module',      sub: 'Visits · New entry',   screen: 'Crops' },
-  { bg: '#FEF3DA', icon: Store,     iconColor: '#C8900A', title: 'Market Intelligence Module',    sub: 'Arrivals · Trends',    screen: 'Mandi', badge: 'Live' },
-  { bg: '#E8F4FD', icon: Package,   iconColor: '#0277BD', title: 'Product Performance Module',    sub: 'Demo · Results',       screen: 'ProductDemoList' },
-  { bg: '#F3E8FF', icon: BarChart2, iconColor: '#7C3AED', title: 'Reports',                sub: 'Analytics · YoY',      screen: 'Reports' },
+// Static tile definitions — visibility resolved at render time from perms
+const ALL_TILES: ActionTile[] = [
+  {
+    bg: '#E1F2E8', icon: Leaf, iconColor: '#1A4A2E',
+    title: 'Crop Intelligence Module', sub: 'Visits · New entry',
+    screen: 'Crops',
+    requiredPerms: ['can_access_crop_module'],
+  },
+  {
+    bg: '#FEF3DA', icon: Store, iconColor: '#C8900A',
+    title: 'Market Intelligence Module', sub: 'Arrivals · Trends',
+    screen: 'Mandi', badge: 'Live',
+    requiredPerms: ['can_access_mandi_module'],
+  },
+  {
+    bg: '#E8F4FD', icon: Package, iconColor: '#0277BD',
+    title: 'Product Performance Module', sub: 'Demo · Results',
+    screen: 'ProductDemoList',
+    requiredPerms: ['can_access_product_demo_module'],
+  },
+  {
+    bg: '#EEF2FF', icon: ClipboardList, iconColor: '#4F46E5',
+    title: 'Approval Queue', sub: 'Review · Approve',
+    screen: 'ApprovalQueue',
+    requiredPerms: ['can_approve_crop_visit', 'can_approve_mandi_arrival', 'can_approve_product_demo'],
+  },
+  {
+    bg: '#F3E8FF', icon: BarChart2, iconColor: '#7C3AED',
+    title: 'Reports', sub: 'Analytics · YoY',
+    screen: 'Reports',
+    requiredPerms: ['can_view_own_analytics', 'can_view_team_analytics', 'can_view_all_analytics'],
+  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -142,11 +172,20 @@ const localSummary = (records: FarmerVisitModel[]): FarmerVisitSummary => {
 const HomeScreen = () => {
   const navigation = useNavigation<Nav>();
   const { user } = useAuth();
+  const { can, perms } = usePermissions();
 
   const [summary, setSummary]               = useState<FarmerVisitSummary | null>(null);
   const [activities, setActivities]         = useState<ActivityItem[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [refreshing, setRefreshing]         = useState(false);
+
+  // ── Resolve visible tiles based on current perms ──────────────────────────
+  // Fail-open when perms not yet loaded (empty array) — show all tiles.
+  const visibleTiles = perms.length === 0
+    ? ALL_TILES
+    : ALL_TILES.filter(tile =>
+        !tile.requiredPerms || tile.requiredPerms.some(p => can(p)),
+      );
 
   const loadData = useCallback(async () => {
     setLoadingActivities(true);
@@ -301,10 +340,10 @@ const HomeScreen = () => {
         ))}
       </View>
 
-      {/* ── Quick Actions ── */}
+      {/* ── Quick Actions (permission-filtered) ── */}
       <Text style={styles.sectionTitle}>QUICK ACTIONS</Text>
       <View style={styles.grid}>
-        {ACTION_TILES.map(({ bg, icon, iconColor, title, sub, screen, badge }) => (
+        {visibleTiles.map(({ bg, icon, iconColor, title, sub, screen, badge }) => (
           <TouchableOpacity
             key={title}
             style={[styles.card, { backgroundColor: bg }]}

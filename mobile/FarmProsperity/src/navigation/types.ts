@@ -61,6 +61,10 @@ export type RootStackParamList = {
   /** Full demo detail (tapped from history). */
   ProductDemoDetail: { demoId: string };
 
+  // ── Approvals (Phase 6) ────────────────────────────────────────────────────
+  /** Approval queue for checkers / regional heads. */
+  ApprovalQueue: undefined;
+
   // ── Misc ───────────────────────────────────────────────────────────────────
   Profile: undefined;
 };
@@ -72,4 +76,6 @@ export type MainTabParamList = {
   Crops: undefined;
   Mandi: undefined;
   Reports: undefined;
+  /** Approval queue tab — only rendered for users with approve permissions (Phase 6). */
+  ApprovalQueue: undefined;
 };

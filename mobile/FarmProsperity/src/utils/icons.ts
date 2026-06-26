@@ -40,8 +40,10 @@ export {
   Inbox,
   Camera,
   FileBarChart,
-  ClipboardList,
+  ClipboardList,  // Approval queue tab icon (Phase 6)
   Share2,
+  Lock,           // Edit-lock indicator (Phase 6)
+  MessageSquare,  // Revision comment icon (Phase 6)
 } from 'lucide-react-native';
 
 /** Standard icon sizes used across the app. */
