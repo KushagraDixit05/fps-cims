@@ -5,3 +5,7 @@ class WorkflowConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'workflow'
     verbose_name = 'Approval Workflow'
+
+    def ready(self):
+        from .signals import register_signals  # noqa: F401
+        register_signals()
