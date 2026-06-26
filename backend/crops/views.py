@@ -1,5 +1,7 @@
 # /media/kushagra/crucial/FPS internship/fps/backend/crops/views.py
 
+import logging
+
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -8,6 +10,10 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import IntegrityError
 from django.db.models import Sum, Count
+
+from audit.engine import AuditEngine
+
+logger = logging.getLogger(__name__)
 
 from fps_backend.pagination import MobilePagination
 from django.utils import timezone
@@ -227,6 +233,32 @@ class FarmerVisitViewSet(viewsets.ModelViewSet):
         context['request'] = self.request
         return context
 
+    def _approval_locked(self, instance):
+        from crops.serializers import _approval_is_locked
+        return _approval_is_locked(instance)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if self._approval_locked(instance):
+            return Response(
+                {'detail': 'Record is locked pending approval.'},
+                status=status.HTTP_423_LOCKED,
+            )
+        response = super().update(request, *args, **kwargs)
+        try:
+            updated = self.get_object()
+            AuditEngine.log(
+                request, event_type='crop', action='visit_updated', module='crops', obj=updated,
+                changes={k: request.data[k] for k in request.data if k not in ('photos', 'crops')},
+            )
+        except Exception:
+            logger.exception('FarmerVisitViewSet.update: audit log failed')
+        return response
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+
     def create(self, request, *args, **kwargs):
         # Idempotency: a retried offline sync (same client local_id) returns the
         # already-stored visit instead of creating a duplicate.
@@ -270,6 +302,14 @@ class FarmerVisitViewSet(viewsets.ModelViewSet):
                 )
             raise
 
+        # Phase 4: log the new visit creation.
+        try:
+            AuditEngine.log(
+                request, event_type='crop', action='visit_created', module='crops', obj=visit,
+            )
+        except Exception:
+            logger.exception('FarmerVisitViewSet.create: audit log failed')
+
         # Return lightweight response on 201
         return Response(
             {
@@ -284,6 +324,16 @@ class FarmerVisitViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
+
+    def perform_destroy(self, instance):
+        try:
+            AuditEngine.log(
+                self.request, event_type='crop', action='visit_deleted', module='crops',
+                obj=instance,
+            )
+        except Exception:
+            logger.exception('FarmerVisitViewSet.perform_destroy: audit log failed')
+        super().perform_destroy(instance)
 
     @action(detail=False, methods=['get'], url_path='summary')
     def summary(self, request):

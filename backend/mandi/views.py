@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -9,6 +11,10 @@ from datetime import date
 
 from .models import Mandi, MandiArrival
 from .serializers import MandiSerializer, MandiArrivalSerializer
+
+from audit.engine import AuditEngine
+
+logger = logging.getLogger(__name__)
 
 
 class MandiViewSet(viewsets.ReadOnlyModelViewSet):
@@ -53,6 +59,32 @@ class MandiArrivalViewSet(viewsets.ModelViewSet):
             return qs.all()
         return qs.filter(submitted_by=user)
 
+    def _approval_locked(self, instance):
+        from mandi.serializers import _approval_is_locked
+        return _approval_is_locked(instance)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if self._approval_locked(instance):
+            return Response(
+                {'detail': 'Record is locked pending approval.'},
+                status=status.HTTP_423_LOCKED,
+            )
+        response = super().update(request, *args, **kwargs)
+        try:
+            AuditEngine.log(
+                request, event_type='mandi', action='arrival_updated', module='mandi',
+                obj=self.get_object(),
+                changes={k: request.data[k] for k in request.data if k not in ('local_id',)},
+            )
+        except Exception:
+            logger.exception('MandiArrivalViewSet.update: audit log failed')
+        return response
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+
     def create(self, request, *args, **kwargs):
         # Idempotency layer 1: a retried offline sync (same client local_id) must
         # not create a duplicate. Return the already-stored record instead.
@@ -65,13 +97,7 @@ class MandiArrivalViewSet(viewsets.ModelViewSet):
                 serializer = self.get_serializer(existing)
                 return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # Idempotency layer 2: natural-key reconciliation. The (mandi, date,
-        # commodity) tuple is unique_together. If the row already exists — created
-        # under a different or empty local_id (older records, app reinstall, a
-        # double-tap that produced two local rows) — the offline retry would
-        # otherwise hit DRF's UniqueTogetherValidator and stay pending forever.
-        # Return the existing record so the client marks itself synced, and
-        # backfill local_id for faster matching on the next sync.
+        # Idempotency layer 2: natural-key reconciliation.
         existing = self._find_natural_key_match(request.data)
         if existing is not None:
             if local_id and not existing.local_id:
@@ -80,9 +106,7 @@ class MandiArrivalViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(existing)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # Idempotency layer 3: race safety net. Two concurrent syncs can both pass
-        # the lookups above and race to INSERT; the loser hits an IntegrityError
-        # at the DB level (past the validator). Reconcile to the winning row.
+        # Idempotency layer 3: race safety net.
         try:
             return super().create(request, *args, **kwargs)
         except IntegrityError:
@@ -105,7 +129,24 @@ class MandiArrivalViewSet(viewsets.ModelViewSet):
         ).first()
 
     def perform_create(self, serializer):
-        serializer.save(submitted_by=self.request.user)
+        instance = serializer.save(submitted_by=self.request.user)
+        try:
+            AuditEngine.log(
+                self.request, event_type='mandi', action='arrival_created', module='mandi',
+                obj=instance,
+            )
+        except Exception:
+            logger.exception('MandiArrivalViewSet.perform_create: audit log failed')
+
+    def perform_destroy(self, instance):
+        try:
+            AuditEngine.log(
+                self.request, event_type='mandi', action='arrival_deleted', module='mandi',
+                obj=instance,
+            )
+        except Exception:
+            logger.exception('MandiArrivalViewSet.perform_destroy: audit log failed')
+        super().perform_destroy(instance)
 
     @action(detail=False, methods=['get'], url_path='yoy_comparison')
     def yoy_comparison(self, request):

@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -16,6 +18,10 @@ from .serializers import (
     AfterPhotoUploadSerializer,
     ProductDemoAfterUpdateSerializer,
 )
+
+from audit.engine import AuditEngine
+
+logger = logging.getLogger(__name__)
 
 
 class ProductMasterViewSet(viewsets.ReadOnlyModelViewSet):
@@ -45,6 +51,32 @@ class ProductDemoViewSet(viewsets.ModelViewSet):
             return ProductDemoDetailSerializer
         return ProductDemoListSerializer
 
+    def _approval_locked(self, instance):
+        from product_demo.serializers import _approval_is_locked
+        return _approval_is_locked(instance)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if self._approval_locked(instance):
+            return Response(
+                {'detail': 'Record is locked pending approval.'},
+                status=status.HTTP_423_LOCKED,
+            )
+        response = super().update(request, *args, **kwargs)
+        try:
+            AuditEngine.log(
+                request, event_type='demo', action='updated', module='product_demo',
+                obj=self.get_object(),
+                changes={k: request.data[k] for k in request.data if k not in ('photos_before', 'photos_after')},
+            )
+        except Exception:
+            logger.exception('ProductDemoViewSet.update: audit log failed')
+        return response
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+
     def create(self, request, *args, **kwargs):
         # Idempotency: a retried offline sync (same client local_id) returns the
         # already-stored record instead of creating a duplicate.
@@ -69,7 +101,26 @@ class ProductDemoViewSet(viewsets.ModelViewSet):
             if existing is not None:
                 return Response({'id': str(existing.id)}, status=status.HTTP_200_OK)
             raise
+
+        # Phase 4: log the new demo creation.
+        try:
+            AuditEngine.log(
+                request, event_type='demo', action='created', module='product_demo', obj=demo,
+            )
+        except Exception:
+            logger.exception('ProductDemoViewSet.create: audit log failed')
+
         return Response({'id': str(demo.id)}, status=status.HTTP_201_CREATED)
+
+    def perform_destroy(self, instance):
+        try:
+            AuditEngine.log(
+                self.request, event_type='demo', action='deleted', module='product_demo',
+                obj=instance,
+            )
+        except Exception:
+            logger.exception('ProductDemoViewSet.perform_destroy: audit log failed')
+        super().perform_destroy(instance)
 
     @action(detail=True, methods=['post'], url_path='complete-after',
             parser_classes=[MultiPartParser, FormParser])
