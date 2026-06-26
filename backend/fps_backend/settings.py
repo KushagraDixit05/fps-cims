@@ -89,9 +89,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    # Phase 2: attaches _fps_request_id + _fps_actor_ip to every request for
-    # audit context (Phase 4 will dispatch async AuditLog writes from here).
+    # Phase 2: attaches _fps_request_id + _fps_actor_ip + _fps_actor_device to
+    # every request for audit context.
     'accounts.middleware.AuditContextMiddleware',
+    # Phase 4: records the request user on django-simple-history snapshots.
+    'simple_history.middleware.HistoryRequestMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -286,10 +288,25 @@ CACHES = {
 
 # ---------------------------------------------------------------------------
 # Celery — async task layer (RBAC prerequisite). Broker/result backend are Redis.
-# In local dev the Redis container from docker-compose.yml serves these. No
-# periodic schedule is registered yet — the escalation beat task lands in Phase 3.
+# In local dev the Redis container from docker-compose.yml serves these.
+from celery.schedules import crontab  # noqa: E402
+
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
 CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # Retain connection-retry-on-startup behavior (default flips in Celery 6).
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# Phase 3: check for overdue approval instances every hour and escalate them.
+CELERY_BEAT_SCHEDULE = {
+    'check-approval-escalations': {
+        'task': 'workflow.check_approval_escalations',
+        'schedule': crontab(minute='0'),  # top of every hour
+    },
+}
+
+# ---------------------------------------------------------------------------
+# Phase 4 — Audit Engine
+# Set to False in test settings to disable async audit dispatch entirely
+# (avoids Celery dependency in unit tests).
+AUDIT_ENGINE_ENABLED = True

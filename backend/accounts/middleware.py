@@ -44,4 +44,12 @@ class AuditContextMiddleware:
         else:
             request._fps_actor_ip = request.META.get('REMOTE_ADDR', '')
 
+        # Phase 4: capture User-Agent as a lightweight device fingerprint.
+        # Mobile app should also send X-Device-ID; read that first if present.
+        device_id = request.META.get('HTTP_X_DEVICE_ID', '')
+        if device_id:
+            request._fps_actor_device = device_id[:200]
+        else:
+            request._fps_actor_device = request.META.get('HTTP_USER_AGENT', '')[:200]
+
         return self.get_response(request)
