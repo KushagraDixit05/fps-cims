@@ -1,9 +1,16 @@
+import logging
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from .serializers import UserProfileSerializer, RegisterSerializer
+
+from audit.engine import AuditEngine
+
+logger = logging.getLogger(__name__)
 
 
 class MeView(APIView):
@@ -42,6 +49,20 @@ class RegisterView(APIView):
 
         user = serializer.save()
 
+        # Phase 4: log user creation (request.user is anonymous at this point).
+        try:
+            AuditEngine.log(
+                request,
+                event_type='user',
+                action='created',
+                module='accounts',
+                obj=user,
+                actor_override=user,
+                changes={'username': user.username, 'role': getattr(user, 'role', '')},
+            )
+        except Exception:
+            logger.exception('RegisterView: audit log failed')
+
         # Issue JWT tokens immediately — auto-login
         refresh = RefreshToken.for_user(user)
         profile = UserProfileSerializer(user)
@@ -65,9 +86,6 @@ class ResetPasswordView(APIView):
     Requires: is_staff or is_superuser.
     Invalidates all existing outstanding refresh tokens for the target user
     after the password change to force re-authentication.
-
-    Phase 2 — Admin Portal APIs (Phase 5) will expose a dedicated admin
-    endpoint; this lives in accounts/ so it can also be called from Django Admin.
     """
     permission_classes = [IsAuthenticated]
 
@@ -103,12 +121,66 @@ class ResetPasswordView(APIView):
         target.set_password(new_password)
         target.save(update_fields=['password'])
 
-        # Blacklist all outstanding refresh tokens for the target user so they
-        # must re-authenticate with the new password.
+        # Blacklist all outstanding refresh tokens for the target user.
         outstanding = OutstandingToken.objects.filter(user=target)
         for token in outstanding:
             BlacklistedToken.objects.get_or_create(token=token)
 
+        # Phase 4: log the password reset.
+        try:
+            AuditEngine.log(
+                request,
+                event_type='user',
+                action='password_reset',
+                module='accounts',
+                obj=target,
+                changes={'reset_by': request.user.username},
+            )
+        except Exception:
+            logger.exception('ResetPasswordView: audit log failed')
+
         return Response({
             'detail': f'Password reset for {target.username}. All sessions invalidated.',
         })
+
+
+class LogoutView(APIView):
+    """
+    Blacklists the provided refresh token, ending the user's session.
+    POST /api/auth/logout/
+
+    Request body:
+        refresh  (required) — the refresh token string to blacklist
+
+    On success returns 204 No Content. The access token will expire naturally
+    (JWT is stateless; only refresh token revocation is enforced server-side).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        refresh_str = request.data.get('refresh', '')
+        if not refresh_str:
+            return Response(
+                {'detail': 'refresh token is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            token = RefreshToken(refresh_str)
+            token.blacklist()
+        except TokenError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Phase 4: log the logout.
+        try:
+            AuditEngine.log(
+                request,
+                event_type='user',
+                action='logout',
+                module='accounts',
+                obj=request.user,
+            )
+        except Exception:
+            logger.exception('LogoutView: audit log failed')
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

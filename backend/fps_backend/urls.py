@@ -6,8 +6,9 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView
 from accounts.token_serializers import CustomTokenObtainPairSerializer
+from accounts.views_auth import AuditedTokenObtainPairView
 
 
 def health(request):
@@ -21,7 +22,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # --- Authentication ---
-    path('api/auth/login/', TokenObtainPairView.as_view(serializer_class=CustomTokenObtainPairSerializer), name='token_obtain_pair'),
+    path('api/auth/login/', AuditedTokenObtainPairView.as_view(serializer_class=CustomTokenObtainPairSerializer), name='token_obtain_pair'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/', include('accounts.urls')),   # /api/auth/me/ + /api/auth/register/
 
@@ -35,6 +36,9 @@ urlpatterns = [
 
     # --- Geo intelligence map ---
     path('api/geo/', include('geo.urls')),
+
+    # --- Phase 3: Approval workflow (checker/mobile API) ---
+    path('api/approvals/', include('workflow.urls')),
 ]
 
 
