@@ -183,6 +183,19 @@ class FarmerVisitListSerializer(serializers.ModelSerializer):
         ]
 
 
+def _approval_is_locked(instance):
+    """Return True if the record has an active ApprovalInstance that blocks editing."""
+    from django.contrib.contenttypes.models import ContentType
+    try:
+        from workflow.models import ApprovalInstance
+        ct = ContentType.objects.get_for_model(instance)
+        return ApprovalInstance.objects.filter(
+            content_type=ct, object_id=instance.pk
+        ).exclude(status__in=['draft', 'cancelled', 'revision_requested']).exists()
+    except Exception:
+        return False
+
+
 class FarmerVisitDetailSerializer(serializers.ModelSerializer):
     """
     Full detail read serializer — includes all crops and photos.
@@ -191,6 +204,7 @@ class FarmerVisitDetailSerializer(serializers.ModelSerializer):
     photos = VisitPhotoSerializer(many=True, read_only=True)
     crop_count = serializers.SerializerMethodField()
     location_display = serializers.SerializerMethodField()
+    is_locked = serializers.SerializerMethodField()
 
     class Meta:
         model = FarmerVisit
@@ -199,7 +213,7 @@ class FarmerVisitDetailSerializer(serializers.ModelSerializer):
             'block_name', 'district_name', 'total_land_acre',
             'latitude', 'longitude', 'location_display',
             'remark', 'submitted_at', 'crop_count', 'crops', 'photos',
-            'local_id', 'is_synced', 'approval_status',
+            'local_id', 'is_synced', 'approval_status', 'is_locked',
         ]
 
     def get_crop_count(self, obj: FarmerVisit) -> int:
@@ -209,6 +223,9 @@ class FarmerVisitDetailSerializer(serializers.ModelSerializer):
         if obj.latitude is not None and obj.longitude is not None:
             return f"{obj.latitude:.4f}° N, {obj.longitude:.4f}° E"
         return None
+
+    def get_is_locked(self, obj: FarmerVisit) -> bool:
+        return _approval_is_locked(obj)
 
 
 class FarmerVisitCreateSerializer(serializers.ModelSerializer):

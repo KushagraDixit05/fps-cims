@@ -8,6 +8,18 @@ from .models import ProductMaster, ProductDemo, DemoPhoto
 logger = logging.getLogger('fps.custom_values')
 
 
+def _approval_is_locked(instance):
+    from django.contrib.contenttypes.models import ContentType
+    try:
+        from workflow.models import ApprovalInstance
+        ct = ContentType.objects.get_for_model(instance)
+        return ApprovalInstance.objects.filter(
+            content_type=ct, object_id=instance.pk
+        ).exclude(status__in=['draft', 'cancelled', 'revision_requested']).exists()
+    except Exception:
+        return False
+
+
 class ProductMasterSerializer(serializers.ModelSerializer):
     class Meta:
         model  = ProductMaster
@@ -168,6 +180,7 @@ class ProductDemoListSerializer(serializers.ModelSerializer):
 class ProductDemoDetailSerializer(serializers.ModelSerializer):
     photos = DemoPhotoSerializer(many=True, read_only=True)
     location_display = serializers.SerializerMethodField()
+    is_locked = serializers.SerializerMethodField()
 
     class Meta:
         model  = ProductDemo
@@ -179,10 +192,13 @@ class ProductDemoDetailSerializer(serializers.ModelSerializer):
             'demo_result', 'demo_phase', 'additional_observations', 'remark',
             'latitude', 'longitude', 'location_display',
             'photos', 'submitted_at', 'updated_at',
-            'local_id', 'is_synced',
+            'local_id', 'is_synced', 'approval_status', 'is_locked',
         ]
 
     def get_location_display(self, obj):
         if obj.latitude is not None and obj.longitude is not None:
             return f"{abs(obj.latitude):.4f}° N, {abs(obj.longitude):.4f}° E"
         return None
+
+    def get_is_locked(self, obj) -> bool:
+        return _approval_is_locked(obj)

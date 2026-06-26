@@ -14,6 +14,9 @@ from .views import (
     PermissionListView,
     UserPermissionListCreateView, UserPermissionDetailView,
     AdminResetPasswordView,
+    # Phase 3 — Approval workflow admin endpoints
+    AdminApprovalListView, AdminApprovalDetailView,
+    AdminApprovalForceApproveView, AdminApprovalReassignView,
 )
 
 urlpatterns = [
@@ -59,4 +62,10 @@ urlpatterns = [
     # ── Phase 2 / Phase 5: User permission overrides ───────────────────────────
     path('user-permissions/',          UserPermissionListCreateView.as_view()),
     path('user-permissions/<str:up_id>/', UserPermissionDetailView.as_view()),
+
+    # ── Phase 3: Approval workflow — admin management endpoints ───────────────
+    path('approvals/',                              AdminApprovalListView.as_view()),
+    path('approvals/<uuid:pk>/',                    AdminApprovalDetailView.as_view()),
+    path('approvals/<uuid:pk>/force-approve/',      AdminApprovalForceApproveView.as_view()),
+    path('approvals/<uuid:pk>/reassign/',           AdminApprovalReassignView.as_view()),
 ]

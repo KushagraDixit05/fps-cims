@@ -5,6 +5,18 @@ from .models import Mandi, MandiArrival
 logger = logging.getLogger('fps.custom_values')
 
 
+def _approval_is_locked(instance):
+    from django.contrib.contenttypes.models import ContentType
+    try:
+        from workflow.models import ApprovalInstance
+        ct = ContentType.objects.get_for_model(instance)
+        return ApprovalInstance.objects.filter(
+            content_type=ct, object_id=instance.pk
+        ).exclude(status__in=['draft', 'cancelled', 'revision_requested']).exists()
+    except Exception:
+        return False
+
+
 class MandiSerializer(serializers.ModelSerializer):
     """
     Serializer for mandi master list — used for dropdowns and admin filtering.
@@ -22,6 +34,7 @@ class MandiArrivalSerializer(serializers.ModelSerializer):
     """
     mandi_name = serializers.CharField(source='mandi.name', read_only=True)
     mandi_state = serializers.CharField(source='mandi.state', read_only=True)
+    is_locked = serializers.SerializerMethodField()
 
     class Meta:
         model = MandiArrival
@@ -29,9 +42,13 @@ class MandiArrivalSerializer(serializers.ModelSerializer):
             'id', 'mandi', 'mandi_name', 'mandi_state',
             'commodity', 'date', 'arrival_quantity',
             'avg_rate', 'min_rate', 'max_rate',
-            'source', 'custom_source', 'remark', 'created_at', 'local_id'
+            'source', 'custom_source', 'remark', 'created_at', 'local_id',
+            'approval_status', 'is_locked',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'approval_status']
+
+    def get_is_locked(self, obj) -> bool:
+        return _approval_is_locked(obj)
 
     def validate_custom_source(self, value: str) -> str:
         return value.strip()[:100]
