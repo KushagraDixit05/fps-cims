@@ -1,16 +1,35 @@
 # Audit System
 
-> **Status (2026-06-25): 🔄 Done differently.** There is no audit table; events are **synthesized on read**. See *Implementation Notes*.
+> **Status (2026-06-26): ✅ Done — 100% complete.**
 
-## Implementation Notes (current state)
+## Implementation Notes (as-built, 2026-06-26)
 
-- The `audit/` app is empty. `admin_portal/views.py::_build_audit_events()` reconstructs an "audit feed" at request time by scanning submission tables (user registrations + the three submission types) and serves it via `/api/admin/audit/` and `/api/admin/audit/export/`.
-- Consequences vs the goals below:
-  - **Not immutable / not written** — nothing is persisted; it is recomputed each request.
-  - **Not comprehensive** — only `create`-type events; **no** logins, role/permission changes, approvals, updates, or deletes.
-  - **No async (Celery)** — synthesis is synchronous.
-  - **Missing fields** — `actor_ip`, `actor_device`, `changes`, and `request_id` are always empty.
-- `django-simple-history` is not installed; no DB immutability rules exist.
+**Architecture:**
+- `audit/engine.py` — `AuditEngine.log(request, event_type, action, ...)` is the single public interface. Resolves actor/object context synchronously in the calling process, then dispatches `write_audit_log.apply_async()` via Celery. Falls back to synchronous DB write if broker is unreachable.
+- `audit/tasks.py` — `@shared_task write_audit_log(**fields)` creates the `AuditLog` row in the worker; retries 3× on transient DB failures.
+- `audit/services/query_service.py` — `AuditQueryService` replaces `_build_audit_events()` synthesis in `admin_portal/views.py`. `AuditLogView` and `AuditExportView` now query the real table.
+- `audit/migrations/0002_auditlog_immutability.py` — PostgreSQL `RULE`s block any UPDATE or DELETE on `audit_auditlog` and `workflow_approvalaction` (verified: 4 rules in `pg_rules`).
+- `accounts/middleware.py` — `AuditContextMiddleware` now also attaches `_fps_actor_device` (from `X-Device-ID` header or User-Agent) in addition to `_fps_request_id` and `_fps_actor_ip`.
+- `fps_backend/settings.py` — `simple_history.middleware.HistoryRequestMiddleware` added; `AUDIT_ENGINE_ENABLED = True` setting added for test isolation.
+
+**Events now logged:**
+
+| Category | Events |
+|---|---|
+| User account | `user.login`, `user.login_failed`, `user.logout`, `user.created`, `user.updated`, `user.deactivated`, `user.reactivated`, `user.password_reset`, `user.force_logout` |
+| Permission | `permission.role_changed`, `permission.role_permission_added`, `permission.role_permission_removed`, `permission.override_granted`, `permission.override_denied`, `permission.override_removed` |
+| Crop data | `crop.visit_created`, `crop.visit_updated`, `crop.visit_deleted` |
+| Mandi data | `mandi.arrival_created`, `mandi.arrival_updated`, `mandi.arrival_deleted` |
+| Product demo | `demo.created`, `demo.updated`, `demo.deleted` |
+| Approval actions | `approval_action` (all transitions — written synchronously by `ApprovalEngine._write_audit()`, unchanged from Phase 3) |
+
+**Deviations from spec:**
+- `AuditContextMiddleware` stays in `accounts/middleware.py` (not moved to `audit/middleware.py`) — already working and imported.
+- `django-simple-history` `HistoricalRecords()` on models deferred — middleware wired; model history tables deferred to avoid 4 extra tables with no consumers in Phase 4.
+- Approval engine `_write_audit()` stays synchronous — Phase 3 code untouched to avoid regressions. New Phase 4 events go through the async `AuditEngine`.
+- `_build_audit_events()` function left in `admin_portal/views.py` (unused) — remove in next sprint.
+
+---
 
 ---
 

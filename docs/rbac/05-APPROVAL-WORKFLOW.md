@@ -1,13 +1,18 @@
 # Approval Workflow Engine
 
-> **Status (2026-06-25): 🟡 Partial.** Only the data shape exists; the engine, state machine, and APIs below are **not built**. See *Implementation Notes*.
+> **Status (2026-06-26): ✅ Done.** Full maker-checker engine implemented. See *Implementation Notes*.
 
 ## Implementation Notes (current state)
 
-- Each submission model (`FarmerVisit`, `MandiArrival`, `ProductDemo`) has an `approval_status` CharField (default `'draft'`) and `approved_at`. That is the full extent of implementation.
-- **No** `ApprovalWorkflow`/`ApprovalInstance`/`ApprovalAction` models, **no** `ApprovalEngine`, **no** transition APIs (`approve`/`reject`/`request-revision`/`resubmit`), **no** auto-create signals, **no** escalation, **no** data-locking. The `workflow/` app is empty.
-- Nothing moves a record out of `'draft'` via API; the state machine below is unrealized.
-- The only approval-aware code is the read-only `admin_portal` `ApprovalSLAView` (analytics). The admin portal's Approvals queue UI calls `/api/admin/approvals/*`, which **does not exist** (orphaned — see `06-ADMIN-PANEL.md`).
+- **Phase 3 fully implemented (2026-06-26).** All of the below is live on `feature/RBAC`.
+- `workflow/services/approval_engine.py` — `ApprovalEngine` with 10 transition methods (submit, start_review, approve, reject, request_revision, resubmit, cancel, escalate, force_approve, reassign). Each syncs `approval_status` back to the source model, writes `ApprovalAction`, and writes `AuditLog`.
+- `workflow/signals.py` — `post_save` signals on `FarmerVisit`, `MandiArrival`, `ProductDemo` auto-create `ApprovalInstance` in `submitted` state on every new sync. Registered via `WorkflowConfig.ready()`.
+- `workflow/tasks.py` — `check_approval_escalations` Celery task runs hourly (beat schedule wired in `CELERY_BEAT_SCHEDULE`).
+- Checker API: `GET /api/approvals/queue/`, `GET /api/approvals/history/`, `GET /api/approvals/<pk>/`, `POST /api/approvals/<pk>/start-review|approve|reject|request-revision|resubmit|cancel/`.
+- Admin API: `GET /api/admin/approvals/`, `GET /api/admin/approvals/<pk>/`, `POST /api/admin/approvals/<pk>/force-approve/`, `POST /api/admin/approvals/<pk>/reassign/`.
+- Data locking: HTTP 423 returned by `FarmerVisitViewSet`, `MandiArrivalViewSet`, `ProductDemoViewSet` on `update()`/`partial_update()` when an active `ApprovalInstance` exists. `is_locked` boolean field added to all three detail serializers.
+- `ApprovalSLAView` updated to query `ApprovalInstance` directly (accurate per-module turnaround stats).
+- **Remaining gap:** Push/FCM notifications deferred — `DeviceRegistration` table exists but no FCM credentials configured. Approval state changes visible on next poll/sync only. Addressed in Phase 6.
 
 ---
 
