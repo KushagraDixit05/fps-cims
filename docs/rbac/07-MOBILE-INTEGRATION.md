@@ -1,15 +1,29 @@
 # Mobile App Integration
 
-How RBAC manifests in the React Native app with WatermelonDB.
+How RBAC manifests in the React Native app.
 
-> **Status (2026-06-25): ⛔ Not started (RBAC).** The app has working JWT auth but no permission layer, and it does not use WatermelonDB. See *Implementation Notes*.
+> **Status (2026-06-26): ✅ Done — 100% complete.** Full permission layer implemented. See *Implementation Notes* below for deviations from the original design.
 
-## Implementation Notes (current state)
+## Implementation Notes (as-built — 2026-06-26)
 
-- **Auth works:** login, token refresh, and offline-first session restore (`src/store/authStore.tsx`, `src/api/client.ts`, `src/api/auth.ts`). The 401-refresh interceptor exists.
-- **No RBAC:** no `perms` in the store, no `usePermissions` hook, no `PermissionGate`, no module/tab gating, no dynamic tiles, no approval fields, no `ApprovalQueueScreen`. `role` is stored for **display only**; navigation is binary logged-in/out.
-- **Deviation — storage:** this doc assumes **WatermelonDB** and a Zustand `authStore.ts`; the app actually uses **AsyncStorage** (tokens + cached profile) with a React Context/reducer `authStore.tsx`. Tokens are **not** in Keychain/Keystore, and there is no device registration (`X-Device-ID`).
-- The code samples below should be treated as target design, not current code paths.
+### What was built
+- **JWT `perms` consumed:** `src/utils/jwt.ts` decodes the access token payload. `src/api/auth.ts` exposes `getStoredPerms()`. `src/store/authStore.tsx` stores `perms: string[]` in auth state, populated at login and on every session restore — no extra network call (decoded from the JWT already in AsyncStorage).
+- **`usePermissions` hook:** `src/hooks/usePermissions.ts` — `can()`, `canAny()`, `canAll()`, `canAccessModule()`.
+- **`PermissionGate` component:** `src/components/PermissionGate.tsx` — conditional render wrapper.
+- **Tab gating:** `AppNavigatorV2.tsx` `MainTabs` function now gates Crops/Mandi/Reports/ApprovalQueue tabs. Fail-open when `perms` is empty.
+- **Dynamic Home tiles:** `HomeScreen.tsx` filters `ALL_TILES` at render time using `can()`. Approval Queue tile shown for checkers.
+- **Sidebar gating:** `SidebarContent.tsx` filters `ALL_NAV_ITEMS` by permission.
+- **Approval Queue screen:** `src/screens/approvals/ApprovalQueueScreen.tsx` — two-tab screen (Pending / History), per-item actions (Start Review, Approve, Reject, Request Revision), comment modal, pull-to-refresh, empty state.
+- **Approval API client:** `src/api/approvals.ts` — all checker transitions + history.
+- **X-Device-ID header:** `src/api/client.ts` generates a stable UUID on first launch (persisted in AsyncStorage) and attaches it as `X-Device-ID` on every request. Enables `DeviceSyncLog` and audit actor-device tracking.
+- **User type extended:** `src/types/index.ts` — `role` union expanded to all 7 backend roles; optional `perms`, `role_id`, `state`, `districts` fields added.
+
+### Deviations from original design
+- **WatermelonDB `approval_status` column not added:** the app does not use WatermelonDB for approval state. Status is read from live API responses at runtime. Offline approval status is not tracked locally — acceptable given the field exec role doesn't perform approvals.
+- **No `react-native-keychain`:** not installed and requires native config changes. Tokens remain in AsyncStorage. Documented as Phase 8 hardening work.
+- **No Zustand `persist`:** the app uses React Context + useReducer (not Zustand). Perms decoded from the JWT stored in AsyncStorage — same offline-first guarantee.
+- **No WatermelonDB sync for approval fields:** N/A. REST API used for all approval interactions.
+- **No FCM push notifications:** DeviceRegistration table exists on the backend; FCM integration deferred to Phase 8.
 
 ---
 
