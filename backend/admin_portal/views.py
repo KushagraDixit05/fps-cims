@@ -1,4 +1,5 @@
 import csv
+import logging
 from datetime import date, datetime, timedelta
 
 from django.contrib.auth import get_user_model
@@ -10,6 +11,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
+
+from audit.engine import AuditEngine
+
+logger = logging.getLogger(__name__)
 
 from crops.models import FarmerVisit, CropRecord
 from mandi.models import MandiArrival
@@ -102,6 +107,13 @@ class AdminUserCreateView(APIView):
         serializer = AdminUserCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save(created_by=request.user)
+        try:
+            AuditEngine.log(
+                request, event_type='user', action='created', module='accounts',
+                obj=user, changes={'role': getattr(user, 'role', ''), 'username': user.username},
+            )
+        except Exception:
+            logger.exception('AdminUserCreateView: audit log failed')
         return Response(AdminUserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
@@ -125,9 +137,24 @@ class AdminUserDetailView(APIView):
         user = self._get_user(pk)
         if user is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        old_role = getattr(user, 'primary_role_id', None)
         serializer = AdminUserSerializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        try:
+            AuditEngine.log(
+                request, event_type='user', action='updated', module='accounts',
+                obj=user, changes={k: request.data[k] for k in request.data},
+            )
+            # Log role change separately when primary_role is being updated.
+            if 'primary_role' in request.data and str(old_role) != str(user.primary_role_id):
+                AuditEngine.log(
+                    request, event_type='permission', action='role_changed', module='rbac',
+                    obj=user,
+                    changes={'old_role': str(old_role), 'new_role': str(user.primary_role_id)},
+                )
+        except Exception:
+            logger.exception('AdminUserDetailView.patch: audit log failed')
         return Response(serializer.data)
 
 
@@ -145,6 +172,13 @@ class AdminDeactivateView(APIView):
         user.deactivation_reason = request.data.get('reason', '')
         user.deactivated_by = request.user
         user.save(update_fields=['is_active', 'deactivated_at', 'deactivation_reason', 'deactivated_by'])
+        try:
+            AuditEngine.log(
+                request, event_type='user', action='deactivated', module='accounts',
+                obj=user, changes={'reason': user.deactivation_reason},
+            )
+        except Exception:
+            logger.exception('AdminDeactivateView: audit log failed')
         return Response({'detail': 'User deactivated.'})
 
 
@@ -161,6 +195,12 @@ class AdminReactivateView(APIView):
         user.deactivated_at = None
         user.deactivation_reason = ''
         user.save(update_fields=['is_active', 'deactivated_at', 'deactivation_reason'])
+        try:
+            AuditEngine.log(
+                request, event_type='user', action='reactivated', module='accounts', obj=user,
+            )
+        except Exception:
+            logger.exception('AdminReactivateView: audit log failed')
         return Response({'detail': 'User reactivated.'})
 
 
@@ -182,7 +222,9 @@ class AdminForceLogoutView(APIView):
         )
 
         User = get_user_model()
-        if not User.objects.filter(pk=pk).exists():
+        try:
+            target_user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         outstanding = OutstandingToken.objects.filter(user_id=pk)
@@ -191,6 +233,14 @@ class AdminForceLogoutView(APIView):
             _, created = BlacklistedToken.objects.get_or_create(token=token)
             if created:
                 blacklisted_count += 1
+
+        try:
+            AuditEngine.log(
+                request, event_type='user', action='force_logout', module='accounts',
+                obj=target_user, changes={'tokens_blacklisted': blacklisted_count},
+            )
+        except Exception:
+            logger.exception('AdminForceLogoutView: audit log failed')
 
         return Response({
             'detail': f'Force logout complete. {blacklisted_count} token(s) blacklisted.',
@@ -483,18 +533,20 @@ class ProductivityView(APIView):
 
 
 class ApprovalSLAView(APIView):
-    """Approval turnaround stats by module using approved_at timestamps."""
+    """Approval turnaround stats by module from the ApprovalInstance table (Phase 3+)."""
     permission_classes = [IsAuthenticated, IsStaffUser]
 
     def get(self, request):
+        from workflow.models import ApprovalInstance
+
         days = max(1, int(request.query_params.get('days', 30)))
         since = timezone.now() - timedelta(days=days)
         by_module = {}
 
-        def _sla_stats(qs, submitted_field='submitted_at'):
-            # Only include records that have been approved and have an approved_at timestamp
-            approved = qs.filter(
-                approval_status='approved',
+        def _sla_stats(module):
+            approved = ApprovalInstance.objects.filter(
+                workflow__module=module,
+                status='approved',
                 approved_at__isnull=False,
                 approved_at__gte=since,
             )
@@ -502,8 +554,8 @@ class ApprovalSLAView(APIView):
             if count == 0:
                 return None
             durations = [
-                (getattr(r, 'approved_at') - getattr(r, submitted_field)).total_seconds() / 3600
-                for r in approved.only('approved_at', submitted_field)
+                (r.approved_at - r.submitted_at).total_seconds() / 3600
+                for r in approved.only('approved_at', 'submitted_at')
             ]
             return {
                 'count': count,
@@ -512,17 +564,10 @@ class ApprovalSLAView(APIView):
                 'max_hours': round(max(durations), 2),
             }
 
-        visits_stats = _sla_stats(FarmerVisit.objects, 'submitted_at')
-        if visits_stats:
-            by_module['crops'] = visits_stats
-
-        mandi_stats = _sla_stats(MandiArrival.objects, 'created_at')
-        if mandi_stats:
-            by_module['mandi'] = mandi_stats
-
-        demo_stats = _sla_stats(ProductDemo.objects, 'submitted_at')
-        if demo_stats:
-            by_module['product_demo'] = demo_stats
+        for module in ('crop_monitoring', 'mandi', 'product_demo'):
+            stats = _sla_stats(module)
+            if stats:
+                by_module[module] = stats
 
         return Response({'days': days, 'by_module': by_module})
 
@@ -663,56 +708,48 @@ def _build_audit_events(module_filter=None, event_type_filter=None,
 
 
 class AuditLogView(APIView):
+    """
+    GET /api/admin/audit/
+    Phase 4: queries the real AuditLog table (replaces synthesized view).
+    Supports filters: module, event_type, actor_username, since, until.
+    """
     permission_classes = [IsAuthenticated, IsStaffUser]
 
     def get(self, request):
-        page = max(1, int(request.query_params.get('page', 1)))
-        page_size = 50
+        from audit.services.query_service import AuditQueryService
 
-        events = _build_audit_events(
-            module_filter=request.query_params.get('module') or None,
-            event_type_filter=request.query_params.get('event_type') or None,
-            actor_filter=request.query_params.get('actor_username') or None,
+        qs = AuditQueryService.get_queryset(
+            module=request.query_params.get('module') or None,
+            event_type=request.query_params.get('event_type') or None,
+            actor_username=request.query_params.get('actor_username') or None,
             since=request.query_params.get('since') or None,
             until=request.query_params.get('until') or None,
         )
-
-        total = len(events)
-        start = (page - 1) * page_size
-        results = events[start:start + page_size]
-
-        return Response({
-            'count': total,
-            'next': None,
-            'previous': None,
-            'results': results,
-        })
+        paginator = StandardPagination()
+        page = paginator.paginate_queryset(qs, request)
+        results = [AuditQueryService.to_api_dict(log) for log in page]
+        return paginator.get_paginated_response(results)
 
 
 class AuditExportView(APIView):
+    """
+    GET /api/admin/audit/export/
+    Phase 4: streams CSV from real AuditLog table.
+    """
     permission_classes = [IsAuthenticated, IsStaffUser]
 
     def get(self, request):
-        events = _build_audit_events(
-            module_filter=request.query_params.get('module') or None,
-            event_type_filter=request.query_params.get('event_type') or None,
-            actor_filter=request.query_params.get('actor_username') or None,
+        from audit.services.query_service import AuditQueryService
+
+        qs = AuditQueryService.get_queryset(
+            module=request.query_params.get('module') or None,
+            event_type=request.query_params.get('event_type') or None,
+            actor_username=request.query_params.get('actor_username') or None,
             since=request.query_params.get('since') or None,
             until=request.query_params.get('until') or None,
         )
-
-        headers = [
-            'id', 'created_at', 'actor_username', 'actor_role',
-            'actor_ip', 'event_type', 'module', 'action', 'object_repr', 'request_id',
-        ]
-
-        def rows():
-            yield headers
-            for e in events:
-                yield [e.get(h, '') for h in headers]
-
         filename = f"fps-audit-{date.today().isoformat()}.csv"
-        return _stream_csv(rows(), filename)
+        return _stream_csv(AuditQueryService.export_rows(qs), filename)
 
 
 # ── Agricultural Intelligence Analytics ───────────────────────────────────────
@@ -1367,6 +1404,14 @@ class RolePermissionsView(APIView):
         # Invalidate cache for all users with this role
         PermissionService.invalidate_cache_for_role(role.id)
 
+        try:
+            AuditEngine.log(
+                request, event_type='permission', action='role_permission_added', module='rbac',
+                obj=role, changes={'permission_ids': list(permission_ids), 'added_count': created},
+            )
+        except Exception:
+            logger.exception('RolePermissionsView.post: audit log failed')
+
         return Response({'detail': f'{created} permission(s) added to role.'})
 
     def delete(self, request, role_id):
@@ -1387,6 +1432,14 @@ class RolePermissionsView(APIView):
 
         # Invalidate cache for all users with this role
         PermissionService.invalidate_cache_for_role(role.id)
+
+        try:
+            AuditEngine.log(
+                request, event_type='permission', action='role_permission_removed', module='rbac',
+                obj=role, changes={'permission_ids': list(permission_ids), 'removed_count': deleted},
+            )
+        except Exception:
+            logger.exception('RolePermissionsView.delete: audit log failed')
 
         return Response({'detail': f'{deleted} permission(s) removed from role.'})
 
@@ -1507,6 +1560,21 @@ class UserPermissionListCreateView(APIView):
         # Immediately invalidate the user's permission cache
         PermissionService.invalidate_cache(target_user.id)
 
+        try:
+            perm_action = 'override_granted' if effect == 'allow' else 'override_denied'
+            AuditEngine.log(
+                request, event_type='permission', action=perm_action, module='rbac',
+                obj=target_user,
+                changes={
+                    'permission': permission.codename,
+                    'effect': effect,
+                    'reason': reason,
+                    'expires_at': str(expires_at) if expires_at else None,
+                },
+            )
+        except Exception:
+            logger.exception('UserPermissionListCreateView.post: audit log failed')
+
         return Response({
             'id': str(up.id),
             'user': up.user_id,
@@ -1533,13 +1601,27 @@ class UserPermissionDetailView(APIView):
         from accounts.services.permission_service import PermissionService
 
         try:
-            up = UserPermission.objects.select_related('user').get(pk=up_id)
+            up = UserPermission.objects.select_related('user', 'permission').get(pk=up_id)
         except UserPermission.DoesNotExist:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+        # Capture details before delete for the audit entry.
+        target_user = up.user
+        codename = up.permission.codename
+        old_effect = up.effect
         user_id = up.user_id
+
         up.delete()
         PermissionService.invalidate_cache(user_id)
+
+        try:
+            AuditEngine.log(
+                request, event_type='permission', action='override_removed', module='rbac',
+                obj=target_user,
+                changes={'permission': codename, 'effect': old_effect},
+            )
+        except Exception:
+            logger.exception('UserPermissionDetailView.delete: audit log failed')
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -1580,4 +1662,130 @@ class AdminResetPasswordView(APIView):
         for token in outstanding:
             BlacklistedToken.objects.get_or_create(token=token)
 
+        try:
+            AuditEngine.log(
+                request, event_type='user', action='password_reset', module='accounts',
+                obj=target, changes={'reset_by': request.user.username},
+            )
+        except Exception:
+            logger.exception('AdminResetPasswordView: audit log failed')
+
         return Response({'detail': f'Password reset for {target.username}. All sessions invalidated.'})
+
+
+# ── Phase 3: Approval Workflow — Admin portal endpoints ───────────────────────
+
+class AdminApprovalListView(APIView):
+    """
+    GET /api/admin/approvals/
+    Returns all ApprovalInstances, filterable by status and module.
+    Used by the admin portal Approvals queue page.
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def get(self, request):
+        from workflow.models import ApprovalInstance
+        from workflow.serializers import ApprovalInstanceListSerializer
+
+        qs = ApprovalInstance.objects.select_related(
+            'workflow', 'submitted_by', 'current_approver'
+        ).order_by('-submitted_at')
+
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        module = request.query_params.get('module')
+        if module:
+            qs = qs.filter(workflow__module=module)
+
+        paginator = StandardPagination()
+        page = paginator.paginate_queryset(qs, request)
+        if page is not None:
+            return paginator.get_paginated_response(
+                ApprovalInstanceListSerializer(page, many=True).data
+            )
+        return Response(ApprovalInstanceListSerializer(qs, many=True).data)
+
+
+class AdminApprovalDetailView(APIView):
+    """
+    GET /api/admin/approvals/<pk>/
+    Returns full detail of an ApprovalInstance including its action log.
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def get(self, request, pk):
+        from workflow.models import ApprovalInstance
+        from workflow.serializers import ApprovalInstanceDetailSerializer
+
+        try:
+            instance = ApprovalInstance.objects.prefetch_related(
+                'actions__actor'
+            ).select_related(
+                'workflow', 'submitted_by', 'current_approver',
+                'approved_by', 'rejected_by'
+            ).get(pk=pk)
+        except ApprovalInstance.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(ApprovalInstanceDetailSerializer(instance).data)
+
+
+class AdminApprovalForceApproveView(APIView):
+    """
+    POST /api/admin/approvals/<pk>/force-approve/
+    Body: {"comment": "..."}
+    Allows admin to override the approval flow and approve any active instance.
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def post(self, request, pk):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from workflow.models import ApprovalInstance
+        from workflow.serializers import ApprovalInstanceDetailSerializer
+        from workflow.services.approval_engine import ApprovalEngine
+
+        try:
+            instance = ApprovalInstance.objects.select_related('workflow').get(pk=pk)
+        except ApprovalInstance.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        comment = request.data.get('comment', '')
+        try:
+            ApprovalEngine.force_approve(instance, request.user, comment)
+        except DjangoValidationError as exc:
+            return Response({'detail': exc.message}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(ApprovalInstanceDetailSerializer(instance).data)
+
+
+class AdminApprovalReassignView(APIView):
+    """
+    POST /api/admin/approvals/<pk>/reassign/
+    Body: {"approver_id": <int>, "comment": "..."}
+    Assigns a new current_approver without changing status.
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def post(self, request, pk):
+        from workflow.models import ApprovalInstance
+        from workflow.serializers import ApprovalInstanceDetailSerializer, ApprovalReassignSerializer
+        from workflow.services.approval_engine import ApprovalEngine
+
+        try:
+            instance = ApprovalInstance.objects.select_related('workflow').get(pk=pk)
+        except ApprovalInstance.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        ser = ApprovalReassignSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+
+        User = get_user_model()
+        try:
+            new_approver = User.objects.get(pk=ser.validated_data['approver_id'])
+        except User.DoesNotExist:
+            return Response({'detail': 'Approver user not found.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        ApprovalEngine.reassign(instance, request.user, new_approver)
+        return Response(ApprovalInstanceDetailSerializer(instance).data)
