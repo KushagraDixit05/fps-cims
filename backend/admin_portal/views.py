@@ -1789,3 +1789,327 @@ class AdminApprovalReassignView(APIView):
 
         ApprovalEngine.reassign(instance, request.user, new_approver)
         return Response(ApprovalInstanceDetailSerializer(instance).data)
+
+
+# ── Phase 5: Region Management APIs ──────────────────────────────────────────
+
+class RegionListCreateView(APIView):
+    """
+    GET  /api/admin/regions/   — paginated list with optional filters
+    POST /api/admin/regions/   — create a new region
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def get(self, request):
+        from accounts.models.region import Region
+        from .serializers import RegionSerializer
+
+        qs = (
+            Region.objects
+            .select_related('parent')
+            .prefetch_related('region_users', 'children')
+            .order_by('state', 'district', 'taluka')
+        )
+
+        state = request.query_params.get('state')
+        if state:
+            qs = qs.filter(state__icontains=state)
+
+        is_active = request.query_params.get('is_active')
+        if is_active is not None:
+            qs = qs.filter(is_active=is_active.lower() in ('true', '1', 'yes'))
+
+        parent = request.query_params.get('parent')
+        if parent:
+            qs = qs.filter(parent__id=parent)
+
+        search = request.query_params.get('search')
+        if search:
+            qs = qs.filter(Q(name__icontains=search) | Q(code__icontains=search))
+
+        paginator = StandardPagination()
+        page = paginator.paginate_queryset(qs, request)
+        return paginator.get_paginated_response(RegionSerializer(page, many=True).data)
+
+    def post(self, request):
+        from accounts.models.region import Region
+        from .serializers import RegionSerializer, RegionWriteSerializer
+
+        ser = RegionWriteSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        region = ser.save()
+
+        try:
+            AuditEngine.log(
+                request, event_type='region', action='created',
+                module='accounts', obj=region,
+                changes={'code': [None, region.code]},
+            )
+        except Exception:
+            logger.exception('RegionListCreateView.post: audit log failed')
+
+        return Response(RegionSerializer(region).data, status=status.HTTP_201_CREATED)
+
+
+class RegionDetailView(APIView):
+    """
+    GET    /api/admin/regions/<pk>/
+    PATCH  /api/admin/regions/<pk>/
+    DELETE /api/admin/regions/<pk>/   — blocked if region has children or assigned users
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def _get_region(self, pk):
+        from accounts.models.region import Region
+        try:
+            return Region.objects.select_related('parent').prefetch_related('region_users', 'children').get(pk=pk)
+        except Region.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        from .serializers import RegionDetailSerializer
+        region = self._get_region(pk)
+        if region is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(RegionDetailSerializer(region).data)
+
+    def patch(self, request, pk):
+        from .serializers import RegionSerializer, RegionWriteSerializer
+        region = self._get_region(pk)
+        if region is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        old_code = region.code
+        ser = RegionWriteSerializer(region, data=request.data, partial=True)
+        ser.is_valid(raise_exception=True)
+        region = ser.save()
+
+        try:
+            changes = {}
+            if region.code != old_code:
+                changes['code'] = [old_code, region.code]
+            AuditEngine.log(
+                request, event_type='region', action='updated',
+                module='accounts', obj=region, changes=changes or None,
+            )
+        except Exception:
+            logger.exception('RegionDetailView.patch: audit log failed')
+
+        return Response(RegionSerializer(region).data)
+
+    def delete(self, request, pk):
+        from accounts.models.region import Region
+        from .serializers import RegionSerializer
+        region = self._get_region(pk)
+        if region is None:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if region.children.exists():
+            return Response(
+                {'detail': 'Cannot delete a region that has child regions.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if region.region_users.exists():
+            return Response(
+                {'detail': 'Cannot delete a region that has assigned users.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            AuditEngine.log(
+                request, event_type='region', action='deleted',
+                module='accounts', obj=region,
+                changes={'code': [region.code, None]},
+            )
+        except Exception:
+            logger.exception('RegionDetailView.delete: audit log failed')
+
+        region.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RegionUsersView(APIView):
+    """
+    GET /api/admin/regions/<pk>/users/
+    Paginated list of users assigned to this region.
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def get(self, request, pk):
+        from accounts.models.region import Region, UserRegion
+        from .serializers import RegionUserSerializer
+
+        try:
+            region = Region.objects.get(pk=pk)
+        except Region.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        qs = UserRegion.objects.filter(region=region).select_related('user')
+        paginator = StandardPagination()
+        page = paginator.paginate_queryset(qs, request)
+        return paginator.get_paginated_response(RegionUserSerializer(page, many=True).data)
+
+
+class RegionAssignUserView(APIView):
+    """
+    POST   /api/admin/regions/<pk>/assign-user/
+           Body: {"user_id": <int>, "role": "assigned"}
+           Creates or updates a UserRegion record.
+
+    DELETE /api/admin/regions/<pk>/assign-user/
+           Body: {"user_id": <int>}
+           Removes a UserRegion record.
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def post(self, request, pk):
+        from accounts.models.region import Region, UserRegion
+        from accounts.services.permission_service import PermissionService
+        from .serializers import RegionUserSerializer
+
+        try:
+            region = Region.objects.get(pk=pk)
+        except Region.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'detail': 'user_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        User = get_user_model()
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        role = request.data.get('role', 'assigned')
+        user_region, created = UserRegion.objects.update_or_create(
+            user=user, region=region,
+            defaults={'role': role},
+        )
+
+        try:
+            PermissionService.invalidate_cache(user.id)
+        except Exception:
+            logger.exception('RegionAssignUserView.post: cache invalidation failed')
+
+        try:
+            AuditEngine.log(
+                request, event_type='region', action='user_assigned',
+                module='accounts', obj=region,
+                changes={'user_id': [None, user.id], 'role': [None, role]},
+            )
+        except Exception:
+            logger.exception('RegionAssignUserView.post: audit log failed')
+
+        return Response(
+            RegionUserSerializer(user_region).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    def delete(self, request, pk):
+        from accounts.models.region import Region, UserRegion
+        from accounts.services.permission_service import PermissionService
+
+        try:
+            region = Region.objects.get(pk=pk)
+        except Region.DoesNotExist:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'detail': 'user_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        deleted, _ = UserRegion.objects.filter(user_id=user_id, region=region).delete()
+        if not deleted:
+            return Response({'detail': 'Assignment not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            PermissionService.invalidate_cache(user_id)
+        except Exception:
+            logger.exception('RegionAssignUserView.delete: cache invalidation failed')
+
+        try:
+            AuditEngine.log(
+                request, event_type='region', action='user_removed',
+                module='accounts', obj=region,
+                changes={'user_id': [user_id, None]},
+            )
+        except Exception:
+            logger.exception('RegionAssignUserView.delete: audit log failed')
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ── Phase 5: Sync Monitor APIs ────────────────────────────────────────────────
+
+class SyncMonitorListView(APIView):
+    """
+    GET /api/admin/sync/
+    Paginated list of device sync events across all devices.
+    Query params: user_id, device_id (DeviceRegistration.device_id string),
+                  status, date_from (ISO date), date_to (ISO date).
+
+    Returns an empty paginated list until Phase 6 instruments the mobile sync
+    endpoint to write DeviceSyncLog entries.
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def get(self, request):
+        from accounts.models.device import DeviceSyncLog
+        from .serializers import DeviceSyncLogSerializer
+
+        qs = DeviceSyncLog.objects.select_related('device', 'user').order_by('-synced_at')
+
+        user_id = request.query_params.get('user_id')
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+
+        device_id = request.query_params.get('device_id')
+        if device_id:
+            qs = qs.filter(device__device_id=device_id)
+
+        sync_status = request.query_params.get('status')
+        if sync_status:
+            qs = qs.filter(status=sync_status)
+
+        date_from = request.query_params.get('date_from')
+        if date_from:
+            try:
+                qs = qs.filter(synced_at__date__gte=date_from)
+            except Exception:
+                pass
+
+        date_to = request.query_params.get('date_to')
+        if date_to:
+            try:
+                qs = qs.filter(synced_at__date__lte=date_to)
+            except Exception:
+                pass
+
+        paginator = StandardPagination()
+        page = paginator.paginate_queryset(qs, request)
+        return paginator.get_paginated_response(DeviceSyncLogSerializer(page, many=True).data)
+
+
+class SyncMonitorDeviceView(APIView):
+    """
+    GET /api/admin/sync/<device_id>/
+    Paginated sync history for a single device, identified by its
+    DeviceRegistration.device_id string (not UUID PK).
+    """
+    permission_classes = [IsAuthenticated, IsStaffUser]
+
+    def get(self, request, device_id):
+        from accounts.models.device import DeviceRegistration, DeviceSyncLog
+        from .serializers import DeviceSyncLogSerializer
+
+        try:
+            device = DeviceRegistration.objects.get(device_id=device_id)
+        except DeviceRegistration.DoesNotExist:
+            return Response({'detail': 'Device not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        qs = DeviceSyncLog.objects.filter(device=device).select_related('user').order_by('-synced_at')
+        paginator = StandardPagination()
+        page = paginator.paginate_queryset(qs, request)
+        return paginator.get_paginated_response(DeviceSyncLogSerializer(page, many=True).data)

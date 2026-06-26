@@ -59,3 +59,36 @@ class RefreshTokenBlacklist(models.Model):
 
     def __str__(self):
         return f'{self.jti} ({self.reason})'
+
+
+class DeviceSyncLog(models.Model):
+    """One record per sync attempt from a field device. Written by the mobile
+    sync endpoint (Phase 6). Table exists now so the Sync Monitor API can
+    return honest empty results before Phase 6 instruments the mobile client."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    device = models.ForeignKey(
+        DeviceRegistration, on_delete=models.CASCADE, related_name='sync_logs',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sync_logs',
+    )
+    sync_type = models.CharField(max_length=20, default='full')   # push | pull | full
+    status = models.CharField(max_length=20, default='success')   # success | partial | failed
+    records_pushed = models.IntegerField(default=0)
+    records_pulled = models.IntegerField(default=0)
+    error_detail = models.TextField(blank=True, default='')
+    sync_batch_id = models.UUIDField(null=True, blank=True)       # cross-ref AuditLog.sync_batch_id
+    synced_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'accounts_devicesynclog'
+        ordering = ['-synced_at']
+        indexes = [
+            models.Index(fields=['device'], name='idx_synclog_device'),
+            models.Index(fields=['user'], name='idx_synclog_user'),
+            models.Index(fields=['-synced_at'], name='idx_synclog_synced'),
+        ]
+
+    def __str__(self):
+        return f'{self.device_id} sync at {self.synced_at:%Y-%m-%d %H:%M} ({self.status})'

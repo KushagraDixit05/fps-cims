@@ -17,6 +17,9 @@ from .views import (
     # Phase 3 — Approval workflow admin endpoints
     AdminApprovalListView, AdminApprovalDetailView,
     AdminApprovalForceApproveView, AdminApprovalReassignView,
+    # Phase 5 — Region management and Sync monitor
+    RegionListCreateView, RegionDetailView, RegionUsersView, RegionAssignUserView,
+    SyncMonitorListView, SyncMonitorDeviceView,
 )
 
 urlpatterns = [
@@ -68,4 +71,14 @@ urlpatterns = [
     path('approvals/<uuid:pk>/',                    AdminApprovalDetailView.as_view()),
     path('approvals/<uuid:pk>/force-approve/',      AdminApprovalForceApproveView.as_view()),
     path('approvals/<uuid:pk>/reassign/',           AdminApprovalReassignView.as_view()),
+
+    # ── Phase 5: Region management ────────────────────────────────────────────
+    path('regions/',                               RegionListCreateView.as_view()),
+    path('regions/<uuid:pk>/',                     RegionDetailView.as_view()),
+    path('regions/<uuid:pk>/users/',               RegionUsersView.as_view()),
+    path('regions/<uuid:pk>/assign-user/',         RegionAssignUserView.as_view()),
+
+    # ── Phase 5: Sync monitor ─────────────────────────────────────────────────
+    path('sync/',                                  SyncMonitorListView.as_view()),
+    path('sync/<str:device_id>/',                  SyncMonitorDeviceView.as_view()),
 ]

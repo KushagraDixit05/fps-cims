@@ -10,7 +10,7 @@ from .role import Role, RolePermission
 from .permission import Permission
 from .user_permission import UserPermission
 from .region import Region, UserRegion
-from .device import DeviceRegistration, RefreshTokenBlacklist
+from .device import DeviceRegistration, RefreshTokenBlacklist, DeviceSyncLog
 
 __all__ = [
     'User',
@@ -22,4 +22,5 @@ __all__ = [
     'UserRegion',
     'DeviceRegistration',
     'RefreshTokenBlacklist',
+    'DeviceSyncLog',
 ]

@@ -3,6 +3,8 @@ from rest_framework import serializers
 from crops.models import FarmerVisit, CropRecord
 from mandi.models import MandiArrival
 from product_demo.models import ProductDemo
+from accounts.models.region import Region, UserRegion
+from accounts.models.device import DeviceRegistration, DeviceSyncLog
 
 
 # ── User Management ───────────────────────────────────────────────────────────
@@ -161,3 +163,117 @@ class ProductDemoAdminSerializer(serializers.ModelSerializer):
         if obj.executive:
             return obj.executive.get_full_name() or obj.executive.username
         return ''
+
+
+# ── Phase 5: Region Management ────────────────────────────────────────────────
+
+class RegionUserSerializer(serializers.ModelSerializer):
+    """Compact user row for the region → users sub-list."""
+    username = serializers.CharField(source='user.username', read_only=True)
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserRegion
+        fields = ['user_id', 'username', 'full_name', 'role']
+
+    def get_full_name(self, obj):
+        return obj.user.get_full_name() or obj.user.username
+
+
+class RegionSerializer(serializers.ModelSerializer):
+    parent_name = serializers.SerializerMethodField()
+    user_count = serializers.SerializerMethodField()
+    children_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Region
+        fields = [
+            'id', 'name', 'code', 'state', 'district', 'taluka',
+            'parent', 'parent_name', 'is_active', 'created_at',
+            'user_count', 'children_count',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def get_parent_name(self, obj):
+        return obj.parent.name if obj.parent_id else None
+
+    def get_user_count(self, obj):
+        # Use prefetched cache when available to avoid N+1.
+        if hasattr(obj, '_prefetched_objects_cache') and 'region_users' in obj._prefetched_objects_cache:
+            return len(obj._prefetched_objects_cache['region_users'])
+        return obj.region_users.count()
+
+    def get_children_count(self, obj):
+        if hasattr(obj, '_prefetched_objects_cache') and 'children' in obj._prefetched_objects_cache:
+            return len(obj._prefetched_objects_cache['children'])
+        return obj.children.count()
+
+
+class RegionDetailSerializer(RegionSerializer):
+    users = RegionUserSerializer(source='region_users', many=True, read_only=True)
+    children = RegionSerializer(many=True, read_only=True)
+
+    class Meta(RegionSerializer.Meta):
+        fields = RegionSerializer.Meta.fields + ['users', 'children']
+
+
+class RegionWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Region
+        fields = ['name', 'code', 'state', 'district', 'taluka', 'parent', 'is_active']
+
+    def validate(self, data):
+        parent = data.get('parent')
+        instance = self.instance  # None on create
+        if parent is None:
+            return data
+        if instance and parent.pk == instance.pk:
+            raise serializers.ValidationError({'parent': 'A region cannot be its own parent.'})
+        # Cycle guard: walk up at most 8 hops.
+        node = parent
+        for _ in range(8):
+            if node.parent_id is None:
+                break
+            if instance and node.parent_id == instance.pk:
+                raise serializers.ValidationError({'parent': 'Circular region hierarchy detected.'})
+            node = node.parent
+        return data
+
+
+# ── Phase 5: Sync Monitor ─────────────────────────────────────────────────────
+
+class DeviceSyncLogSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    device_identifier = serializers.CharField(source='device.device_id', read_only=True)
+    device_name = serializers.CharField(source='device.device_name', read_only=True)
+    platform = serializers.CharField(source='device.platform', read_only=True)
+
+    class Meta:
+        model = DeviceSyncLog
+        fields = [
+            'id', 'synced_at', 'username', 'device_identifier', 'device_name',
+            'platform', 'sync_type', 'status',
+            'records_pushed', 'records_pulled', 'error_detail', 'sync_batch_id',
+        ]
+
+
+class DeviceSummarySerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    last_sync_at = serializers.SerializerMethodField()
+    last_sync_status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DeviceRegistration
+        fields = [
+            'id', 'device_id', 'device_name', 'platform', 'app_version',
+            'username', 'last_active_at', 'is_trusted', 'registered_at',
+            'last_sync_at', 'last_sync_status',
+        ]
+
+    def get_last_sync_at(self, obj):
+        last = obj.sync_logs.order_by('-synced_at').first()
+        return last.synced_at.isoformat() if last else None
+
+    def get_last_sync_status(self, obj):
+        last = obj.sync_logs.order_by('-synced_at').first()
+        return last.status if last else None
