@@ -40,7 +40,7 @@ import {
 
 const STATUS_CONFIG: Record<ApprovalStatus, { label: string; bg: string; color: string }> = {
   submitted:          { label: 'Submitted',     bg: '#EEF2FF', color: '#4F46E5' },
-  in_review:          { label: 'In Review',     bg: '#FEF3DA', color: '#C8900A' },
+  under_review:       { label: 'In Review',     bg: '#FEF3DA', color: '#C8900A' },
   revision_requested: { label: 'Needs Revision',bg: '#FFF3CD', color: '#856404' },
   escalated:          { label: 'Escalated',     bg: '#FEE2E2', color: '#DC2626' },
   resubmitted:        { label: 'Resubmitted',   bg: '#D1FAE5', color: '#065F46' },
@@ -201,7 +201,7 @@ const ApprovalCard = ({
           )}
 
           {/* Approve / Request Revision / Reject while actively reviewing */}
-          {item.status === 'in_review' && (
+          {item.status === 'under_review' && (
             <View style={card.actions}>
               <TouchableOpacity style={card.approveBtn} onPress={onApprove} disabled={loading}>
                 <AppIcon icon={Check} size={14} color="#FFFFFF" strokeWidth={2.5} />

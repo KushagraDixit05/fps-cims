@@ -6,10 +6,11 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from accounts.permissions import OwnEntryOrCheckerPermission, permission_from_codename
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import IntegrityError
-from django.db.models import Sum, Count
+from django.db.models import Sum
 
 from audit.engine import AuditEngine
 
@@ -207,6 +208,17 @@ class FarmerVisitViewSet(viewsets.ModelViewSet):
     GET    /api/farmer-visits/summary/   → dashboard counts (today/week/month/team)
     """
     permission_classes = [IsAuthenticated]
+    own_perm = "can_edit_own_crop_visit"
+    any_perm = "can_edit_any_crop_visit"
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [IsAuthenticated(), permission_from_codename("can_create_crop_visit")()]
+        if self.action in ("update", "partial_update"):
+            return [IsAuthenticated(), OwnEntryOrCheckerPermission()]
+        if self.action == "destroy":
+            return [IsAuthenticated(), permission_from_codename("can_delete_crop_visit")()]
+        return [IsAuthenticated()]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     pagination_class = MobilePagination
     filter_backends = [filters.OrderingFilter, filters.SearchFilter]

@@ -7,7 +7,6 @@ the app registry is fully populated.
 """
 
 from django.db.models.signals import post_save
-from django.dispatch import receiver
 
 
 def _get_actor(instance):

@@ -20,7 +20,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
-from django.utils import timezone
 
 from workflow.models import ApprovalAction, ApprovalInstance, ApprovalWorkflow
 

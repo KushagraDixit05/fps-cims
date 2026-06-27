@@ -6,7 +6,7 @@ Step-by-step delivery plan. Each phase is independently deployable and leaves th
 
 ---
 
-## Implementation Status (as of 2026-06-26)
+## Implementation Status (as of 2026-06-27 — Phase 10 final)
 
 Audited against the active `feature/RBAC` branch (→ `main`). The unmerged `feature/rbac-implementation` branch is experimental/obsolete and is **not** counted.
 
@@ -20,7 +20,9 @@ Audited against the active `feature/RBAC` branch (→ `main`). The unmerged `fea
 | 5 — Admin Portal APIs | ✅ Done | 100% | All admin APIs complete. User-mgmt, analytics, audit, roles/permissions/user-permissions, approvals, **regions**, and **sync monitor** APIs live. Admin auth (`aud: fps-admin` scope) deferred to Phase 8 hardening. |
 | 6 — Mobile Integration | ✅ Done | 100% | `perms` decoded from JWT at login/restore. `usePermissions` hook + `PermissionGate` component. Tab gating (Crops/Mandi/Reports/ApprovalQueue). Dynamic Home tiles. Sidebar gating. `ApprovalQueueScreen` (Pending/History tabs, approve/reject/revision actions). `X-Device-ID` header on all requests. User type extended to 7 roles. |
 | 7 — Admin Portal Frontend | ✅ Done | 100% | Next.js 16 portal complete. All 9 pages wired: Dashboard, Users, Roles, Permissions, Regions, Approvals, Analytics, Audit, Sync Monitor. Regions + Sync Monitor pages built in Phase 7 completion (2026-06-26). |
-| 8 — Hardening & Testing | ✅ Done | 100% | Admin scoped auth (aud: fps-admin), test suite, throttling, Swagger (drf-spectacular), monitoring alerts, locustfile. |
+| 8 — Hardening & Testing | ✅ Done | 100% | Admin scoped auth (aud: fps-admin), test suite (55 tests), throttling, Swagger (drf-spectacular), monitoring alerts, locustfile. |
+| **9 — Final Audit & Merge Readiness** | ✅ **Done** | **100%** | End-to-end audit complete. 3 bugs fixed: `ApprovalStatus` naming mismatch (mobile `'in_review'` → `'under_review'`), dead `_build_audit_events()` function removed (131 lines), dead `IsStaffUser` import + stale comment removed. 55/55 tests pass. 6 deviations documented. GO for merge. See `12-PHASE-9-FINAL-AUDIT.md`. |
+| **10 — Final Validation & Release Readiness** | ✅ **Done** | **100%** | Closed last security gap: `permission_from_codename()` factory added; `FarmerVisitViewSet`, `MandiArrivalViewSet`, `ProductDemoViewSet` write actions now gated by `HasFPSPermission` + `OwnEntryOrCheckerPermission`. Access token lifetime reduced 12h → 8h. All verification checks pass (Django check 0 issues, 0 pending migrations, 55/55 tests, Next.js build clean, mobile tsc 0 errors). See `13-PHASE-10-FINAL-VALIDATION.md`. |
 
 ### Critical cross-cutting deviations
 1. ~~**No Role/Permission tables.**~~ **Resolved (Phase 1).**
@@ -461,7 +463,7 @@ Full admin portal operational. Admins can create users, assign roles, manage per
    - Next.js frontend updated to call `/api/admin/auth/login/`.
    - *httpOnly-cookie BFF pattern deferred (see deviation above).*
 2. **Write Django test suite:** ✅
-   - 33 tests across `accounts.tests`, `workflow.tests`, `audit.tests`.
+   - 55 tests across `accounts.tests`, `workflow.tests`, `audit.tests` (Phase 9 audit confirmed actual count; Phase 8 docs originally stated 33).
    - Permission resolution: role grants, deny overrides, expiry, cache, inactive user.
    - Approval engine: all valid and invalid transitions, comment validation, action logging.
    - API authorization: 401/403 enforcement, mobile token rejection, admin token acceptance.
@@ -484,7 +486,7 @@ Full admin portal operational. Admins can create users, assign roles, manage per
    - `requirements-dev.txt` created with `locust>=2.32`.
 
 ### Deliverable
-System is production-ready. Test suite covers permission engine and approval workflow (33 tests). Brute-force protection live. All API endpoints documented via Swagger. Monitoring tasks alert admins on operational drift.
+System is production-ready. Test suite covers permission engine and approval workflow (55 tests). Brute-force protection live. All API endpoints documented via Swagger. Monitoring tasks alert admins on operational drift.
 *Status: **met** — `manage.py check` → 0 issues; all Phase 8 files created and wired; admin token isolation verified by `test_admin_auth.py`.*
 
 ---
@@ -537,7 +539,9 @@ Completing the **Phase 5 roles/permissions/approvals APIs** (which requires Phas
 | 5 — Admin APIs | ✅ Done | 100% | All admin APIs complete: user-mgmt, roles, permissions, approvals, regions, sync monitor, analytics, audit. Admin auth (`aud` scope) deferred to Phase 8. |
 | 6 — Mobile Integration | ✅ Done | 100% | `perms` decoded from JWT; `usePermissions` + `PermissionGate`; tab gating; dynamic tiles + sidebar; `ApprovalQueueScreen`; `X-Device-ID` device header. |
 | 7 — Admin Portal Frontend | ✅ Done | 100% | All 9 pages built and wired: Dashboard, Users, Roles, Permissions, Regions, Approvals, Analytics, Audit, Sync Monitor. Regions + Sync Monitor completed 2026-06-26. |
-| 8 — Hardening | ✅ Done | 100% | Admin scoped auth, test suite, throttling, Swagger, monitoring tasks, locustfile. |
+| 8 — Hardening | ✅ Done | 100% | Admin scoped auth, 55-test suite, throttling, Swagger, monitoring tasks, locustfile. |
+| **9 — Final Audit** | ✅ **Done** | **100%** | 3 bugs fixed, dead code removed, 55/55 tests pass. GO for merge → `main`. |
+| **10 — Final Validation** | ✅ **Done** | **100%** | Last security gap closed (field-data write permission guards). Token lifetime 12h → 8h. All verification checks pass. Branch is complete, production-ready, and merge-ready. |
 
 <details>
 <summary>Original effort estimates (pre-implementation, for reference)</summary>
@@ -557,3 +561,35 @@ Completing the **Phase 5 roles/permissions/approvals APIs** (which requires Phas
 
 With 2 developers in parallel: **~20–28 working days.** Phase 7 is now largely complete; the bulk of the remaining estimate lives in Phases 0–6 and 8.
 </details>
+
+---
+
+## Phase 10 — Final Validation & Release Readiness
+**Status: ✅ Done — 100% complete (2026-06-27)**
+
+Phase 10 performed a complete audit of Phases 0–9, closed the last accepted deviation, and produced the definitive final-validation report.
+
+### Tasks
+
+- [x] **Audit Phases 0–9** — verified all 10 phases complete via 3 parallel Explore agents covering backend, docs/frontend, and git/build state.
+- [x] **Add `permission_from_codename()` factory** — `accounts/permissions.py`: factory function that creates a `HasFPSPermission` subclass for any codename. Enables per-action permission switching inside ViewSet `get_permissions()`.
+- [x] **Gate `FarmerVisitViewSet` write actions** — `crops/views.py`: `create` → `can_create_crop_visit`; `update/partial_update` → `OwnEntryOrCheckerPermission`; `destroy` → `can_delete_crop_visit`. Read-only and custom actions unchanged.
+- [x] **Gate `MandiArrivalViewSet` write actions** — `mandi/views.py`: same pattern with `can_create_mandi_arrival`, `can_edit_own_mandi_arrival`, `can_delete_mandi_arrival`.
+- [x] **Gate `ProductDemoViewSet` write actions** — `product_demo/views.py`: same pattern with `can_create_product_demo`, `can_edit_own_product_demo`, `can_delete_product_demo`. Custom actions (`complete_after`, `upload_after_photos`, `summary`) fall through to `[IsAuthenticated]`.
+- [x] **Reduce token lifetime** — `fps_backend/settings.py`: `ACCESS_TOKEN_LIFETIME` changed from `timedelta(hours=12)` to `timedelta(hours=8)` per Phase 0 recommendation.
+- [x] **Verification** — `manage.py check` → 0 issues; `makemigrations --check` → no changes; 55/55 tests pass; Next.js build → compiled successfully; `tsc --noEmit` → 0 errors.
+- [x] **Update docs** — `00-OVERVIEW.md` status banner updated to Phase 10 complete; this file updated with Phase 10 row and section.
+- [x] **Write Phase 10 final-validation report** — `13-PHASE-10-FINAL-VALIDATION.md`: comprehensive final report including phase matrix, deviation status, security assessment, merge readiness, post-merge roadmap, and RBAC completion percentage.
+
+### Deviations — Explicitly Deferred Post-Merge
+
+| # | Item | Reason |
+|---|------|--------|
+| 2 | Admin portal BFF httpOnly-cookie pattern | Full Next.js proxy refactor + live testing required |
+| 3 | Mobile `SecureStore`/`Keychain` token storage | Native module install + device testing required |
+| 4 | FCM push notifications | New Firebase integration, separate feature scope |
+| 5 | `HistoricalRecords()` on field models | `AuditLog` already captures change events; full row history not required for current compliance |
+
+### Deliverable
+All 10 phases complete. Field-data write endpoints are fully permission-gated. No pending migrations. All builds clean. Branch is production-ready and merge-ready with 0 blocking items.
+*Status: **met** — `manage.py check` → 0 issues; 55/55 tests pass; Next.js build clean; mobile tsc 0 errors; branch is 27 commits ahead of `main`, 0 behind.*

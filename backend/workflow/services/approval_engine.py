@@ -7,7 +7,6 @@ approval_status back to the source submission model, and appends an ApprovalActi
 and AuditLog entry.
 """
 
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
@@ -89,7 +88,6 @@ class ApprovalEngine:
     @staticmethod
     def reassign(instance, actor, new_approver):
         """Assign a new current_approver without changing status."""
-        from workflow.models import ApprovalAction
         instance.current_approver = new_approver
         instance.save(update_fields=['current_approver', 'updated_at'])
         ApprovalEngine._write_action(instance, actor, 'commented',
@@ -177,8 +175,8 @@ class ApprovalEngine:
             AuditLog.objects.create(
                 actor=actor,
                 actor_username=actor.username if actor else 'system',
-                actor_role=getattr(getattr(actor, 'primary_role', None), 'code', '') or
-                           getattr(actor, 'role', '') if actor else '',
+                actor_role=(getattr(getattr(actor, 'primary_role', None), 'code', '') or
+                            getattr(actor, 'role', '')) if actor else '',
                 actor_ip=getattr(request, '_fps_actor_ip', None) if request else None,
                 event_type='approval_action',
                 module=instance.workflow.module,

@@ -5,7 +5,7 @@
  *   GET  /api/approvals/queue/                 → pending submissions for the caller
  *   GET  /api/approvals/history/               → completed approvals
  *   GET  /api/approvals/<id>/                  → detail + action history
- *   POST /api/approvals/<id>/start-review/     → move submitted → in_review
+ *   POST /api/approvals/<id>/start-review/     → move submitted → under_review
  *   POST /api/approvals/<id>/approve/          → mark approved
  *   POST /api/approvals/<id>/reject/           → mark rejected (comment required)
  *   POST /api/approvals/<id>/request-revision/ → send back to submitter
@@ -19,7 +19,7 @@ import apiClient from './client';
 
 export type ApprovalStatus =
   | 'submitted'
-  | 'in_review'
+  | 'under_review'
   | 'revision_requested'
   | 'escalated'
   | 'resubmitted'
@@ -85,17 +85,17 @@ export const getApprovalDetail = async (id: string): Promise<ApprovalDetail> => 
   return data;
 };
 
-/** Checker claims the submission (submitted → in_review). */
+/** Checker claims the submission (submitted → under_review). */
 export const startReview = async (id: string): Promise<void> => {
   await apiClient.post(`/approvals/${id}/start-review/`);
 };
 
-/** Checker approves the submission (in_review → approved). */
+/** Checker approves the submission (under_review → approved). */
 export const approveSubmission = async (id: string, comment?: string): Promise<void> => {
   await apiClient.post(`/approvals/${id}/approve/`, { comment: comment ?? '' });
 };
 
-/** Checker rejects the submission (in_review → rejected). Comment is required. */
+/** Checker rejects the submission (under_review → rejected). Comment is required. */
 export const rejectSubmission = async (id: string, comment: string): Promise<void> => {
   await apiClient.post(`/approvals/${id}/reject/`, { comment });
 };

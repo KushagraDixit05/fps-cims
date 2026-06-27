@@ -9,4 +9,3 @@ urlpatterns = [
     # Phase 4: blacklist refresh token + emit audit log.
     path('logout/', LogoutView.as_view(), name='user-logout'),
 ]
-

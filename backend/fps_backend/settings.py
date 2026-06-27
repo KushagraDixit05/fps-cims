@@ -288,7 +288,7 @@ from datetime import timedelta
 SIMPLE_JWT = {
     # 12h access lifetime is the established project setting (RBAC docs suggest 8h
     # for field use; we keep 12h deliberately — see docs/rbac/11-IMPLEMENTATION-PHASES.md).
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     # Blacklist rotated refresh tokens so revocation / force-logout actually invalidates

@@ -3,7 +3,7 @@ import logging
 from datetime import date, datetime, timedelta
 
 from django.contrib.auth import get_user_model
-from django.db.models import Avg, Count, F, ExpressionWrapper, DurationField, Max, Min, Q, Sum
+from django.db.models import Avg, Count, Max, Q, Sum
 from django.http import StreamingHttpResponse
 from django.utils import timezone
 from rest_framework.views import APIView
@@ -18,7 +18,7 @@ from crops.models import FarmerVisit, CropRecord
 from mandi.models import MandiArrival
 from product_demo.models import ProductDemo
 
-from .permissions import IsAdminPortalUser, IsStaffUser  # IsStaffUser kept for tests/fallback
+from .permissions import IsAdminPortalUser
 from .serializers import (
     FarmerVisitAdminSerializer,
     MandiArrivalAdminSerializer,
@@ -572,139 +572,6 @@ class ApprovalSLAView(APIView):
 
 # ── Audit Log ─────────────────────────────────────────────────────────────────
 
-def _build_audit_events(module_filter=None, event_type_filter=None,
-                         actor_filter=None, since=None, until=None):
-    """
-    Synthesises audit events from existing submission tables.
-    Returns a list of dicts sorted by created_at descending.
-    """
-    User = get_user_model()
-    events = []
-
-    def _ts(dt):
-        return dt.isoformat() if dt else ''
-
-    # -- User registrations (module: accounts) ---------------------------------
-    if not module_filter or module_filter == 'accounts':
-        if not event_type_filter or event_type_filter == 'create':
-            qs = User.objects.select_related('created_by').order_by('-date_joined')[:500]
-            for u in qs:
-                actor = u.created_by
-                actor_username = actor.username if actor else 'system'
-                actor_role = actor.role if actor else 'system'
-                if actor_filter and actor_filter.lower() not in actor_username.lower():
-                    continue
-                ts = _ts(u.date_joined)
-                if since and ts < since:
-                    continue
-                if until and ts > until:
-                    continue
-                events.append({
-                    'id': f'acc-{u.pk}',
-                    'actor_username': actor_username,
-                    'actor_role': actor_role,
-                    'actor_ip': '',
-                    'actor_device': '',
-                    'event_type': 'create',
-                    'module': 'accounts',
-                    'action': 'user_registered',
-                    'object_repr': u.username,
-                    'changes': {},
-                    'request_id': '',
-                    'created_at': ts,
-                })
-
-    # -- Farmer visits (module: crops) ----------------------------------------
-    if not module_filter or module_filter == 'crops':
-        if not event_type_filter or event_type_filter == 'create':
-            qs = FarmerVisit.objects.select_related('executive').order_by('-submitted_at')[:500]
-            for v in qs:
-                actor_username = v.executive.username if v.executive else 'unknown'
-                actor_role = v.executive.role if v.executive else ''
-                if actor_filter and actor_filter.lower() not in actor_username.lower():
-                    continue
-                ts = _ts(v.submitted_at)
-                if since and ts < since:
-                    continue
-                if until and ts > until:
-                    continue
-                events.append({
-                    'id': f'visit-{v.pk}',
-                    'actor_username': actor_username,
-                    'actor_role': actor_role,
-                    'actor_ip': '',
-                    'actor_device': '',
-                    'event_type': 'create',
-                    'module': 'crops',
-                    'action': 'submitted_farmer_visit',
-                    'object_repr': f'{v.farmer_name} ({v.district_name})',
-                    'changes': {},
-                    'request_id': '',
-                    'created_at': ts,
-                })
-
-    # -- Mandi arrivals (module: mandi) ----------------------------------------
-    if not module_filter or module_filter == 'mandi':
-        if not event_type_filter or event_type_filter == 'create':
-            qs = MandiArrival.objects.select_related('submitted_by').order_by('-created_at')[:500]
-            for m in qs:
-                actor_username = m.submitted_by.username if m.submitted_by else 'unknown'
-                actor_role = m.submitted_by.role if m.submitted_by else ''
-                if actor_filter and actor_filter.lower() not in actor_username.lower():
-                    continue
-                ts = _ts(m.created_at)
-                if since and ts < since:
-                    continue
-                if until and ts > until:
-                    continue
-                events.append({
-                    'id': f'mandi-{m.pk}',
-                    'actor_username': actor_username,
-                    'actor_role': actor_role,
-                    'actor_ip': '',
-                    'actor_device': '',
-                    'event_type': 'create',
-                    'module': 'mandi',
-                    'action': 'submitted_mandi_arrival',
-                    'object_repr': f'{m.commodity} ({getattr(m, "mandi_id", "")})',
-                    'changes': {},
-                    'request_id': '',
-                    'created_at': ts,
-                })
-
-    # -- Product demos (module: product_demo) ----------------------------------
-    if not module_filter or module_filter == 'product_demo':
-        if not event_type_filter or event_type_filter == 'create':
-            qs = ProductDemo.objects.select_related('executive').order_by('-submitted_at')[:500]
-            for d in qs:
-                actor_username = d.executive.username if d.executive else 'unknown'
-                actor_role = d.executive.role if d.executive else ''
-                if actor_filter and actor_filter.lower() not in actor_username.lower():
-                    continue
-                ts = _ts(d.submitted_at)
-                if since and ts < since:
-                    continue
-                if until and ts > until:
-                    continue
-                events.append({
-                    'id': f'demo-{d.pk}',
-                    'actor_username': actor_username,
-                    'actor_role': actor_role,
-                    'actor_ip': '',
-                    'actor_device': '',
-                    'event_type': 'create',
-                    'module': 'product_demo',
-                    'action': 'submitted_product_demo',
-                    'object_repr': f'{d.product_name} — {d.farmer_name}',
-                    'changes': {},
-                    'request_id': '',
-                    'created_at': ts,
-                })
-
-    events.sort(key=lambda e: e['created_at'], reverse=True)
-    return events
-
-
 class AuditLogView(APIView):
     """
     GET /api/admin/audit/
@@ -777,7 +644,6 @@ def _period_bounds(period: str):
 
 
 def _summary_for_range(start, end):
-    User = get_user_model()
     visits = FarmerVisit.objects.filter(submitted_at__gte=start, submitted_at__lt=end)
     mandi = MandiArrival.objects.filter(created_at__gte=start, created_at__lt=end)
     demos = ProductDemo.objects.filter(submitted_at__gte=start, submitted_at__lt=end)
@@ -1199,8 +1065,6 @@ class ExecutivePerformanceView(APIView):
 
 
 # ── Role Management APIs ──────────────────────────────────────────────────────
-# Phase 2 + Phase 5: these endpoints un-orphan the admin portal's Roles page.
-# Requires: IsStaffUser (is_staff or is_superuser).
 
 class RoleListCreateView(APIView):
     """
@@ -1211,7 +1075,6 @@ class RoleListCreateView(APIView):
 
     def get(self, request):
         from accounts.models.role import Role
-        from accounts.models.user_permission import UserPermission
 
         roles = Role.objects.prefetch_related('role_permissions__permission').order_by('name')
         data = []
@@ -1377,7 +1240,7 @@ class RolePermissionsView(APIView):
         return Response(data)
 
     def post(self, request, role_id):
-        from accounts.models.role import Role, RolePermission
+        from accounts.models.role import RolePermission
         from accounts.models.permission import Permission
         from accounts.services.permission_service import PermissionService
 
@@ -1830,7 +1693,6 @@ class RegionListCreateView(APIView):
         return paginator.get_paginated_response(RegionSerializer(page, many=True).data)
 
     def post(self, request):
-        from accounts.models.region import Region
         from .serializers import RegionSerializer, RegionWriteSerializer
 
         ser = RegionWriteSerializer(data=request.data)
@@ -1896,8 +1758,6 @@ class RegionDetailView(APIView):
         return Response(RegionSerializer(region).data)
 
     def delete(self, request, pk):
-        from accounts.models.region import Region
-        from .serializers import RegionSerializer
         region = self._get_region(pk)
         if region is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)

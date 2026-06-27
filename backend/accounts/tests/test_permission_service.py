@@ -132,18 +132,10 @@ class PermissionServiceTest(TestCase):
         PermissionService processes overrides in order: deny calls .discard()
         which removes even if allow added it earlier.
         """
-        from accounts.models.permission import Permission
         from accounts.models.user_permission import UserPermission
         from accounts.services.permission_service import PermissionService
 
-        perm_x = Permission.objects.create(
-            codename='ps_can_x_thing',
-            label='X Thing',
-            module='test_module',
-            category='misc',
-        )
-        # Grant via allow override first, then deny a different one —
-        # the deny override on perm_view (which is role-granted) should win.
+        # The deny override on perm_view (which is role-granted) should win.
         UserPermission.objects.create(
             user=self.user,
             permission=self.perm_view,

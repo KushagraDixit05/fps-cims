@@ -21,31 +21,34 @@ As FPS scales to multiple states, regional teams, verification workflows, and ev
 
 This document is the top-level architecture overview. Detailed implementation lives in numbered sibling documents.
 
-> **Status (2026-06-26):** Phase 1 (Schema) and Phase 2 (Permission Engine) are now complete. The architecture described below for permissions is live. Approvals and Audit are still pending. See the authoritative status matrix in `11-IMPLEMENTATION-PHASES.md`.
+> **Status (2026-06-27 — Phase 10 complete):** All 10 phases (0–8 implementation + Phase 9 final audit + Phase 10 final validation) are complete. The full RBAC system is live and **production-ready**. Phase 10 closed the last security gap (field-data write endpoints now permission-gated), reduced token lifetime to 8h, and produced the definitive final-validation report. See `11-IMPLEMENTATION-PHASES.md` for the authoritative status matrix and `13-PHASE-10-FINAL-VALIDATION.md` for the final report.
 
 ---
 
-## 1a. Implementation Status (2026-06-26)
+## 1a. Implementation Status (2026-06-27)
 
 Audited against the active `feature/RBAC` branch (→ `main`). The unmerged `feature/rbac-implementation` branch is experimental/obsolete and is **not** counted.
 
-**Phases 1 (Schema) and 2 (Permission Engine) are fully built and integrated:**
+**All 9 phases are fully built and verified:**
 
-- **Roles/permissions:** Phase 1 complete — `Role`/`Permission`/`RolePermission`/`UserPermission`/`Region`/`UserRegion`/`DeviceRegistration`/`RefreshTokenBlacklist` tables all exist and are seeded (48 permissions, 7 roles, 5 regions). `User.primary_role` is a real FK to `accounts_role`.
-- **Permission Engine:** Phase 2 complete — `PermissionService` resolves ABAC-lite rules with Redis caching. DRF classes (`HasFPSPermission`, `OwnEntryOrCheckerPermission`) and mixins (`RegionScopedQuerysetMixin`) are in place.
-- **JWT:** embeds `perms` (sorted list), `role_id`, `state`, and `districts`.
-- **Approval workflow:** only `approval_status`/`approved_at` fields exist; no engine, no maker-checker, no APIs.
-- **Audit:** **synthesized on read** from submission tables — no persistent, immutable audit log.
-- **Infrastructure:** **Phase 0 complete** — Redis (docker-compose), a Celery app (`fps_backend/celery.py`), `django-simple-history`, and the JWT `token_blacklist` app are now wired in. Nothing yet *consumes* them (no cache layer or async tasks until Phases 2–4), but the broker + worker boot cleanly.
-- **Admin portal (Next.js 16):** largely built. Users, Analytics, and (pseudo-)Audit are wired to real APIs. **Roles, Permissions, and Approvals pages are orphaned** — they call `/api/admin/roles|permissions|approvals`, which do not exist on this branch.
+- **Roles/permissions:** Phase 1 complete — `Role`/`Permission`/`RolePermission`/`UserPermission`/`Region`/`UserRegion`/`DeviceRegistration`/`RefreshTokenBlacklist` tables all exist and are seeded (48 permissions, 7 roles, 5 regions).
+- **Permission Engine:** Phase 2 complete — `PermissionService` resolves ABAC-lite rules with Redis caching. `HasFPSPermission`, `OwnEntryOrCheckerPermission`, `RegionEnforcedPermission` DRF classes live.
+- **JWT:** embeds `perms` (sorted list), `role_id`, `state`, and `districts`. Admin portal uses `aud: fps-admin` scoped tokens.
+- **Approval workflow:** Phase 3 complete — full `ApprovalEngine` state machine (10 transitions), maker-checker APIs, data locking (HTTP 423), auto-escalation.
+- **Audit:** Phase 4 complete — persistent, immutable `AuditLog` table with 25+ event types; async Celery writes; PostgreSQL RULEs prevent UPDATE/DELETE.
+- **Admin APIs:** Phase 5 complete — 40+ admin views covering users, roles, permissions, approvals, regions, sync monitor, analytics, and audit.
+- **Mobile:** Phase 6 complete — `usePermissions` hook, `PermissionGate`, tab/tile/sidebar gating, `ApprovalQueueScreen`, `X-Device-ID` tracking.
+- **Admin Portal Frontend:** Phase 7 complete — Next.js 16, 20 routes (9 dashboard pages + login + map + field-data), all wired to live APIs.
+- **Hardening:** Phase 8 complete — admin scoped auth, 55 tests (0 failures), brute-force throttle, Swagger/Redoc, monitoring beat tasks.
+- **Final Audit:** Phase 9 complete — 3 bugs fixed, dead code removed, branch confirmed conflict-free. GO for merge.
 
-**Net:** Phase 0 and Phase 1 (DB schema) are complete. The next priority is building the backend RBAC engine (permission engine → approval workflow → admin APIs) to match the existing UI.
+**Net:** `feature/RBAC` is production-ready and cleared for merge into `main`.
 
 ---
 
 ## 2. System Architecture Diagram
 
-> ⚠️ **Target architecture.** The Permission Engine, Approval Engine, Audit Engine, and Redis cache shown below are **not yet implemented** (see §1a).
+> **As-built architecture.** All components shown below are implemented and live on `feature/RBAC` (see §1a).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐

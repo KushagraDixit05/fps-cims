@@ -141,3 +141,15 @@ class RegionEnforcedPermission(BasePermission):
 
         obj_district = getattr(obj, district_attr, None)
         return obj_district in districts
+
+
+def permission_from_codename(codename: str) -> type:
+    """Return a HasFPSPermission subclass gated on a specific permission codename.
+
+    Allows per-action permission checking inside ViewSet.get_permissions():
+
+        def get_permissions(self):
+            if self.action == 'create':
+                return [IsAuthenticated(), permission_from_codename('can_create_crop_visit')()]
+    """
+    return type(f"Requires_{codename}", (HasFPSPermission,), {"required_permission": codename})

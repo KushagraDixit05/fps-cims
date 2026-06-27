@@ -4,6 +4,7 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from accounts.permissions import OwnEntryOrCheckerPermission, permission_from_codename
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db import IntegrityError
 from django.db.models import Sum
@@ -47,6 +48,17 @@ class MandiArrivalViewSet(viewsets.ModelViewSet):
     """
     serializer_class = MandiArrivalSerializer
     permission_classes = [IsAuthenticated]
+    own_perm = "can_edit_own_mandi_arrival"
+    any_perm = "can_edit_any_mandi_arrival"
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [IsAuthenticated(), permission_from_codename("can_create_mandi_arrival")()]
+        if self.action in ("update", "partial_update"):
+            return [IsAuthenticated(), OwnEntryOrCheckerPermission()]
+        if self.action == "destroy":
+            return [IsAuthenticated(), permission_from_codename("can_delete_mandi_arrival")()]
+        return [IsAuthenticated()]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['mandi', 'date', 'commodity', 'source']
     ordering_fields = ['date', 'arrival_quantity', 'avg_rate']

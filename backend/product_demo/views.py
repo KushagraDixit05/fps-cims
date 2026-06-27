@@ -1,13 +1,12 @@
 import logging
 
 from rest_framework import viewsets, permissions, status
+from accounts.permissions import OwnEntryOrCheckerPermission, permission_from_codename
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.db import transaction, IntegrityError
 from django.utils import timezone
-from django.db.models import Count
-
 from fps_backend.pagination import MobilePagination
 from .models import ProductMaster, ProductDemo, DemoPhoto
 from .serializers import (
@@ -35,6 +34,17 @@ class ProductDemoViewSet(viewsets.ModelViewSet):
     """CRUD for product demo entries. Field executives see only their own records."""
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     permission_classes = [permissions.IsAuthenticated]
+    own_perm = "can_edit_own_product_demo"
+    any_perm = "can_edit_any_product_demo"
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [permissions.IsAuthenticated(), permission_from_codename("can_create_product_demo")()]
+        if self.action in ("update", "partial_update"):
+            return [permissions.IsAuthenticated(), OwnEntryOrCheckerPermission()]
+        if self.action == "destroy":
+            return [permissions.IsAuthenticated(), permission_from_codename("can_delete_product_demo")()]
+        return [permissions.IsAuthenticated()]
     pagination_class = MobilePagination
 
     def get_queryset(self):
