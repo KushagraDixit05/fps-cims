@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Download, Search, ChevronDown, ChevronRight } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -222,9 +222,8 @@ export default function AuditPage() {
                     </tr>
                   ) : (
                     logs.map((log) => (
-                      <>
+                      <React.Fragment key={log.id}>
                         <tr
-                          key={log.id}
                           className="border-b border-fps-divider last:border-0 hover:bg-fps-canvas/70 transition-colors cursor-pointer"
                           onClick={() => setExpandedId((prev) => (prev === log.id ? null : log.id))}
                         >
@@ -269,7 +268,7 @@ export default function AuditPage() {
                           </td>
                         </tr>
                         {expandedId === log.id && (
-                          <tr key={`${log.id}-expand`} className="bg-fps-canvas/50">
+                          <tr className="bg-fps-canvas/50">
                             <td colSpan={8} className="px-6 py-4">
                               <div className="space-y-2">
                                 <p className="text-[11px] font-bold uppercase tracking-wider text-fps-muted">Changes</p>
@@ -283,7 +282,7 @@ export default function AuditPage() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     ))
                   )}
                 </tbody>
