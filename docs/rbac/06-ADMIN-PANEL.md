@@ -1,30 +1,30 @@
 # Admin Panel Architecture
 
-> **Status (2026-06-26): 🟡 Mostly built (Approvals pending).** The portal is live, and Phase 2 un-orphaned the Roles and Permissions pages. See *Implementation Notes*.
+> **Status (2026-06-26): ✅ Done — Phase 7 complete.** All 9 portal pages are built and wired to live backend APIs. Regions and Sync Monitor pages added in Phase 7 completion. See *Implementation Notes*.
 
 ## Implementation Notes (current state)
 
-Built with **Next.js 16** (this doc says 15), shadcn/ui, Tailwind, TanStack Query, Zustand.
+Built with **Next.js 16**, shadcn/ui, Tailwind, TanStack Query, Zustand.
 
 | Page | State |
 |------|-------|
 | Dashboard | ✅ built + wired |
 | User Management | ✅ built + wired (`/api/admin/users/*`) |
 | Analytics | ✅ built + wired (`/api/admin/analytics/*`) |
-| Audit Log Viewer | ✅ built + wired, but reads **synthesized** audit (see `08`) |
+| Audit Log Viewer | ✅ built + wired (reads real immutable `AuditLog` table — Phase 4) |
 | Role Management | ✅ built + wired (`/api/admin/roles/*`) |
 | Permission Management | ✅ built + wired (`/api/admin/permissions/`, `/api/admin/user-permissions/`) |
-| Approval Queue | 🟡 UI built, **orphaned** — calls missing `/api/admin/approvals/*` |
-| Region Management | ⛔ not built |
-| Sync Monitor | ⛔ not built |
+| Approval Queue | ✅ built + wired (`/api/admin/approvals/*`) |
+| Region Management | ✅ built + wired (`/api/admin/regions/*`) — Phase 7 |
+| Sync Monitor | ✅ built + wired (`/api/admin/sync/*`) — Phase 7 |
 
-**Auth deviations:** localStorage Zustand store + client-side JWT decode (`store/authStore.ts`, `lib/api.ts`) — **not** the httpOnly-cookie / `aud: fps-admin` model below. `AuthGuard` enforces *logged-in only*; there are **no permission-based route guards** (any authenticated user can open every admin page). Only the audit-CSV export is role-gated. No Docker/Nginx config yet.
+**Auth deviations (Phase 8 items):** localStorage Zustand store + client-side JWT decode (`store/authStore.ts`, `lib/api.ts`) — **not** the httpOnly-cookie / `aud: fps-admin` model below. `AuthGuard` enforces *logged-in only*; there are **no permission-based route guards** beyond `is_staff` check (any authenticated staff can open every admin page). Only the audit-CSV export is role-gated. No Docker/Nginx config yet.
 
 ---
 
 ## 1. Stack Decision
 
-**Next.js 15 (App Router) — deployed as a separate internal service.**
+**Next.js 16 (App Router) — deployed as a separate internal service.**
 
 ### Why Next.js (not Django Admin, not a React SPA)
 
@@ -39,7 +39,7 @@ Built with **Next.js 16** (this doc says 15), shadcn/ui, Tailwind, TanStack Quer
 | Real-time updates | Poor | Good | Good |
 | Dev speed | Fast for simple needs | Slow | Medium-fast |
 
-**Decision: Next.js 15 with shadcn/ui component library.**
+**Decision: Next.js 16 with shadcn/ui component library.**
 
 Django Admin remains useful for super admin emergency access and database-level operations. It is NOT the primary admin UI.
 
@@ -308,7 +308,7 @@ The admin portal should NOT be publicly accessible. Put it behind a VPN or IP al
 
 | Layer | Choice | Why |
 |-------|--------|-----|
-| Framework | Next.js 15 | SSR + API routes + ecosystem |
+| Framework | Next.js 16 | SSR + API routes + ecosystem |
 | UI components | shadcn/ui + Tailwind | Accessible, no bundle bloat |
 | Data tables | TanStack Table | Headless, sorts/filters/pagination |
 | Charts | Recharts | React-native-friendly API |

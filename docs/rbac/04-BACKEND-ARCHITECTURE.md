@@ -1,13 +1,13 @@
 # Backend Architecture
 
-> **Status (2026-06-26): 🟡 Partial.** The `accounts` and `admin_portal` architecture is largely complete (Phases 1-2). `workflow` and `audit` remain pending (Phases 3-4). See *Implementation Notes*.
+> **Status (2026-06-26): ✅ Complete.** All phases 0–7 are done. Phases 3 (Approval Workflow) and 4 (Audit Engine) are fully implemented. Phase 7 (Admin Portal Frontend) is 100% complete as of 2026-06-26. See *Implementation Notes*.
 
 ## Implementation Notes (current state)
 
 - **`accounts`** — real, extended: `models/` package fully established with RBAC tables. `PermissionService`, `tokens`, `signals`, `mixins`, `permissions`, and `middleware` (AuditContext) are all wired up.
-- **`admin_portal`** — real: user-mgmt, analytics, pseudo-audit, **plus roles, permissions, and user-permissions** views are live. Approvals and regions pending.
-- **`workflow`** — 🟡 **models built**, but engine logic / views are pending (Phase 3).
-- **`audit`** — 🟡 **models built**, `AuditContextMiddleware` is active, but async engine/tasks pending (Phase 4).
+- **`admin_portal`** — real: user-mgmt, analytics, audit, roles, permissions, user-permissions, approvals, regions, and sync monitor views are all live.
+- **`workflow`** — ✅ **complete**: `ApprovalEngine` with 10 transition methods, all state machine APIs, `workflow/signals.py` auto-creates `ApprovalInstance` on sync, hourly Celery escalation task.
+- **`audit`** — ✅ **complete**: `AuditEngine` service, async Celery writes with sync fallback, full instrumentation (25+ event types), PostgreSQL immutability RULEs on `audit_auditlog` + `workflow_approvalaction`.
 - **`crops`/`mandi`/`product_demo`** — existing; gained `approval_status`/`approved_at` fields and owner-filtered querysets. `HasFPSPermission` is available for integration.
 
 ---

@@ -12,7 +12,7 @@
 - Admin API: `GET /api/admin/approvals/`, `GET /api/admin/approvals/<pk>/`, `POST /api/admin/approvals/<pk>/force-approve/`, `POST /api/admin/approvals/<pk>/reassign/`.
 - Data locking: HTTP 423 returned by `FarmerVisitViewSet`, `MandiArrivalViewSet`, `ProductDemoViewSet` on `update()`/`partial_update()` when an active `ApprovalInstance` exists. `is_locked` boolean field added to all three detail serializers.
 - `ApprovalSLAView` updated to query `ApprovalInstance` directly (accurate per-module turnaround stats).
-- **Remaining gap:** Push/FCM notifications deferred — `DeviceRegistration` table exists but no FCM credentials configured. Approval state changes visible on next poll/sync only. Addressed in Phase 6.
+- **Remaining gap:** Push/FCM notifications deferred — `DeviceRegistration` table exists but no FCM credentials configured. Approval state changes visible on next poll/sync only. Addressed in Phase 8 (hardening).
 
 ---
 
