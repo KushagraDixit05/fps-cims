@@ -1,0 +1,7 @@
+# Development-only dependencies — not installed in production.
+# Install with: pip install -r requirements-dev.txt
+#
+# Include production deps too:
+#   pip install -r requirements.txt -r requirements-dev.txt
+
+locust>=2.32          # load / performance testing (see locustfile.py)

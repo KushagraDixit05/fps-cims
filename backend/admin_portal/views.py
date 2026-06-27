@@ -10,8 +10,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import IsAuthenticated
-
 from audit.engine import AuditEngine
 
 logger = logging.getLogger(__name__)
@@ -20,7 +18,7 @@ from crops.models import FarmerVisit, CropRecord
 from mandi.models import MandiArrival
 from product_demo.models import ProductDemo
 
-from .permissions import IsStaffUser
+from .permissions import IsAdminPortalUser, IsStaffUser  # IsStaffUser kept for tests/fallback
 from .serializers import (
     FarmerVisitAdminSerializer,
     MandiArrivalAdminSerializer,
@@ -75,7 +73,7 @@ def _stream_csv(rows_iter, filename):
 # ── User Management ───────────────────────────────────────────────────────────
 
 class AdminUserListView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         User = get_user_model()
@@ -101,7 +99,7 @@ class AdminUserListView(APIView):
 
 
 class AdminUserCreateView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def post(self, request):
         serializer = AdminUserCreateSerializer(data=request.data)
@@ -118,7 +116,7 @@ class AdminUserCreateView(APIView):
 
 
 class AdminUserDetailView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def _get_user(self, pk):
         User = get_user_model()
@@ -159,7 +157,7 @@ class AdminUserDetailView(APIView):
 
 
 class AdminDeactivateView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def post(self, request, pk):
         User = get_user_model()
@@ -183,7 +181,7 @@ class AdminDeactivateView(APIView):
 
 
 class AdminReactivateView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def post(self, request, pk):
         User = get_user_model()
@@ -214,7 +212,7 @@ class AdminForceLogoutView(APIView):
     The user's existing access tokens will continue to work until they expire
     (max 12h), but no new access tokens can be obtained without re-login.
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def post(self, request, pk):
         from rest_framework_simplejwt.token_blacklist.models import (
@@ -275,7 +273,7 @@ def _visits_queryset(params):
 
 
 class FarmerVisitListView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         qs = _visits_queryset(request.query_params)
@@ -286,7 +284,7 @@ class FarmerVisitListView(APIView):
 
 
 class FarmerVisitExportView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         qs = _visits_queryset(request.query_params)
@@ -357,7 +355,7 @@ def _mandi_queryset(params):
 
 
 class MandiArrivalListView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         qs = _mandi_queryset(request.query_params)
@@ -368,7 +366,7 @@ class MandiArrivalListView(APIView):
 
 
 class MandiArrivalExportView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         qs = _mandi_queryset(request.query_params)
@@ -427,7 +425,7 @@ def _demos_queryset(params):
 
 
 class ProductDemoListView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         qs = _demos_queryset(request.query_params)
@@ -438,7 +436,7 @@ class ProductDemoListView(APIView):
 
 
 class ProductDemoExportView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         qs = _demos_queryset(request.query_params)
@@ -483,7 +481,7 @@ class ProductDemoExportView(APIView):
 
 class ProductivityView(APIView):
     """Per-executive submission counts across all three modules within a date window."""
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         days = max(1, int(request.query_params.get('days', 30)))
@@ -534,7 +532,7 @@ class ProductivityView(APIView):
 
 class ApprovalSLAView(APIView):
     """Approval turnaround stats by module from the ApprovalInstance table (Phase 3+)."""
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         from workflow.models import ApprovalInstance
@@ -713,7 +711,7 @@ class AuditLogView(APIView):
     Phase 4: queries the real AuditLog table (replaces synthesized view).
     Supports filters: module, event_type, actor_username, since, until.
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         from audit.services.query_service import AuditQueryService
@@ -736,7 +734,7 @@ class AuditExportView(APIView):
     GET /api/admin/audit/export/
     Phase 4: streams CSV from real AuditLog table.
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         from audit.services.query_service import AuditQueryService
@@ -807,7 +805,7 @@ def _summary_for_range(start, end):
 
 
 class SummaryView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         period = request.query_params.get('period', 'week')
@@ -828,7 +826,7 @@ class SummaryView(APIView):
 
 
 class CropIntelligenceView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         days = max(1, int(request.query_params.get('days', 30)))
@@ -920,7 +918,7 @@ class CropIntelligenceView(APIView):
 
 
 class MarketIntelligenceView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         days = max(1, int(request.query_params.get('days', 30)))
@@ -1008,7 +1006,7 @@ class MarketIntelligenceView(APIView):
 
 
 class ProductPerformanceView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         days = max(1, int(request.query_params.get('days', 30)))
@@ -1076,7 +1074,7 @@ class ProductPerformanceView(APIView):
 
 
 class RecentActivitiesView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         limit = max(1, min(100, int(request.query_params.get('limit', 20))))
@@ -1129,7 +1127,7 @@ class RecentActivitiesView(APIView):
 
 
 class ExecutivePerformanceView(APIView):
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         days = max(1, int(request.query_params.get('days', 30)))
@@ -1209,7 +1207,7 @@ class RoleListCreateView(APIView):
     GET  /api/admin/roles/        — list all roles (with permission/user counts)
     POST /api/admin/roles/        — create a custom role
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         from accounts.models.role import Role
@@ -1276,7 +1274,7 @@ class RoleDetailView(APIView):
     PATCH  /api/admin/roles/<id>/  — update a role (non-preset only for code changes)
     DELETE /api/admin/roles/<id>/  — delete a custom role (preset roles are protected)
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def _get_role(self, role_id):
         from accounts.models.role import Role
@@ -1345,7 +1343,7 @@ class RolePermissionsView(APIView):
     DELETE /api/admin/roles/<id>/permissions/  — remove permissions from role
                                                  body: { "permission_ids": ["uuid", ...] }
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def _get_role(self, role_id):
         from accounts.models.role import Role
@@ -1451,7 +1449,7 @@ class PermissionListView(APIView):
     GET /api/admin/permissions/  — list all active permissions in the catalogue.
     Grouped by module. Used by the admin portal's Permission Catalogue page.
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         from accounts.models.permission import Permission
@@ -1484,7 +1482,7 @@ class UserPermissionListCreateView(APIView):
     POST /api/admin/user-permissions/               — create an override
          body: { user, permission (UUID), effect, reason, expires_at? }
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         from accounts.models.user_permission import UserPermission
@@ -1594,7 +1592,7 @@ class UserPermissionDetailView(APIView):
     """
     DELETE /api/admin/user-permissions/<id>/  — remove a user permission override
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def delete(self, request, up_id):
         from accounts.models.user_permission import UserPermission
@@ -1634,7 +1632,7 @@ class AdminResetPasswordView(APIView):
     Resets a user's password and blacklists all their outstanding tokens.
     body: { "password": "new_password" }
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def post(self, request, pk):
         from rest_framework_simplejwt.token_blacklist.models import (
@@ -1681,7 +1679,7 @@ class AdminApprovalListView(APIView):
     Returns all ApprovalInstances, filterable by status and module.
     Used by the admin portal Approvals queue page.
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         from workflow.models import ApprovalInstance
@@ -1713,7 +1711,7 @@ class AdminApprovalDetailView(APIView):
     GET /api/admin/approvals/<pk>/
     Returns full detail of an ApprovalInstance including its action log.
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request, pk):
         from workflow.models import ApprovalInstance
@@ -1738,7 +1736,7 @@ class AdminApprovalForceApproveView(APIView):
     Body: {"comment": "..."}
     Allows admin to override the approval flow and approve any active instance.
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def post(self, request, pk):
         from django.core.exceptions import ValidationError as DjangoValidationError
@@ -1766,7 +1764,7 @@ class AdminApprovalReassignView(APIView):
     Body: {"approver_id": <int>, "comment": "..."}
     Assigns a new current_approver without changing status.
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def post(self, request, pk):
         from workflow.models import ApprovalInstance
@@ -1798,7 +1796,7 @@ class RegionListCreateView(APIView):
     GET  /api/admin/regions/   — paginated list with optional filters
     POST /api/admin/regions/   — create a new region
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         from accounts.models.region import Region
@@ -1857,7 +1855,7 @@ class RegionDetailView(APIView):
     PATCH  /api/admin/regions/<pk>/
     DELETE /api/admin/regions/<pk>/   — blocked if region has children or assigned users
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def _get_region(self, pk):
         from accounts.models.region import Region
@@ -1933,7 +1931,7 @@ class RegionUsersView(APIView):
     GET /api/admin/regions/<pk>/users/
     Paginated list of users assigned to this region.
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request, pk):
         from accounts.models.region import Region, UserRegion
@@ -1960,7 +1958,7 @@ class RegionAssignUserView(APIView):
            Body: {"user_id": <int>}
            Removes a UserRegion record.
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def post(self, request, pk):
         from accounts.models.region import Region, UserRegion
@@ -2053,7 +2051,7 @@ class SyncMonitorListView(APIView):
     Returns an empty paginated list until Phase 6 instruments the mobile sync
     endpoint to write DeviceSyncLog entries.
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request):
         from accounts.models.device import DeviceSyncLog
@@ -2098,7 +2096,7 @@ class SyncMonitorDeviceView(APIView):
     Paginated sync history for a single device, identified by its
     DeviceRegistration.device_id string (not UUID PK).
     """
-    permission_classes = [IsAuthenticated, IsStaffUser]
+    permission_classes = [IsAdminPortalUser]
 
     def get(self, request, device_id):
         from accounts.models.device import DeviceRegistration, DeviceSyncLog

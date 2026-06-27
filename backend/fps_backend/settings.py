@@ -70,6 +70,9 @@ INSTALLED_APPS = [
     'django_celery_beat',  # DB-backed periodic task scheduler for Celery
     'rest_framework_simplejwt.token_blacklist',  # refresh-token revocation / force-logout
 
+    # Phase 8: OpenAPI schema generation
+    'drf_spectacular',
+
     # FPS apps — order matters: accounts first (custom user model)
     'accounts',
     'crops',
@@ -171,6 +174,35 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
         'rest_framework.filters.SearchFilter',
     ],
+    # Phase 8: brute-force / DoS protection on all endpoints.
+    # Login endpoint uses a tighter LoginRateThrottle (5/min per IP).
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/minute',
+        'user': '300/minute',
+        'login': '5/minute',    # applied via LoginRateThrottle on login views
+    },
+    # Phase 8: OpenAPI schema class for drf-spectacular.
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# ---------------------------------------------------------------------------
+# Phase 8 — drf-spectacular (Swagger / OpenAPI 3.0)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Farm Prosperity System API',
+    'DESCRIPTION': (
+        'FPS backend API. Mobile field-executive endpoints are under /api/. '
+        'Admin portal endpoints are under /api/admin/ and require a JWT issued '
+        'by POST /api/admin/auth/login/ (aud: fps-admin).'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SORT_OPERATIONS': True,
 }
 
 # Internationalization
@@ -298,10 +330,21 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 # Phase 3: check for overdue approval instances every hour and escalate them.
+# Phase 8: additional monitoring tasks.
 CELERY_BEAT_SCHEDULE = {
     'check-approval-escalations': {
         'task': 'workflow.check_approval_escalations',
         'schedule': crontab(minute='0'),  # top of every hour
+    },
+    # Phase 8: alert admins about escalated approvals not actioned in 24h.
+    'notify-unactioned-escalations': {
+        'task': 'workflow.notify_unactioned_escalations',
+        'schedule': crontab(minute='*/30'),  # every 30 minutes
+    },
+    # Phase 8: alert about field executives whose devices haven't synced in 48h.
+    'check-sync-staleness': {
+        'task': 'audit.check_sync_staleness',
+        'schedule': crontab(minute='0', hour='*/6'),  # every 6 hours
     },
 }
 

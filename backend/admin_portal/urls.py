@@ -1,4 +1,5 @@
 from django.urls import path
+from accounts.views_auth import AdminTokenObtainPairView, AdminTokenRefreshView
 from .views import (
     FarmerVisitListView, FarmerVisitExportView,
     MandiArrivalListView, MandiArrivalExportView,
@@ -23,6 +24,10 @@ from .views import (
 )
 
 urlpatterns = [
+    # ── Phase 8: Admin portal scoped authentication (aud: fps-admin) ──────────
+    path('auth/login/', AdminTokenObtainPairView.as_view(), name='admin-login'),
+    path('auth/refresh/', AdminTokenRefreshView.as_view(), name='admin-token-refresh'),
+
     # Field data
     path('field-data/visits/',        FarmerVisitListView.as_view()),
     path('field-data/visits/export/', FarmerVisitExportView.as_view()),

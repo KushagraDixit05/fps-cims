@@ -145,7 +145,12 @@ class AuditEngine:
             write_audit_log.apply_async(kwargs=fields)
         except Exception:
             logger.debug('AuditEngine: Celery unavailable, writing audit log synchronously')
-            AuditEngine._write_sync(fields)
+            try:
+                AuditEngine._write_sync(fields)
+            except Exception:
+                # Both async and sync paths failed — log and swallow so the
+                # caller's business logic is never interrupted by audit failures.
+                logger.exception('AuditEngine: all write paths failed')
 
     @staticmethod
     def _write_sync(fields: dict) -> None:
