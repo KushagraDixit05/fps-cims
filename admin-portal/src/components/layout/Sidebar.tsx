@@ -17,6 +17,8 @@ import {
   Store,
   FlaskConical,
   Globe,
+  MapPin,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/authStore";
@@ -28,9 +30,11 @@ const NAV_ITEMS = [
   { href: "/users", label: "Users", icon: Users },
   { href: "/roles", label: "Roles", icon: Shield },
   { href: "/permissions", label: "Permissions", icon: Key },
+  { href: "/regions", label: "Regions", icon: MapPin },
   { href: "/approvals", label: "Approvals", icon: ClipboardCheck },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/audit", label: "Audit Log", icon: ScrollText },
+  { href: "/sync-monitor", label: "Sync Monitor", icon: Activity },
 ];
 
 function NavItem({

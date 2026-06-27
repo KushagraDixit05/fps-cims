@@ -83,7 +83,7 @@ api.interceptors.response.use(
     try {
       const { refresh } = getTokens();
       if (!refresh) throw new Error("No refresh token");
-      const { data } = await axios.post(`${BASE_URL}/api/auth/refresh/`, {
+      const { data } = await axios.post(`${BASE_URL}/api/admin/auth/refresh/`, {
         refresh,
       });
       const newAccess: string = data.access;

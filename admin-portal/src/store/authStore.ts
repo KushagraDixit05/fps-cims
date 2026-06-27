@@ -50,7 +50,9 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       login: async (username, password) => {
-        const { data } = await api.post("/api/auth/login/", { username, password });
+        // Phase 8: use admin-scoped login endpoint that issues aud='fps-admin' tokens.
+        // Mobile-issued tokens (no aud claim) are rejected by IsAdminPortalUser on the backend.
+        const { data } = await api.post("/api/admin/auth/login/", { username, password });
         const payload = decodeJWT(data.access);
         const user: AuthUser = {
           id: Number(payload?.user_id ?? 0),

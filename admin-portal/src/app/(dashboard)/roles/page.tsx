@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRoles, useCreateRole, useDeleteRole } from "@/hooks/useRoles";
-import { cn } from "@/lib/utils";
 import type { Role } from "@/types/models";
 
 const ROLE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -101,7 +100,7 @@ function RoleCard({ role }: { role: Role }) {
 }
 
 export default function RolesPage() {
-  const { data: roles, isLoading } = useRoles();
+  const { data: roles, isLoading, isError } = useRoles();
   const createRole = useCreateRole();
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({ name: "", code: "", description: "" });
@@ -142,6 +141,10 @@ export default function RolesPage() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-fps-border bg-white h-52 animate-pulse" />
           ))}
+        </div>
+      ) : isError ? (
+        <div className="rounded-xl bg-status-error-bg border border-[#D63333]/20 px-4 py-3 text-sm text-status-error-text">
+          Failed to load roles. Your session may have expired — please log out and log back in.
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

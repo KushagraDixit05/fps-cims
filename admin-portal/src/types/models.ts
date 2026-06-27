@@ -204,3 +204,49 @@ export interface ExecutivePerformanceMetric {
   last_activity: string | null;
   total_activities: number;
 }
+
+// ── Region Management ─────────────────────────────────────────────────────────
+
+export interface Region {
+  id: string;
+  name: string;
+  code: string;
+  state: string;
+  district: string;
+  taluka: string;
+  parent: string | null;
+  parent_name: string | null;
+  is_active: boolean;
+  created_at: string;
+  user_count: number;
+  children_count: number;
+}
+
+export interface RegionDetail extends Region {
+  users: RegionUser[];
+  children: Region[];
+}
+
+export interface RegionUser {
+  user_id: number;
+  username: string;
+  full_name: string;
+  role: string;
+}
+
+// ── Sync Monitor ──────────────────────────────────────────────────────────────
+
+export interface DeviceSyncLog {
+  id: string;
+  synced_at: string;
+  username: string;
+  device_identifier: string;
+  device_name: string;
+  platform: string;
+  sync_type: "pull" | "push" | "full";
+  status: "success" | "partial" | "failed";
+  records_pushed: number;
+  records_pulled: number;
+  error_detail: string | null;
+  sync_batch_id: string | null;
+}
